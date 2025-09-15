@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <button id="testbutton">Ask AI</button>
+    <pre id="output"></pre>
+
+    <script>
+      document.getElementById("testbutton").onclick = async () => {
+        const res = await fetch("/generate");
+        const data = await res.json();
+        document.getElementById("output").textContent = data.output;
+      };
+    </script>
+  </body>
+</html>
