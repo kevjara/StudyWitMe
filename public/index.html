@@ -1,15 +1,79 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI Testing</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
   <body>
-    <button id="testbutton">Ask AI</button>
-    <pre id="output"></pre>
+    <div class="container">
+      <h2>AI Testing</h2>
 
-    <script>
-      document.getElementById("testbutton").onclick = async () => {
-        const res = await fetch("/generate");
-        const data = await res.json();
-        document.getElementById("output").textContent = data.output;
-      };
-    </script>
+      <!-- user text input -->
+      <textarea
+        id="textInput"
+        rows="4"
+        placeholder="Paste text here to make flashcards OR attach a PDF and specify page numbers (PDF range takes precedence if PDF is attached)"
+      ></textarea>
+      <br />
+
+      <!-- pdf upload -->
+      <button id="pdfButton" title="Add PDF">➕</button>
+      <input type="file" id="pdfInput" accept=".pdf" style="display:none" />
+
+      <!-- pdf status -->
+      <input
+        type="text"
+        id="pdfStatus"
+        readonly
+        placeholder="No PDF selected"
+      />
+      <br />
+
+      <!-- page range -->
+      <div class="page-range">
+        <div class="inputs-row">
+          <input type="number" id="pageStart" placeholder="Start page" min="1" />
+          <input type="number" id="pageEnd" placeholder="End page" min="1" />
+        </div>
+        <small class="page-range-example">Ex. 1-1 or 1-5</small>
+      </div>
+      <br />
+
+      <!-- optional instructions -->
+      <textarea
+        id="instructionsInput"
+        rows="3"
+        placeholder="Optional: add instructions for question generation (avoid instructions that change the output format away from JSON)"
+      ></textarea>
+
+      <!-- generate button -->
+      <button id="generateButton">Generate Flashcards</button>
+      <pre id="apiOutput"></pre>
+
+      <!-- flashcards section -->
+      <div id="flashcardSection" style="margin-top:20px;">
+        <h3>Flashcards</h3>
+
+        <!-- question -->
+        <textarea id="flashcardQuestion" rows="3" readonly>
+waiting for api call before we can start making flashcards
+        </textarea>
+
+        <!-- relevant text -->
+        <textarea id="flashcardRelevantText" rows="4" readonly></textarea>
+
+        <!-- user answer -->
+        <textarea id="flashcardUserAnswer" rows="3" placeholder="Write your own answer here..."></textarea>
+
+        <!-- controls -->
+        <div style="margin-top:10px;">
+          <button id="skipButton">Skip</button>
+          <button id="saveButton">Save Flashcard</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
   </body>
 </html>

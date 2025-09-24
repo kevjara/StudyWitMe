@@ -1,0 +1,113 @@
+body {
+  background-color: #1e90ff;
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  text-align: center;
+  background: white;
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+h2 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-size: 14px;
+  resize: none;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #0077cc;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background-color: #005fa3;
+}
+
+pre {
+  text-align: left;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #222;
+  max-height: 400px;
+  overflow-y: auto; 
+}
+
+
+#filebutton {
+  margin-top: 8px;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  font-size: 20px;
+  border: none;
+  border-radius: 50%;
+  background-color: #0077cc;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#filebutton:hover {
+  background-color: #005fa3;
+}
+
+#filestatus {
+  margin-top: 8px;
+  padding: 8px;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+.page-range {
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  gap: 0.3rem;
+}
+
+.inputs-row {
+  display: flex;
+  gap: 0.5rem;          
+  justify-content: center; 
+}
+
+.page-range-example {
+  font-size: 0.8rem;
+  color: #555;
+}
