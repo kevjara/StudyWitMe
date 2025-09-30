@@ -1,18 +1,36 @@
-import { useState } from 'react'
 import './App.css'
 import logo from "./assets/plainLogo.svg"
+import { auth, db } from "./firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 function App() {
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const data= new FormData(e.target);
-    console.log("Signing up: ", {
+    const data = new FormData(e.target);
+    //no longer need this, need varss
+    /* console.log("Signing up: ", {
       username: data.get("username"),
       email: data.get("email"),
       password: data.get("password"),
-    }
-    );
+    });
+      */
+
     //we'll put the firebase complicated stuff ehre
+    const username = data.get("username");
+    const email = data.get("email");
+    const password = data.get("password");
+    try {
+      const newUser = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "users", newUser.user.uid), { email, displayName: username || null, createdAt: serverTimestamp(), });
+      console.log("Signing up: ", newUser.user.uid);
+      e.target.reset();
+      alert("Account Created!");
+    } catch (error) {
+      console.error("Error with signup", error);
+      alert("Error with signup");
+    }
+
   }
 
   return (
