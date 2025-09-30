@@ -10,6 +10,7 @@ body {
   align-items: center;
   background: rgb(148, 135, 135);
   box-sizing:border-box;
+  padding: 16px 48px;
 }
 
 .nav-left {
@@ -20,13 +21,38 @@ body {
 .nav-right {
   display: flex;
   gap:24px;
+  font-size: 24px;
 }
 .nav-right a{
-  color:white;
+  color:rgb(43, 42, 42);
   text-decoration: none;
 }
 
 .nav-logo {
-  height: 100px;
+  height: 75px;
   margin-right: 20px;
+}
+
+.signup{
+  color: rgb(49, 48, 48);
+  max-width: 300px;
+  margin: 2rem auto;
+  background: rgb(194, 193, 156);
+  border-radius: 6px;
+  box-shadow: 12px 14px 35px rgb(121, 118, 118);
+  text-align: center;
+}
+.signup input{
+  width: 80%;
+  margin: .75rem;
+}
+.signup button{
+  width: 50%;
+  margin-bottom: .75rem;
+  background: rgb(19, 19, 18);
+}
+.signup button:hover{
+  background: rgb(73, 73, 72);
+  width: 50%;
+  margin-bottom: .75rem;
 }

@@ -1,41 +1,54 @@
 import { useState } from 'react'
 import './App.css'
-import logo from "./assets/logo.svg"
+import logo from "./assets/plainLogo.svg"
 
 function App() {
-  const [formData, setFormData] = useState(
-    {
-      username: "",
-      email:"",
-      password:"",
-    }
-  )
-
-  const handleChange=(e) =>{
-    const{username, value}=e.target
-    setFormData((prev) =>({
-      ...prev, [username]:value,
-
-    }))
-  }
-
-  const handleSubmit=(e) =>{
+  const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Signing up: ", formData)
+    const data= new FormData(e.target);
+    console.log("Signing up: ", {
+      username: data.get("username"),
+      email: data.get("email"),
+      password: data.get("password"),
+    }
+    );
     //we'll put the firebase complicated stuff ehre
   }
 
   return (
+    <>
+
       <nav className="navbar">
         <div className="nav-left">
-          <img src={logo} alt="robot logo" className="nav-logo"/>  
+          <img src={logo} alt="robot logo" className="nav-logo" />
         </div>
         <div className="nav-right">
-          <a href="">Signup</a>
-          <a href="">Login</a>
-          <a href="">Flashcards</a>
+          <a href="">SIGNUP</a>
+          <a href="">LOGIN</a>
+          <a href="">FLASHCARDS</a>
         </div>
       </nav>
+
+      <div className="signup">
+        <h2>Sign Up</h2>
+        <form onSubmit={handleSubmit} className="signup-form">
+          <label>
+            Username:
+            <input type="text" name="username" placeholder="Username" required />
+          </label>
+          <label>
+            Email:
+            <input type="email" name="email" placeholder="Email" required />
+          </label>
+          <label>
+            Passowrd:
+            <input type="password" name="password" placeholder="Password" required />
+          </label>
+
+          <button type="submit">Sign Up</button>
+        </form>
+      </div>
+    </>
   )
 }
 
