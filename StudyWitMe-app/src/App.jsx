@@ -3,6 +3,8 @@ import logo from "./assets/plainLogo.svg"
 import { auth, db } from "./firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {Link, Routes, Route} from "react-router-dom";
+import Login from "./Login.jsx";
 
 function App() {
   const handleSubmit = async (e) => {
@@ -41,31 +43,36 @@ function App() {
           <img src={logo} alt="robot logo" className="nav-logo" />
         </div>
         <div className="nav-right">
-          <a href="">SIGNUP</a>
-          <a href="">LOGIN</a>
-          <a href="">FLASHCARDS</a>
+          <Link to="/">SIGNUP</Link>
+          <Link to="/login">LOGIN</Link>
+          <Link to="/flashcards">FLASHCARDS</Link>
         </div>
       </nav>
+      <Routes>
+        <Route path="/" element={
+          <div className="signup">
+            <h2>Sign Up</h2>
+            <form onSubmit={handleSubmit} className="signup-form">
+              <label>
+                Username:
+                <input type="text" name="username" placeholder="Username" required />
+              </label>
+              <label>
+                Email:
+                <input type="email" name="email" placeholder="Email" required />
+              </label>
+              <label>
+                Passowrd:
+                <input type="password" name="password" placeholder="Password" required />
+              </label>
 
-      <div className="signup">
-        <h2>Sign Up</h2>
-        <form onSubmit={handleSubmit} className="signup-form">
-          <label>
-            Username:
-            <input type="text" name="username" placeholder="Username" required />
-          </label>
-          <label>
-            Email:
-            <input type="email" name="email" placeholder="Email" required />
-          </label>
-          <label>
-            Passowrd:
-            <input type="password" name="password" placeholder="Password" required />
-          </label>
-
-          <button type="submit">Sign Up</button>
-        </form>
-      </div>
+              <button type="submit">Sign Up</button>
+            </form>
+          </div>
+        }
+        />
+        <Route path="/login" element={<Login />}/>
+      </Routes>
     </>
   )
 }
