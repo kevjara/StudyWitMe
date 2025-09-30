@@ -1,5 +1,5 @@
 body {
-  font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
   margin: 0;
   background-color: rgb(64, 112, 151);
 }
@@ -9,7 +9,7 @@ body {
   justify-content: space-between;
   align-items: center;
   background: rgb(148, 135, 135);
-  box-sizing:border-box;
+  box-sizing: border-box;
   padding: 16px 48px;
 }
 
@@ -20,11 +20,12 @@ body {
 
 .nav-right {
   display: flex;
-  gap:24px;
+  gap: 24px;
   font-size: 24px;
 }
-.nav-right a{
-  color:rgb(43, 42, 42);
+
+.nav-right a {
+  color: rgb(43, 42, 42);
   text-decoration: none;
 }
 
@@ -33,7 +34,7 @@ body {
   margin-right: 20px;
 }
 
-.signup{
+.signup {
   color: rgb(49, 48, 48);
   max-width: 300px;
   margin: 2rem auto;
@@ -42,22 +43,25 @@ body {
   box-shadow: 12px 14px 35px rgb(121, 118, 118);
   text-align: center;
 }
-.signup input{
+
+.signup input {
   width: 80%;
   margin: .75rem;
 }
-.signup button{
+
+.signup button {
   width: 50%;
   margin-bottom: .75rem;
   background: rgb(19, 19, 18);
 }
-.signup button:hover{
+
+.signup button:hover {
   background: rgb(73, 73, 72);
   width: 50%;
   margin-bottom: .75rem;
 }
 
-.login{
+.login {
   color: rgb(49, 48, 48);
   max-width: 300px;
   margin: 2rem auto;
@@ -66,24 +70,49 @@ body {
   box-shadow: 12px 14px 35px rgb(121, 118, 118);
   text-align: center;
 }
-.login input{
+
+.login input {
   width: 80%;
   margin: .75rem;
 }
-.login button{
+
+.login button {
   width: 50%;
   margin-bottom: .75rem;
   background: rgb(19, 19, 18);
 }
-.login button:hover{
+
+.login button:hover {
   background: rgb(73, 73, 72);
   width: 50%;
   margin-bottom: .75rem;
 }
-.signout{
-  height:40px;
+
+.signout {
+  height: 40px;
   text-align: center;
   font-size: 20px;
   padding: 8px 16px;
   box-sizing: border-box;
+}
+
+.flashcard-list {
+  color: rgb(49, 48, 48);
+  max-width: 300px;
+  margin: 2rem auto;
+  background: rgb(194, 193, 156);
+  border-radius: 6px;
+  box-shadow: 12px 14px 35px rgb(121, 118, 118);
+  text-align: center;
+  padding: 15px; 
+}
+
+.flashcard-image {
+  color: rgb(49, 48, 48);
+  max-width: 300px;
+  margin: 2rem auto;
+  background: rgb(194, 193, 156);
+  border-radius: 6px;
+  box-shadow: 12px 14px 35px rgb(121, 118, 118);
+  text-align: center;
 }
