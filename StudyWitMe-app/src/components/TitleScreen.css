@@ -1,0 +1,166 @@
+.title-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background-color: #edebe9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Shapes container (behind content) */
+.shapes {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none; /* shapes don't block clicks */
+}
+
+/* background squares & rectangles using pattern pseudo elements */
+.pattern::before,
+.pattern::after {
+    content: "";
+    position: absolute;
+    border-radius: 8px;
+    animation: float 8s ease-in-out infinite alternate;
+}
+
+/* Square (top-left, darker) */
+.pattern::before {
+    width: 150px;
+    height: 150px;
+    background-color: #1b3c4f;
+    top: 10%;
+    left: 15%;
+    opacity: 0.5;
+    animation-delay: 0s;
+}
+
+/* Rectangle (bottom-right) */
+.pattern::after {
+    width: 300px;
+    height: 100px;
+    background-color: #416d8e;
+    bottom: 10%;
+    right: 20%;
+    opacity: 0.4;
+    animation-delay: 2s;
+}
+
+/* Skinny rectangle styling */
+.shape.rectangle {
+    position: absolute;
+    background: #416d8e;
+    border-radius: 4px;
+    animation: float 8s infinite ease-in-out;
+}
+
+.shape.rectangle.bottom-left {
+    width: 150px;
+    height: 20px;
+    bottom: 40px;
+    left: 20px;
+}
+
+.shape.rectangle.bottom-right {
+    width: 200px;
+    height: 20px;
+    bottom: 100px;
+    right: 30px;
+}
+
+/* Circle styling */
+.shape.circle {
+    position: absolute;
+    bottom: -100px; /* always start below screen */
+    border-radius: 50%;
+    animation: bubble 10s infinite ease-in-out;
+    opacity: 0.8;r;
+}
+
+/* Filled circle */
+.shape.circle.filled {
+    background: #254457;
+}
+
+/* Hollow circle */
+.shape.circle.hollow {
+    border: 3px solid #254457;
+    background: transparent;
+}
+
+/* Bubble animation (rise up and fade) */
+@keyframes bubble {
+0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+    25% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(-120vh) scale(1.1);
+        opacity: 0;
+    }
+}
+
+/* Float animation for rectangles/squares */
+@keyframes float {
+    0% {
+        transform: translateY(0) translateX(0);
+    }
+    50% {
+        transform: translateY(-15px) translateX(10px);
+    }
+    100% {
+        transform: translateY(0) translateX(0);
+    }
+}
+
+.title-content {
+    text-align: center;
+    z-index: 1;
+}
+
+.title-logo {
+    max-width: 200px;
+    margin-bottom: 20px;
+}
+
+.welcome-box {
+    background: #d3d2d8;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.welcome-box h2 {
+    margin-bottom: 20px;
+    color: #1b3c4f;
+}
+
+.btn {
+    display: block;
+    width: 200px;
+    margin: 10px auto;
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn.sign-in {
+    background-color: #1b3c4f;
+    color: #fff;
+}
+
+.btn.guest {
+    background-color: #416d8e;
+    color: #fff;
+}
+
+.btn.guest:hover {
+    background-color: #2f546e;
+}
