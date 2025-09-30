@@ -56,3 +56,27 @@ body {
   width: 50%;
   margin-bottom: .75rem;
 }
+
+.login{
+  color: rgb(49, 48, 48);
+  max-width: 300px;
+  margin: 2rem auto;
+  background: rgb(194, 193, 156);
+  border-radius: 6px;
+  box-shadow: 12px 14px 35px rgb(121, 118, 118);
+  text-align: center;
+}
+.login input{
+  width: 80%;
+  margin: .75rem;
+}
+.login button{
+  width: 50%;
+  margin-bottom: .75rem;
+  background: rgb(19, 19, 18);
+}
+.login button:hover{
+  background: rgb(73, 73, 72);
+  width: 50%;
+  margin-bottom: .75rem;
+}
