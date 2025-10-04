@@ -5,45 +5,7 @@
     align-items: center;
     height: 100vh;
     width: 100vw;
-    background-color: #edebe9;
     overflow: hidden;
-}
-
-.pattern::before,
-.pattern::after {
-    content: "";
-    position: absolute;
-    border-radius: 8px;
-    animation: float 8s ease-in-out infinite alternate;
-}
-
-/* Square (top-left, darker) */
-.pattern::before {
-    width: 150px;
-    height: 150px;
-    background-color: #1b3c4f;  /* darker blue */
-    top: 10%;
-    left: 15%;
-    opacity: 0.5;
-    animation-delay: 0s;
-}
-
-/* Rectangle (bottom-right) */
-.pattern::after {
-    width: 300px;
-    height: 100px;
-    background-color: #416d8e;  /* mid-blue */
-    bottom: 10%;
-    right: 20%;
-    opacity: 0.4;
-    animation-delay: 2s;
-}
-
-/* Float animation */
-@keyframes float {
-    0%   { transform: translateY(0) translateX(0); }
-    50%  { transform: translateY(-15px) translateX(10px); }
-    100% { transform: translateY(0) translateX(0); }
 }
 
 .login-box {

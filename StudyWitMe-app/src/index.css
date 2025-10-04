@@ -1,44 +1,44 @@
 html, body, #root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
 }
 
 /* Base font */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Remove weird centering */
 body {
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: #edebe9; /* your group background */
-  color: #1b3c4f; /* default text color */
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: #edebe9; /* your group background */
+    color: #1b3c4f; /* default text color */
 }
 
 /* General heading style */
 h1, h2, h3 {
-  margin: 0;
-  font-weight: 600;
+    margin: 0;
+    font-weight: 600;
 }
 
 /* Buttons (global fallback, can override in components) */
 button {
-  border-radius: 8px;
-  border: none;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.25s ease;
+    border-radius: 8px;
+    border: none;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
 }
 
 /* background squares & rectangles */
@@ -50,27 +50,6 @@ button {
     animation: float 8s ease-in-out infinite alternate;
 }
 
-/* Square (top-left, darker) */
-.pattern::before {
-    width: 150px;
-    height: 150px;
-    background-color: #1b3c4f;  /* darker blue */
-    top: 10%;
-    left: 15%;
-    opacity: 0.5;
-    animation-delay: 0s;
-}
-
-/* Rectangle (bottom-right) */
-.pattern::after {
-    width: 300px;
-    height: 100px;
-  background-color: #416d8e;  /* mid-blue */
-    bottom: 10%;
-    right: 20%;
-    opacity: 0.4;
-    animation-delay: 2s;
-}
 /* Skinny rectangle styling */
 .shape.rectangle {
     position: absolute;
