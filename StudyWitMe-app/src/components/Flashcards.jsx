@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore"
-import { useNavigate } from "react-router-dom";
+import { collection, onSnapshot } from "firebase/firestore"
+import { useNavigate, Link } from "react-router-dom";
 import "./Flashcards.css";
 
 export default function Flashcards() {
@@ -43,7 +43,12 @@ export default function Flashcards() {
         return (
             <div className="flashcard-page">
                 <h2>Oops, you're not signed in</h2>
-                <p>Please sign in to view your flashcards</p>
+                <p>
+                    Please <Link to="/login">sign in</Link> to view your flashcards
+                </p>
+                <button className="back-button" onClick={() => navigate("/main")}>
+                    ← Back
+                </button>
             </div>
         )
     }
