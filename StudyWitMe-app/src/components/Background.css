@@ -74,47 +74,69 @@
     100% { transform: translateY(0) scale(1); }
 }/* Big boxes */
 .shape.box {
-    position: absolute;
+position: absolute;
     background: #d3d2d8; /* light gray */
     border-radius: 12px;
-    animation: floatBox 12s infinite ease-in-out;
-    opacity: 0.3;
+    opacity: 0; /* start invisible, will fade in */
+    animation-name: glideBox;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
 }
 
 .shape.box.top-left {
     width: 180px;
     height: 180px;
     top: 40px;
-    left: 60px;
+    left: 0;
+    animation-duration: 25s;
+    animation-delay: 0s;
 }
 
 .shape.box.top-right {
     width: 220px;
     height: 220px;
     top: 80px;
-    right: 80px;
+    left: -220px;
+    animation-duration: 35s;
+    animation-delay: 5s;
 }
 
 .shape.box.bottom-left-large {
     width: 200px;
     height: 200px;
     bottom: 60px;
-    left: 50px;
+    left: -200px;
+    animation-duration: 40s;
+    animation-delay: 10s;
 }
 
 .shape.box.bottom-right-large {
     width: 250px;
     height: 250px;
     bottom: 40px;
-    right: 100px;
+    left: -250px;
+    animation-duration: 50s;
+    animation-delay: 15s;
 }
 
-/* Box animation */
-@keyframes floatBox {
-    0%   { transform: translateY(0) scale(1); }
-    50%  { transform: translateY(-20px) scale(1.05); }
-    100% { transform: translateY(0) scale(1); }
+/* Box animation - glide left to right */
+@keyframes glideBox {
+    0% {
+        transform: translateX(-120%);
+        opacity: 0;  /* invisible at start */
+    }
+    10% {
+        opacity: 0.3; /* fade in as it enters */
+    }
+    90% {
+        opacity: 0.7; /* stay visible while crossing */
+    }
+    100% {
+        transform: translateX(120vw);
+        opacity: 0;  /* fade out as it exits */
+    }
 }
+
 
 /* skinny rectangles */
 .shape.rectangle {

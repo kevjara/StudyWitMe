@@ -19,7 +19,7 @@ html, body, #root {
 body {
     min-width: 320px;
     min-height: 100vh;
-    background-color: #edebe9; /* your group background */
+    background-color: #edebe9;
     color: #1b3c4f; /* default text color */
 }
 
