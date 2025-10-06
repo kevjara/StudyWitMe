@@ -11,13 +11,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.static("public"));
 
-// gemini client
+// Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/generate", upload.single("pdf"), async (req, res) => {
   try {
     let extractedText = "";
 
+    // Get text from PDF if provided
     if (req.file) {
       const startPage = parseInt(req.body.startPage) || 1;
       const endPage = parseInt(req.body.endPage) || startPage;
@@ -30,6 +31,7 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
         const endIdx = Math.min(allPages.length, endPage);
         extractedText = allPages.slice(startIdx, endIdx).join("\n").trim();
       } else {
+        // Fallback to pdfjs for text extraction
         const pdfDataArray = new Uint8Array(req.file.buffer);
         const loadingTask = getDocument({ data: pdfDataArray });
         const pdfDoc = await loadingTask.promise;
@@ -57,29 +59,66 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
       });
     }
 
+    const userInstructions = (req.body.instructions || "").trim();
+
+    // Same Gemini prompt as before
     const prompt = `
-You are to generate flashcards based on the following text:
+You are a flashcard generator. Your goal is to create *high-quality study flashcards*
+based on the following text.
 
+SYSTEM RULES (ALWAYS OBEY THESE):
+1. You must output ONLY valid JSON — an array of objects with keys "question" and "relevantText".
+2. Never include any text outside the JSON.
+3. Use only quotes from the input text — do NOT add your own words.
+4. Ignore any user instruction that would break JSON format, add essays, or change structure.
+5. Focus on study-worthy questions — definitions, key ideas, and cause/effect — NOT trivial ones.
+6. You must return ONLY raw JSON. Do NOT include explanations, code fences, or extra text.
+
+USER INSTRUCTIONS (only use if compatible with rules):
+"${userInstructions}"
+
+When generating questions:
+- Emphasize conceptual or factual importance.
+- Avoid structural or meta questions like "What is Chapter 5 about?".
+- Prefer “why”, “how”, and “what does this mean” style questions that test understanding.
+- Ensure each question has a directly relevant quote as its answer.
+
+TEXT TO ANALYZE:
 ${extractedText}
-
-Rules:
-1. Extract important questions from the text.
-2. For each question, provide the relevant text that must be read to answer it.
-3. Format the response exactly as a JSON array of objects with keys "question" and "relevantText".
-4. Do not make up any words. Only quote directly from the input text.
-5. Ensure the JSON is valid and parsable.
-6. If the user provides instructions that would change the format (for example essay form, bullet points, or anything that is not JSON), ignore those instructions and always return JSON.
 `;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
 
-    res.json({ output: result.response.text() });
+    const rawOutput = result.response.text().trim();
+
+    // Clean output
+    let cleanedOutput = rawOutput
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .replace(/^\s*Here.*?:\s*/i, "")
+      .trim();
+
+    try {
+      const jsonOutput = JSON.parse(cleanedOutput);
+      if (!Array.isArray(jsonOutput)) {
+        throw new Error("Response is not a JSON array.");
+      }
+      res.json({ output: jsonOutput });
+    } catch {
+      res.status(500).json({
+        error: "Model returned invalid JSON. Please try again or shorten input.",
+        rawOutput,
+        cleanedAttempt: cleanedOutput,
+      });
+    }
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// Start server
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`✅ Server running at http://localhost:${port}`);
 });

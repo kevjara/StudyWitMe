@@ -4,21 +4,21 @@ const pdfStatus = document.getElementById("pdfStatus");
 const textInput = document.getElementById("textInput");
 const pageStartInput = document.getElementById("pageStart");
 const pageEndInput = document.getElementById("pageEnd");
-const MAX_CHARACTERS = 50000;
+const MAX_CHARACTERS = 3_500_000;
 
 let selectedPDF = null;
-let flashcardPairs = []; // array of [question, relevantText]
+let flashcardPairs = [];
 let currentFlashcardIndex = 0;
-let savedFlashcards = []; // array of [question, userAnswer]
+let savedFlashcards = [];
 
-// load one flashcard
+// Load a flashcard into the input fields
 function loadFlashcard(index) {
   const questionBox = document.getElementById("flashcardQuestion");
   const relevantBox = document.getElementById("flashcardRelevantText");
   const userAnswerBox = document.getElementById("flashcardUserAnswer");
 
   if (flashcardPairs.length === 0) {
-    questionBox.value = "waiting for api call before we can start making flashcards";
+    questionBox.value = "Waiting for flashcards.";
     relevantBox.value = "";
     userAnswerBox.value = "";
     return;
@@ -29,13 +29,13 @@ function loadFlashcard(index) {
     relevantBox.value = flashcardPairs[index][1];
     userAnswerBox.value = "";
   } else {
-    questionBox.value = "Done! No more flashcards.";
+    questionBox.value = "Done.";
     relevantBox.value = "";
     userAnswerBox.value = "";
   }
 }
 
-// skip button
+// Skip to next flashcard
 document.getElementById("skipButton").onclick = () => {
   if (currentFlashcardIndex < flashcardPairs.length) {
     currentFlashcardIndex++;
@@ -43,32 +43,31 @@ document.getElementById("skipButton").onclick = () => {
   }
 };
 
-// save button
+// Save user answer and go to next
 document.getElementById("saveButton").onclick = () => {
   if (currentFlashcardIndex < flashcardPairs.length) {
     const question = flashcardPairs[currentFlashcardIndex][0];
     const userAnswer = document.getElementById("flashcardUserAnswer").value.trim();
     savedFlashcards.push([question, userAnswer]);
-
     currentFlashcardIndex++;
     loadFlashcard(currentFlashcardIndex);
   }
 };
 
-// toggle pdf selection
+// Handle PDF button toggle
 pdfButton.onclick = () => {
   if (selectedPDF) {
     selectedPDF = null;
     pdfInput.value = "";
     pdfStatus.value = "No PDF selected";
-    pdfButton.textContent = "➕";
+    pdfButton.textContent = "+";
     pdfButton.classList.remove("active");
   } else {
     pdfInput.click();
   }
 };
 
-// handle pdf file
+// Handle PDF selection
 pdfInput.onchange = () => {
   const file = pdfInput.files[0];
   if (!file) return;
@@ -81,25 +80,30 @@ pdfInput.onchange = () => {
 
   selectedPDF = file;
   pdfStatus.value = `Selected PDF: ${file.name}`;
-  pdfButton.textContent = "❌";
+  pdfButton.textContent = "x";
   pdfButton.classList.add("active");
 };
 
-// handle generate flashcards
+// Generate flashcards
 document.getElementById("generateButton").onclick = async () => {
   const outputBox = document.getElementById("apiOutput");
-  outputBox.textContent = "Processing...";
-
-  let textToSend = "";
   const instructionsText = document.getElementById("instructionsInput").value.trim();
 
+  outputBox.textContent = "Processing...";
+  flashcardPairs = [];
+  savedFlashcards = [];
+  currentFlashcardIndex = 0;
+
   try {
+    let response;
+
+    // If PDF selected, send as form data
     if (selectedPDF) {
       const startPage = parseInt(pageStartInput.value);
       const endPage = parseInt(pageEndInput.value);
 
       if (!startPage || !endPage || startPage > endPage) {
-        outputBox.textContent = "Please enter a valid page range.";
+        outputBox.textContent = "Invalid page range.";
         return;
       }
 
@@ -107,69 +111,59 @@ document.getElementById("generateButton").onclick = async () => {
       formData.append("pdf", selectedPDF);
       formData.append("startPage", startPage);
       formData.append("endPage", endPage);
+      formData.append("instructions", instructionsText);
+      response = await fetch("/generate", { method: "POST", body: formData });
 
-      const res = await fetch("/generate", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errorData = await res.json();
-        outputBox.textContent = `Error: ${errorData.error}`;
-        return;
-      }
-
-      const data = await res.json();
-      textToSend = data.output;
-
-      if (!textToSend.trim()) {
-        outputBox.textContent = "PDF contains no text in the selected pages.";
-        return;
-      }
     } else {
-      textToSend = textInput.value.trim();
-      if (!textToSend) {
-        outputBox.textContent = "Please enter some text to generate flashcards.";
+      // If text entered directly
+      const text = textInput.value.trim();
+      if (!text) {
+        outputBox.textContent = "Please enter text.";
         return;
       }
+      if (text.length > MAX_CHARACTERS) {
+        outputBox.textContent = "Text too long.";
+        return;
+      }
+
+      response = await fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: text, instructions: instructionsText }),
+      });
     }
 
-    if (instructionsText) {
-      textToSend += `\n\nInstructions: ${instructionsText}`;
-    }
-
-    if (textToSend.length > MAX_CHARACTERS) {
-      outputBox.textContent = `Text too long (${textToSend.length} characters). Please shorten it.`;
+    if (!response.ok) {
+      const errorData = await response.json();
+      outputBox.textContent = `Error: ${errorData.error || "Unknown error"}`;
       return;
     }
 
-    const resAI = await fetch("/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input: textToSend }),
-    });
+    const data = await response.json();
 
-    if (!resAI.ok) {
-      const errorData = await resAI.json();
-      outputBox.textContent = `Error: ${errorData.error}`;
+    if (!data.output) {
+      outputBox.textContent = "No flashcards returned.";
       return;
     }
 
-    const dataAI = await resAI.json();
-    outputBox.textContent = dataAI.output;
+    if (Array.isArray(data.output)) {
+      flashcardPairs = data.output.map(f => [f.question, f.relevantText]);
+      loadFlashcard(0);
+      outputBox.textContent = `Loaded ${flashcardPairs.length} flashcards`;
+      return;
+    }
 
-    let cleanOutput = dataAI.output.trim();
+    // Handle JSON text manually if needed
+    let cleanOutput = data.output.trim();
     if (cleanOutput.startsWith("```")) {
       cleanOutput = cleanOutput.replace(/^```(json)?/, '').replace(/```$/, '').trim();
     }
 
-    try {
-      const flashcards = JSON.parse(cleanOutput);
-      flashcardPairs = flashcards.map(f => [f.question, f.relevantText]);
+    const flashcards = JSON.parse(cleanOutput);
+    flashcardPairs = flashcards.map(f => [f.question, f.relevantText]);
+    loadFlashcard(0);
+    outputBox.textContent = `Loaded ${flashcardPairs.length} flashcards`;
 
-      currentFlashcardIndex = 0;
-      savedFlashcards = [];
-
-      loadFlashcard(currentFlashcardIndex);
-    } catch {
-      // leave raw output if parsing fails
-    }
   } catch {
     outputBox.textContent = "Error processing input.";
   }
