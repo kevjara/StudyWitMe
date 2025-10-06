@@ -1,9 +1,10 @@
 import { auth } from "./firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 import './App.css'
 
 export default function Login() {
-
+    const navigate= useNavigate();
     //reuisng the handlesubmit format from app for login, 
     // just use signin instead of signup firebase functions
     const handleSubmit = async (e) => {
@@ -19,6 +20,7 @@ export default function Login() {
             console.log("Logging in: ", userCreds.user.uid);
             e.target.reset();
             alert("Login Successful!");
+            navigate('/profile');
         } catch (error) {
             console.error("Error with login", error);
             alert("Error with login");
