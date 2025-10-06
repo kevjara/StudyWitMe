@@ -105,7 +105,7 @@ function App() {
         />
         <Route path="/login" element={<Login />} />
         <Route path="/flashcards" element={<Flashcards user={currentUser}/>} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<Profile user={currentUser} />} />
       </Routes>
     </>
   )

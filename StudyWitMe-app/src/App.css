@@ -116,3 +116,14 @@ body {
   box-shadow: 12px 14px 35px rgb(121, 118, 118);
   text-align: center;
 }
+
+.profile-list {
+  color: rgb(49, 48, 48);
+  max-width: 300px;
+  margin: 2rem auto;
+  background: rgb(194, 193, 156);
+  border-radius: 6px;
+  box-shadow: 12px 14px 35px rgb(121, 118, 118);
+  text-align: center;
+  padding: 15px; 
+}
