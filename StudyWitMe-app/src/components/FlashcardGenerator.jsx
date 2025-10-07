@@ -34,7 +34,7 @@ function FlashcardGenerator() {
     if (bottomRef.current) {
         bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-    }, [flashcardPairs, currentFlashcardIndex]);
+    }, [flashcardPairs, currentFlashcardIndex, showCancelConfirm]);
 
 // --- Helper: safe JSON parse ---
     const safeJsonParse = async (res) => {
