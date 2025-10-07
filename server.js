@@ -14,7 +14,7 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // gemini client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI("AIzaSyDukPzzOUKomN8PPTm86szEBKOABUJnF0E");
 
 app.post("/generate", upload.single("pdf"), async (req, res) => {
   try {

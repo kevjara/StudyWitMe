@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useRef, useEffect } from "react";
-// import { db } from "../services/firebase";
-// import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../services/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import "./FlashcardGenerator.css";
 
 function FlashcardGenerator() {
@@ -31,12 +31,12 @@ function FlashcardGenerator() {
     const bottomRef = useRef(null);
 
     useEffect(() => {
-    if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        }
     }, [flashcardPairs, currentFlashcardIndex, showCancelConfirm]);
 
-// --- Helper: safe JSON parse ---
+    // --- Helper: safe JSON parse ---
     const safeJsonParse = async (res) => {
         const text = await res.text(); // read body once
         try {
@@ -65,7 +65,7 @@ function FlashcardGenerator() {
                 const formData = new FormData();
                 formData.append("pdf", file);
                 res = await fetch("/generate", { method: "POST", body: formData });
-            } 
+            }
             else {
                 let textToSend = textInput.trim();
                 if (!textToSend) {
@@ -126,7 +126,7 @@ function FlashcardGenerator() {
                 console.error("Failed to parse AI output:", cleanOutput, parseErr);
                 setStatus("Error: Could not parse AI output. Check console for details.");
             }
-        } 
+        }
         catch (err) {
             console.error("Unexpected error:", err);
             setStatus(`Unexpected error: ${err.message}`);
@@ -144,42 +144,65 @@ function FlashcardGenerator() {
     // Keep per-card answer state
     const handleAnswerChange = (value) => {
         setUserAnswers((prev) => {
-        const copy = [...prev];
-        copy[currentFlashcardIndex] = value;
-        return copy;
+            const copy = [...prev];
+            copy[currentFlashcardIndex] = value;
+            return copy;
         });
     };
 
     const handleDoneConfirmYes = async () => {
-    setStatus("Saving deck...");
-    try {
-        // ----- PLACEHOLDER: persist to DB here -----
-        // At this step we DO NOT write to Firestore. Replace this block with real DB code.
-        // Example (pseudo):
-        // const deckDocRef = await addDoc(collection(db, "deck"), { ownerId: currentUser.uid, title, ... });
-        // then add each savedFlashcards item with deckID = deckDocRef.id
-        console.log("Simulated deck save. Deck contents:", savedFlashcards);
-        await new Promise((res) => setTimeout(res, 400));
+        setStatus("Saving deck...");
+        try {
+            //First we save the deck 
+            const deckData = {
+                ownerId: currentUser.uid,
+                title: deckTitle.trim() || "Untitled Deck",
+                description: deckDescription,
+                createdAt: serverTimestamp(), 
+                isPublic: false, 
+                category: "", 
+                collaborators: [], 
+                //we can add image stuff here when decided
+               
+            };
+            const deckDocRef = await addDoc(collection(db, "deck"), deckData);
+            const newDeckId = deckDocRef.id;
+            //Then we save the flashcards
+            if (savedFlashcards.length > 0) {
+                const flashcardPromises = savedFlashcards.map((card) => {
+                    const flashcardData = {
+                        deckId: newDeckId,
+                        ownerId: currentUser.uid,
+                        front: card.front, 
+                        back: card.back, 
+                        createdAt: serverTimestamp(),
+                        isPublic: false, 
+                        category: deckData.category, 
+                        //I will pul the stuff here for the image on the cards
+                    };
+                    return addDoc(collection(db, "flashcard"), flashcardData);
+                });
+                await Promise.all(flashcardPromises); // Execute all saves concurrently
+            }
+            setStatus("Deck saved successfully!");
 
-        setStatus("Deck saved successfully!");
-
-        // Optionally delay resetting UI so user sees the success message briefly
-        setTimeout(() => {
-            // Reset/refresh generator so user can create more flashcards
-            setFlashcardPairs([]);
-            setUserAnswers([]);
-            setSavedFlashcards([]);
-            setSavedIndices(new Set());
-            setCurrentFlashcardIndex(0);
-            setFlashcardsGenerated(false);
-            setTextInput("");
-            setFile(null);
-            setAiPrompt("");
-            setDeckTitle("");
-            setDeckDescription("");
-            setStatus("");
-            setShowDeckPrompt(false);
-        }, 800);
+            // Optionally delay resetting UI so user sees the success message briefly
+            setTimeout(() => {
+                // Reset/refresh generator so user can create more flashcards
+                setFlashcardPairs([]);
+                setUserAnswers([]);
+                setSavedFlashcards([]);
+                setSavedIndices(new Set());
+                setCurrentFlashcardIndex(0);
+                setFlashcardsGenerated(false);
+                setTextInput("");
+                setFile(null);
+                setAiPrompt("");
+                setDeckTitle("");
+                setDeckDescription("");
+                setStatus("");
+                setShowDeckPrompt(false);
+            }, 800);
         } catch (err) {
             console.error("Error saving deck:", err);
             setStatus("Error saving deck. Check console.");
@@ -214,15 +237,15 @@ function FlashcardGenerator() {
     // Render current flashcard
     const currentFlashcard =
         flashcardPairs.length > 0 && currentFlashcardIndex < flashcardPairs.length
-        ? flashcardPairs[currentFlashcardIndex]
-        : null;
+            ? flashcardPairs[currentFlashcardIndex]
+            : null;
 
     if (!currentUser) {
         return (
-        <div className="flashcard-generator">
-            <h2>You must be signed in to use the Flashcard Generator</h2>
-            <button onClick={() => navigate("/login")}>Go to Login</button>
-        </div>
+            <div className="flashcard-generator">
+                <h2>You must be signed in to use the Flashcard Generator</h2>
+                <button onClick={() => navigate("/login")}>Go to Login</button>
+            </div>
         );
     }
 
@@ -274,148 +297,148 @@ function FlashcardGenerator() {
 
                 {/* Flashcard viewer */}
                 {!showDeckPrompt && currentFlashcard && (
-                <div className="flashcard-viewer">
-                    {/* Cancel button (top-right) */}
-                    <button className="cancel-btn" type="button" onClick={handleCancelClick}>
-                    Cancel
-                    </button>
-
-                    <div className="viewer-inner">
-                    <div className="viewer-content">
-                        <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
-                        <p><strong>Q:</strong> {currentFlashcard[0]}</p>
-                        <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
-                        <textarea
-                        value={userAnswers[currentFlashcardIndex] || ""}
-                        onChange={(e) => handleAnswerChange(e.target.value)}
-                        placeholder="Your Answer..."
-                        />
-                        <div className="flashcard-actions">
-                            <div className="left-actions">
-                                <button type="button" onClick={handlePrev}>
-                                &lt; Prev
-                                </button>
-                                <button type="button" onClick={handleNext}>
-                                Next &gt;
-                                </button>
-                            </div>
-
-                            <div className="right-actions">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                const [question, relevant] = currentFlashcard;
-                                const answer = userAnswers[currentFlashcardIndex] || "";
-
-                                setSavedFlashcards((prev) => {
-                                    const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
-                                    if (existingIdx !== -1) {
-                                    // Update existing saved card
-                                    const copy = [...prev];
-                                    copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer };
-                                    return copy;
-                                    } else {
-                                    // Add new saved card
-                                    return [...prev, { index: currentFlashcardIndex, front: question, back: answer }];
-                                    }
-                                });
-
-                                // Ensure index is marked as saved
-                                setSavedIndices((prev) => new Set(prev).add(currentFlashcardIndex));
-                                }}
-                            >
-                                {savedIndices.has(currentFlashcardIndex) ? "Update" : "Save"}
-                            </button>
-
-                            {savedIndices.has(currentFlashcardIndex) && (
-                                <button
-                                type="button"
-                                onClick={() => {
-                                    setSavedFlashcards((prev) =>
-                                    prev.filter((card) => card.index !== currentFlashcardIndex)
-                                    );
-                                    setSavedIndices((prev) => {
-                                    const newSet = new Set(prev);
-                                    newSet.delete(currentFlashcardIndex);
-                                    return newSet;
-                                    });
-                                }}
-                                >
-                                Remove
-                                </button>
-                            )}
-                            </div>
-                        </div>
-
-                        <div className="done-row">
-                        <button
-                            type="button"
-                            className="done-btn"
-                            onClick={() => setShowDeckPrompt(true)}
-                        >
-                            Done
+                    <div className="flashcard-viewer">
+                        {/* Cancel button (top-right) */}
+                        <button className="cancel-btn" type="button" onClick={handleCancelClick}>
+                            Cancel
                         </button>
-                        </div>
 
-                        {savedIndices.has(currentFlashcardIndex) && (
-                        <div className="saved-indicator">Saved ✓</div>
-                        )}
+                        <div className="viewer-inner">
+                            <div className="viewer-content">
+                                <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
+                                <p><strong>Q:</strong> {currentFlashcard[0]}</p>
+                                <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
+                                <textarea
+                                    value={userAnswers[currentFlashcardIndex] || ""}
+                                    onChange={(e) => handleAnswerChange(e.target.value)}
+                                    placeholder="Your Answer..."
+                                />
+                                <div className="flashcard-actions">
+                                    <div className="left-actions">
+                                        <button type="button" onClick={handlePrev}>
+                                            &lt; Prev
+                                        </button>
+                                        <button type="button" onClick={handleNext}>
+                                            Next &gt;
+                                        </button>
+                                    </div>
+
+                                    <div className="right-actions">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const [question, relevant] = currentFlashcard;
+                                                const answer = userAnswers[currentFlashcardIndex] || "";
+
+                                                setSavedFlashcards((prev) => {
+                                                    const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
+                                                    if (existingIdx !== -1) {
+                                                        // Update existing saved card
+                                                        const copy = [...prev];
+                                                        copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer };
+                                                        return copy;
+                                                    } else {
+                                                        // Add new saved card
+                                                        return [...prev, { index: currentFlashcardIndex, front: question, back: answer }];
+                                                    }
+                                                });
+
+                                                // Ensure index is marked as saved
+                                                setSavedIndices((prev) => new Set(prev).add(currentFlashcardIndex));
+                                            }}
+                                        >
+                                            {savedIndices.has(currentFlashcardIndex) ? "Update" : "Save"}
+                                        </button>
+
+                                        {savedIndices.has(currentFlashcardIndex) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSavedFlashcards((prev) =>
+                                                        prev.filter((card) => card.index !== currentFlashcardIndex)
+                                                    );
+                                                    setSavedIndices((prev) => {
+                                                        const newSet = new Set(prev);
+                                                        newSet.delete(currentFlashcardIndex);
+                                                        return newSet;
+                                                    });
+                                                }}
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="done-row">
+                                    <button
+                                        type="button"
+                                        className="done-btn"
+                                        onClick={() => setShowDeckPrompt(true)}
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+
+                                {savedIndices.has(currentFlashcardIndex) && (
+                                    <div className="saved-indicator">Saved ✓</div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    </div>
-                </div>
                 )}
 
                 {/* Deck title + description prompt */}
                 {showDeckPrompt && (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                    <div className="modal">
-                    <h3>Finalize Deck</h3>
-                    <label>
-                        Deck Title:
-                        <input
-                        type="text"
-                        value={deckTitle}
-                        onChange={(e) => setDeckTitle(e.target.value)}
-                        placeholder="Enter a title for your deck"
-                        />
-                    </label>
-                    <label>
-                        Description:
-                        <textarea
-                        value={deckDescription}
-                        onChange={(e) => setDeckDescription(e.target.value)}
-                        placeholder="Enter a short description (optional)"
-                        />
-                    </label>
-                    <div className="modal-actions">
-                        <button
-                        onClick={() => {
-                            if (!deckTitle.trim()) {
-                            alert("Please enter a deck title first.");
-                            return;
-                            }
-                            handleDoneConfirmYes();
-                        }}
-                        >
-                        Finish
-                        </button>
-                        <button onClick={() => setShowDeckPrompt(false)}>Cancel</button>
+                    <div className="modal-overlay" role="dialog" aria-modal="true">
+                        <div className="modal">
+                            <h3>Finalize Deck</h3>
+                            <label>
+                                Deck Title:
+                                <input
+                                    type="text"
+                                    value={deckTitle}
+                                    onChange={(e) => setDeckTitle(e.target.value)}
+                                    placeholder="Enter a title for your deck"
+                                />
+                            </label>
+                            <label>
+                                Description:
+                                <textarea
+                                    value={deckDescription}
+                                    onChange={(e) => setDeckDescription(e.target.value)}
+                                    placeholder="Enter a short description (optional)"
+                                />
+                            </label>
+                            <div className="modal-actions">
+                                <button
+                                    onClick={() => {
+                                        if (!deckTitle.trim()) {
+                                            alert("Please enter a deck title first.");
+                                            return;
+                                        }
+                                        handleDoneConfirmYes();
+                                    }}
+                                >
+                                    Finish
+                                </button>
+                                <button onClick={() => setShowDeckPrompt(false)}>Cancel</button>
+                            </div>
+                        </div>
                     </div>
-                    </div>
-                </div>
                 )}
             </form>
 
             {/* Cancel confirmation modal */}
             {showCancelConfirm && (
                 <div className="modal-overlay" role="dialog" aria-modal="true">
-                <div className="modal">
-                    <p>Are you sure? All flashcards will be lost.</p>
-                    <div className="modal-actions">
-                    <button onClick={handleCancelConfirmYes}>Yes</button>
-                    <button onClick={handleCancelConfirmNo}>Never mind</button>
+                    <div className="modal">
+                        <p>Are you sure? All flashcards will be lost.</p>
+                        <div className="modal-actions">
+                            <button onClick={handleCancelConfirmYes}>Yes</button>
+                            <button onClick={handleCancelConfirmNo}>Never mind</button>
+                        </div>
                     </div>
-                </div>
                 </div>
             )}
             <div ref={bottomRef}></div>
