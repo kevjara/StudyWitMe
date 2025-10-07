@@ -1,0 +1,317 @@
+:root{
+    --accent:#1b3c4f;
+    --card-bg:#ffffff;
+    --muted:#6b7280;
+    --surface:#f4f6f8;
+    --accent-2:#d3d2d8;
+    --primary:#416d8e;
+}
+
+.back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 8px 14px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: background-color 0.2s;
+    z-index: 5;
+}
+
+.back-btn:hover {
+    background-color: rgba(255, 255, 255, 1);
+}
+
+.profile-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 80px 20px 40px 20px; /* top padding to account for back button */
+    min-height: 100vh;
+    position: relative;
+}
+
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 900px;
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+}
+
+/* top row: icon + meta + actions */
+.profile-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+/* left column: icon + name/email */
+.profile-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* rounded square icon */
+.profile-icon-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.profile-icon {
+    width: 180px; /* bigger */
+    height: 180px; /* bigger */
+    border-radius: 16px;
+    background-color: #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.profile-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 16px;
+}
+
+/* placeholder inside icon when no image */
+.profile-icon-placeholder {
+    width: 100%;
+    height: 100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: #9aa2a8;
+    font-size: 14px;
+}
+
+/* + button on icon */
+.icon-upload-btn {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.06);
+    cursor: pointer;
+    font-weight: 700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+/* meta area (name + email) */
+.profile-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.display-row {
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.profile-meta .display-name {
+    font-size: 24px;
+    font-weight: 400;
+}
+
+.change-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 6px 8px;
+}
+
+.profile-meta .email {
+    font-size: 20px;
+}
+
+/* right-side actions */
+.profile-actions {
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+}
+
+/* When editing: stack buttons vertically */
+.profile-actions.editing {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn.primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+}
+
+.btn.cancel {
+    background: #f3f4f6;
+    color: #333;
+}
+
+.btn.danger {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+}
+
+.info-section {
+    display: flex;
+    gap: 40px;
+    margin-top: 30px;
+    border-top: 1px solid #eef2f5;
+    padding-top: 16px;
+}
+
+.account-section, .flashcard-section {
+    flex: 1; /* take equal space */
+}
+
+.flashcard-list .flashcard-row {
+    margin-bottom: 8px;
+    color: #374151;
+}
+
+.account-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: var(--accent);
+}
+
+.account-list .account-row {
+    display:flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #374151;
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+    color: #111827;
+}
+
+/* delete row */
+.delete-row {
+    margin-top: 18px;
+    display:flex;
+    justify-content:center;
+}
+
+/* hidden file inputs */
+.hidden-file {
+    display: none;
+}
+
+/* responsive */
+@media (max-width: 720px) {
+    .profile-top { flex-direction: column; align-items: center; gap: 12px; }
+    .profile-left { flex-direction: column; align-items: center; }
+    .profile-meta { align-items: center; text-align: center; }
+    .profile-actions { width: 100%; justify-content: center; margin-top: 10px; }
+    .profile-card { padding: 16px; margin-top: 0; }
+    .back-btn { top: 12px; left: 12px; padding: 6px 12px; font-size: 14px; }
+}
+
+.modal-overlay {
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.5);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index: 100;
+}
+
+.modal.delete-modal {
+    background:#fff;
+    padding: 24px 32px;
+    border-radius:16px;
+    max-width: 400px;
+    width: 90%;
+    text-align:center;
+}
+
+.timer-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin: 16px 0;
+}
+
+.status {
+    margin-left: 10px;
+    font-weight: 600;
+    color: #1b3c4f;
+}
+
+.modal-actions {
+    display:flex;
+    justify-content:space-around;
+    margin-top:16px;
+}
+
+.delete-row-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.delete-step1 {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.delete-row-top {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timer-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.delete-status-message {
+    text-align: center;
+    font-weight: bold;
+    color: red;
+}
