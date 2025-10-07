@@ -23,6 +23,7 @@ function FlashcardGenerator() {
     const [savedIndices, setSavedIndices] = useState(new Set());
     const [userAnswers, setUserAnswers] = useState([]); // per-card answers
     const [flashcardsGenerated, setFlashcardsGenerated] = useState(false);
+    const fileInputRef = useRef(null);
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -179,6 +180,9 @@ function FlashcardGenerator() {
             setDeckDescription("");
             setStatus("");
             setShowDeckPrompt(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         }, 800);
         } catch (err) {
             console.error("Error saving deck:", err);
@@ -193,6 +197,9 @@ function FlashcardGenerator() {
 
     const handleCancelConfirmYes = () => {
         setShowCancelConfirm(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
         // Clear state, do not save anything
         setFlashcardPairs([]);
         setUserAnswers([]);
@@ -249,7 +256,12 @@ function FlashcardGenerator() {
                 {/* File Upload */}
                 <label>
                     Upload File (PDF):
-                    <input type="file" accept=".pdf" onChange={handleFileChange} />
+                        <input
+                            type="file"
+                            accept=".pdf"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                        />
                 </label>
 
                 {/* AI Prompt */}
