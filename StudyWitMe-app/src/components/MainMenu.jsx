@@ -41,7 +41,7 @@ function MainMenu() {
                         {showDropdown && (
                             <div className="dropdown-menu">
                                 <button onClick={() => navigate("/flashcards/create")}>Create</button>
-                                <button onClick={() => navigate("/flashcards/view")}>View</button>
+                                <button onClick={() => navigate("/flashcards/study")}>Study</button>
                                 <button disabled>Manage (Coming Soon)</button>
                                 <button disabled>Share (Coming Soon)</button>
                             </div>
