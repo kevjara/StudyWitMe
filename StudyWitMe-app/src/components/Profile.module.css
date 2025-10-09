@@ -7,7 +7,7 @@
     --primary:#416d8e;
 }
 
-.back-btn {
+.backBtn {
     position: absolute;
     top: 20px;
     left: 20px;
@@ -22,11 +22,11 @@
     z-index: 5;
 }
 
-.back-btn:hover {
+.backBtn:hover {
     background-color: rgba(255, 255, 255, 1);
 }
 
-.profile-page {
+.profilePage {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -35,7 +35,7 @@
     position: relative;
 }
 
-.profile-card {
+.profileCard {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -48,7 +48,7 @@
 }
 
 /* top row: icon + meta + actions */
-.profile-top {
+.profileTop {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -56,19 +56,19 @@
 }
 
 /* left column: icon + name/email */
-.profile-left {
+.profileLeft {
     display: flex;
     align-items: center;
     gap: 20px;
 }
 
 /* rounded square icon */
-.profile-icon-wrap {
+.profileIconWrap {
     position: relative;
     flex-shrink: 0;
 }
 
-.profile-icon {
+.profileIcon {
     width: 180px; /* bigger */
     height: 180px; /* bigger */
     border-radius: 16px;
@@ -79,7 +79,7 @@
     overflow: hidden;
 }
 
-.profile-icon img {
+.profileIcon img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -87,7 +87,7 @@
 }
 
 /* placeholder inside icon when no image */
-.profile-icon-placeholder {
+.profileIconPlaceholder {
     width: 100%;
     height: 100%;
     display:flex;
@@ -98,7 +98,7 @@
 }
 
 /* + button on icon */
-.icon-upload-btn {
+.iconUploadBtn {
     position: absolute;
     right: 8px;
     bottom: 8px;
@@ -115,24 +115,24 @@
 }
 
 /* meta area (name + email) */
-.profile-meta {
+.profileMeta {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.display-row {
+.displayRow {
     display:flex;
     align-items:center;
     gap:10px;
 }
 
-.profile-meta .display-name {
+.profileMeta .display-name {
     font-size: 24px;
     font-weight: 400;
 }
 
-.change-btn {
+.changeBtn {
     background: transparent;
     border: none;
     color: var(--primary);
@@ -141,19 +141,19 @@
     padding: 6px 8px;
 }
 
-.profile-meta .email {
+.profileMeta .email {
     font-size: 20px;
 }
 
 /* right-side actions */
-.profile-actions {
+.profileActions {
     display:flex;
     gap:10px;
     align-items:flex-start;
 }
 
 /* When editing: stack buttons vertically */
-.profile-actions.editing {
+.profileActions.editing {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
@@ -169,25 +169,30 @@
     font-size: 14px;
 }
 
-.btn.primary {
+.btnPrimary {
     background: var(--primary);
     color: white;
     border: none;
 }
 
-.btn.cancel {
-    background: #f3f4f6;
+.btnCancel {
+    background: #ccc;
     color: #333;
+    border: 1px solid #ccc;
 }
 
-.btn.danger {
+.btnCancel:hover {
+    background: #f3f4f6;
+}
+
+.btnDanger {
     background: #ef4444;
     color: white;
     border: none;
     padding: 10px 14px;
 }
 
-.info-section {
+.infoSection {
     display: flex;
     gap: 40px;
     margin-top: 30px;
@@ -195,22 +200,22 @@
     padding-top: 16px;
 }
 
-.account-section, .flashcard-section {
+.accountSection, .flashcardSection {
     flex: 1; /* take equal space */
 }
 
-.flashcard-list .flashcard-row {
+.flashcardList .flashcardRow {
     margin-bottom: 8px;
     color: #374151;
 }
 
-.account-section h3 {
+.accountSection h3 {
     margin: 0 0 12px 0;
     font-size: 16px;
     color: var(--accent);
 }
 
-.account-list .account-row {
+.accountList .accountRow {
     display:flex;
     gap: 8px;
     margin-bottom: 8px;
@@ -223,14 +228,14 @@
 }
 
 /* delete row */
-.delete-row {
+.deleteRow {
     margin-top: 18px;
     display:flex;
     justify-content:center;
 }
 
 /* hidden file inputs */
-.hidden-file {
+.hiddenFile {
     display: none;
 }
 
@@ -244,7 +249,7 @@
     .back-btn { top: 12px; left: 12px; padding: 6px 12px; font-size: 14px; }
 }
 
-.modal-overlay {
+.modalOverlay {
     position: fixed;
     top:0; left:0;
     width:100%; height:100%;
@@ -255,7 +260,7 @@
     z-index: 100;
 }
 
-.modal.delete-modal {
+.modalDeleteModal {
     background:#fff;
     padding: 24px 32px;
     border-radius:16px;
@@ -264,7 +269,7 @@
     text-align:center;
 }
 
-.timer-row {
+.timerRow {
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -277,40 +282,40 @@
     color: #1b3c4f;
 }
 
-.modal-actions {
+.modalActions {
     display:flex;
     justify-content:space-around;
     margin-top:16px;
 }
 
-.delete-row-top {
+.deleteRowTop {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 12px;
 }
 
-.delete-step1 {
+.deleteStep1 {
     display: flex;
     flex-direction: column;
     gap: 15px;
     align-items: center;
 }
 
-.delete-row-top {
+.deleteRowTop {
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.timer-row {
+.timerRow {
     display: flex;
     gap: 10px;
     align-items: center;
 }
 
-.delete-status-message {
+.deleteStatusMessage {
     text-align: center;
     font-weight: bold;
     color: red;

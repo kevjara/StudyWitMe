@@ -7,7 +7,7 @@ import { signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import DefaultProfileIcon from "../assets/Default_Profile_Icon.png";
 import { useRef } from 'react';
-import "./Profile.css";
+import styles from "./Profile.module.css";
 
 
 function Profile() {
@@ -24,6 +24,7 @@ function Profile() {
     const [showFinalYes, setShowFinalYes] = useState(false);
     const [deleteIntervalId, setDeleteIntervalId] = useState(null);
     const deleteIntervalRef = useRef(null);
+    const showYesTimeoutRef = useRef(null);
 
     // For potential file uploads later
     const [profileImage, setProfileImage] = useState(null);
@@ -57,7 +58,7 @@ function Profile() {
 
     if (!currentUser) {
         return (
-            <div className="profile-page empty">
+            <div className={styles.profilePageEmpty}>
                 <h2>Oops, you're not signed in</h2>
                 <p>Please sign in to view your profile</p>
             </div>
@@ -65,14 +66,14 @@ function Profile() {
     }
     if (isLoading) {
         return (
-            <div className="profile-page empty">
+            <div className={styles.profilePageEmpty}>
                 <h2>Profile is loading...</h2>
             </div>
         )
     }
     if (!profile) {
         return (
-            <div className="profile-page empty">
+            <div className={styles.profilePageEmpty}>
                 <h2>Could not find profile :/</h2>
                 <p>Trying to find profile: {currentUser.uid}/</p>
             </div>
@@ -98,24 +99,37 @@ function Profile() {
     };
 
     const startDeleteCountdown = () => {
-    setDeleteStep(1);
-    setDeleteTimer(20);
-    setDeleteStatus("Deleting Account");
+        setDeleteStep(1);
+        setDeleteTimer(20);
+        setDeleteStatus("Deleting Account");
 
-    const interval = setInterval(() => {
-        setDeleteTimer(prev => {
-        if (prev <= 1) {
-            clearInterval(interval);
-            showFinalDeleteStatus();
-            return 0;
+        // clear any previous interval/timeout before starting
+        if (deleteIntervalRef.current) {
+            clearInterval(deleteIntervalRef.current);
+            deleteIntervalRef.current = null;
         }
-        return prev - 1;
-        });
-    }, 1000);
+        if (showYesTimeoutRef.current) {
+            clearTimeout(showYesTimeoutRef.current);
+            showYesTimeoutRef.current = null;
+        }
 
-    deleteIntervalRef.current = interval; // store in ref
+        const interval = setInterval(() => {
+            setDeleteTimer(prev => {
+            if (prev <= 1) {
+                clearInterval(interval);
+                showFinalDeleteStatus();
+                return 0;
+            }
+            return prev - 1;
+            });
+        }, 1000);
 
-    setTimeout(() => setShowFinalYes(true), 5000);
+        deleteIntervalRef.current = interval; // store in ref
+
+        // store timeout for "Yes, I'm Sure"
+        showYesTimeoutRef.current = setTimeout(() => {
+            setShowFinalYes(true);
+        }, 5000);
     };
 
     // unified final status handler
@@ -144,20 +158,20 @@ function Profile() {
     };
 
     return (
-        <div className="profile-page">
+        <div className={styles.profilePage}>
             <button
-                className="back-btn"
+                className={styles.backBtn}
                 onClick={() => navigate("/main")}
             >
                 ← Back to Main Menu
             </button>
 
             {/* Main card */}
-            <div className="profile-card">
-                <div className="profile-top">
-                    <div className="profile-left">
-                        <div className="profile-icon-wrap">
-                            <div className="profile-icon">
+            <div className={styles.profileCard}>
+                <div className={styles.profileTop}>
+                    <div className={styles.profileLeft}>
+                        <div className={styles.profileIconWrap}>
+                            <div className={styles.profileIcon}>
                                 <img
                                     src={profileImage || DefaultProfileIcon}
                                     alt="Profile Icon"
@@ -165,7 +179,7 @@ function Profile() {
                                 {isEditing && (
                                     <>
                                         <button
-                                        className="icon-upload-btn"
+                                        className={styles.iconUploadBtn}
                                         onClick={() => document.getElementById("iconUpload").click()}
                                         aria-label="Upload profile icon"
                                         type="button"
@@ -176,7 +190,7 @@ function Profile() {
                                         id="iconUpload"
                                         type="file"
                                         accept="image/*"
-                                        className="hidden-file"
+                                        className={styles.hiddenFile}
                                         onChange={onIconSelect}
                                         />
                                     </>
@@ -184,49 +198,49 @@ function Profile() {
                             </div>
                         </div>
 
-                        <div className="profile-meta">
-                            <div className="display-row">
-                                <h2 className="display-name">Display Name: {profile.displayName || "No display name"}</h2>
-                                {isEditing && <button className="change-btn">Change</button>}
+                        <div className={styles.profileMeta}>
+                            <div className={styles.displayRow}>
+                                <h2 className={styles.displayName}>Display Name: {profile.displayName || "No display name"}</h2>
+                                {isEditing && <button className={styles.changeBtn}>Change</button>}
                             </div>
-                            <p className="email">Email: {profile.email}</p>
+                            <p className={styles.email}>Email: {profile.email}</p>
                         </div>
                     </div>
 
-                    <div className={`profile-actions ${isEditing ? "editing" : ""}`}>
+                    <div className={`${styles.profileActions} ${isEditing ? styles.editing : ""}`}>
                         {isEditing ? (
-                            <div className="edit-buttons">
-                                <button className="btn primary" onClick={finishEdit}>Finish</button>
-                                <button className="btn cancel" onClick={cancelEdit}>Cancel</button>
+                            <div className={styles.editButtons}>
+                                <button className={styles.btnPrimary} onClick={finishEdit}>Finish</button>
+                                <button className={styles.btnCancel} onClick={cancelEdit}>Cancel</button>
                             </div>
                             ) : (
-                            <button className="btn primary" onClick={startEdit}>Edit Profile</button>
+                            <button className={styles.btnPrimary} onClick={startEdit}>Edit Profile</button>
                         )}
                     </div>
                 </div>
 
-                <div className="info-section">
-                    <div className="account-section">
+                <div className={styles.infoSection}>
+                    <div className={styles.accountSection}>
                         <h3>Account Information</h3>
-                        <div className="account-list">
-                            <div className="account-row"><strong>User ID:</strong> <span className="mono">{profile.id}</span></div>
+                        <div className={styles.accountList}>
+                            <div className={styles.accountRow}><strong>User ID:</strong> <span className={styles.mono}>{profile.id}</span></div>
                             {profile.createdAt && (
-                                <div className="account-row"><strong>Member Since:</strong> <span>{profile.createdAt.toDate().toLocaleDateString()}</span></div>
+                                <div className={styles.accountRow}><strong>Member Since:</strong> <span>{profile.createdAt.toDate().toLocaleDateString()}</span></div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flashcard-section">
+                    <div className={styles.flashcardSection}>
                         <h3>Flashcard Information</h3>
-                        <div className="flashcard-list">
-                            <div className="flashcard-row"><strong>Decks:</strong> 0</div>
-                            <div className="flashcard-row"><strong>Flashcards:</strong> 0</div>
+                        <div className={styles.flashcardList}>
+                            <div className={styles.flashcardRow}><strong>Decks:</strong> 0</div>
+                            <div className={styles.flashcardRow}><strong>Flashcards:</strong> 0</div>
                         </div>
                     </div>
                 </div>
 
-                <div className="delete-row">
-                    <button className="btn danger" onClick={() => setShowDeleteModal(true)}>
+                <div className={styles.deleteRow}>
+                    <button className={styles.btnDanger} onClick={() => setShowDeleteModal(true)}>
                         Delete Account 
                     </button>
                 </div>
@@ -234,11 +248,11 @@ function Profile() {
             
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                    <div className="modal delete-modal">
+                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.modalDeleteModal}>
                     {/* Final deleted status only */}
                     {deleteStatus === "Account Deleted, thank you for StudyingWitMe" ? (
-                        <div className="delete-final-status">
+                        <div className={styles.deleteFinalStatus}>
                         <span>{deleteStatus}</span>
                         </div>
 
@@ -247,11 +261,11 @@ function Profile() {
                         <>
                         <h3>Are you sure you want to delete your account?</h3>
                         <p>All Flashcards will be discarded upon deletion</p>
-                        <div className="modal-actions">
-                            <button className="btn danger" onClick={startDeleteCountdown}>
+                        <div className={styles.modalActions}>
+                            <button className={styles.btnDanger} onClick={startDeleteCountdown}>
                             Yes
                             </button>
-                            <button className="btn cancel" onClick={() => setShowDeleteModal(false)}>
+                            <button className={styles.btnCancel} onClick={() => setShowDeleteModal(false)}>
                             No
                             </button>
                         </div>
@@ -259,13 +273,24 @@ function Profile() {
 
                     // Countdown + Yes button + status
                     ) : (
-                        <div className="delete-step1">
+                        <div className={styles.deleteStep1}>
                         {/* Top row: Are you sure? -> Cancel */}
-                        <div className="delete-row-top">
+                        <div className={styles.deleteRowTop}>
                             <span>Are you sure? -{'>'}</span>
                             <button
-                            className="btn cancel"
+                            className={styles.btnCancel}
                             onClick={() => {
+                                // clear countdown interval
+                                if (deleteIntervalRef.current) {
+                                    clearInterval(deleteIntervalRef.current);
+                                    deleteIntervalRef.current = null;
+                                }
+                                // clear "Yes" timeout
+                                if (showYesTimeoutRef.current) {
+                                    clearTimeout(showYesTimeoutRef.current);
+                                    showYesTimeoutRef.current = null;
+                                }
+
                                 if (deleteIntervalId) clearInterval(deleteIntervalId);
                                 setDeleteStep(0);
                                 setShowDeleteModal(false);
@@ -274,15 +299,15 @@ function Profile() {
                                 setShowFinalYes(false);
                             }}
                             >
-                            Cancel
+                            On second thought...
                             </button>
                         </div>
 
                         {/* Middle row: timer + Yes button */}
-                        <div className="timer-row">
+                        <div className={styles.timerRow}>
                         <span>{deleteTimer}s</span>
                         {showFinalYes && (
-                            <button className="btn danger" onClick={showFinalDeleteStatus}>
+                            <button className={styles.btnDanger} onClick={showFinalDeleteStatus}>
                             Yes, I'm Sure
                             </button>
                         )}
@@ -290,7 +315,7 @@ function Profile() {
 
                         {/* Bottom row: status message */}
                         {deleteStatus && (
-                            <div className="delete-status-message">
+                            <div className={styles.deleteStatusMessage}>
                                 <span>{deleteStatus}</span>
                             </div>
                         )}

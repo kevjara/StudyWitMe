@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useRef, useEffect } from "react";
 // import { db } from "../services/firebase";
 // import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import "./FlashcardGenerator.css";
+import styles from "./FlashcardGenerator.module.css";
 
 function FlashcardGenerator() {
     const navigate = useNavigate();
@@ -226,7 +226,7 @@ function FlashcardGenerator() {
 
     if (!currentUser) {
         return (
-        <div className="flashcard-generator">
+        <div className={styles.flashcardGenerator}>
             <h2>You must be signed in to use the Flashcard Generator</h2>
             <button onClick={() => navigate("/login")}>Go to Login</button>
         </div>
@@ -234,15 +234,15 @@ function FlashcardGenerator() {
     }
 
     return (
-        <div className="flashcard-generator">
+        <div className={styles.flashcardGenerator}>
             {/* Back Button */}
-            <button className="back-btn" onClick={() => navigate("/main")}>
+            <button className={styles.backBtn} onClick={() => navigate("/main")}>
                 ← Back to Main Menu
             </button>
 
             <h2>Flashcard Generator</h2>
 
-            <form onSubmit={handleSubmit} className="generator-form">
+            <form onSubmit={handleSubmit} className={styles.generatorForm}>
                 {/* Text Input */}
                 <label>
                     Enter Text Directly:
@@ -276,24 +276,24 @@ function FlashcardGenerator() {
 
                 <button
                     type="submit"
-                    className="generate-btn"
+                    className={styles.generateBtn}
                     disabled={flashcardsGenerated}
                 >
                     {flashcardsGenerated ? "Flashcards Generated" : "Generate Flashcards"}
                 </button>
 
-                <p className="status">{status}</p>
+                <p className={styles.status}>{status}</p>
 
                 {/* Flashcard viewer */}
                 {!showDeckPrompt && currentFlashcard && (
-                <div className="flashcard-viewer">
+                <div className={styles.flashcardViewer}>
                     {/* Cancel button (top-right) */}
-                    <button className="cancel-btn" type="button" onClick={handleCancelClick}>
+                    <button className={styles.cancelBtn} type="button" onClick={handleCancelClick}>
                     Cancel
                     </button>
 
-                    <div className="viewer-inner">
-                    <div className="viewer-content">
+                    <div className={styles.viewerInner}>
+                    <div className={styles.viewerContent}>
                         <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
                         <p><strong>Q:</strong> {currentFlashcard[0]}</p>
                         <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
@@ -302,8 +302,8 @@ function FlashcardGenerator() {
                         onChange={(e) => handleAnswerChange(e.target.value)}
                         placeholder="Your Answer..."
                         />
-                        <div className="flashcard-actions">
-                            <div className="left-actions">
+                        <div className={styles.flashcardActions}>
+                            <div className={styles.leftActions}>
                                 <button type="button" onClick={handlePrev}>
                                 &lt; Prev
                                 </button>
@@ -312,7 +312,7 @@ function FlashcardGenerator() {
                                 </button>
                             </div>
 
-                            <div className="right-actions">
+                            <div className={styles.rightActions}>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -359,10 +359,10 @@ function FlashcardGenerator() {
                             </div>
                         </div>
 
-                        <div className="done-row">
+                        <div className={styles.doneRow}>
                         <button
                             type="button"
-                            className="done-btn"
+                            className={styles.doneBtn}
                             onClick={() => setShowDeckPrompt(true)}
                         >
                             Done
@@ -370,7 +370,7 @@ function FlashcardGenerator() {
                         </div>
 
                         {savedIndices.has(currentFlashcardIndex) && (
-                        <div className="saved-indicator">Saved ✓</div>
+                        <div className={styles.savedIndicator}>Saved ✓</div>
                         )}
                     </div>
                     </div>
@@ -379,8 +379,8 @@ function FlashcardGenerator() {
 
                 {/* Deck title + description prompt */}
                 {showDeckPrompt && (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                    <div className="modal">
+                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.modal}>
                     <h3>Finalize Deck</h3>
                     <label>
                         Deck Title:
@@ -399,7 +399,7 @@ function FlashcardGenerator() {
                         placeholder="Enter a short description (optional)"
                         />
                     </label>
-                    <div className="modal-actions">
+                    <div className={styles.modalActions}>
                         <button
                         onClick={() => {
                             if (!deckTitle.trim()) {
@@ -420,10 +420,10 @@ function FlashcardGenerator() {
 
             {/* Cancel confirmation modal */}
             {showCancelConfirm && (
-                <div className="modal-overlay" role="dialog" aria-modal="true">
-                <div className="modal">
+                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+                <div className={styles.modal}>
                     <p>Are you sure? All flashcards will be lost.</p>
-                    <div className="modal-actions">
+                    <div className={styles.modalActions}>
                     <button onClick={handleCancelConfirmYes}>Yes</button>
                     <button onClick={handleCancelConfirmNo}>Never mind</button>
                     </div>
