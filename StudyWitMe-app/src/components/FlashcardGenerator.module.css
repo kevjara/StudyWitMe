@@ -1,7 +1,7 @@
 .flashcardGenerator {
     max-width: 800px;
     margin: 40px auto;
-    padding: 30px;
+    padding: 60px 30px 30px;
     background: #d3d2d8;
     border-radius: 12px;
     box-shadow: 0 6px 16px rgba(0,0,0,0.2);

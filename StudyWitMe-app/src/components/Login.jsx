@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase"; // adjust path if needed
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { handleBack } from "../utils/navigation";
 import "./Login.css";
 
 export default function Login() {
@@ -49,7 +50,7 @@ export default function Login() {
     return (
         <div className="login-screen">
         <div className="login-box">
-            <button className="back-btn" onClick={() => navigate("/")}>
+            <button className="back-btn" onClick={() => handleBack(navigate, "/")}>
             ← Back
             </button>
 

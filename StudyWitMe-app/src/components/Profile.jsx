@@ -57,12 +57,32 @@ function Profile() {
     }, [currentUser]);
 
     if (!currentUser) {
-        return (
+            return (
             <div className={styles.profilePageEmpty}>
-                <h2>Oops, you're not signed in</h2>
-                <p>Please sign in to view your profile</p>
+                <div className={styles.guestCard}>
+                    <button 
+                        className={styles.backBtn}
+                        onClick={() => navigate("/main")}
+                    >
+                        ← Back
+                    </button>
+
+                    <h2>Oops, you're not signed in!</h2>
+                    <p>
+                        Please{" "}
+                        <span
+                            className={styles.loginLink}
+                            onClick={() => navigate("/login")}
+                            role="button"
+                            tabIndex="0"
+                        >
+                            sign in
+                        </span>{" "}
+                        to view your profile.
+                    </p>
+                </div>
             </div>
-        )
+        );
     }
     if (isLoading) {
         return (

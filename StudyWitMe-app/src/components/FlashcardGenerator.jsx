@@ -228,6 +228,14 @@ function FlashcardGenerator() {
         return (
         <div className={styles.flashcardGenerator}>
             <h2>You must be signed in to use the Flashcard Generator</h2>
+            {/* Back Button (fixed route to Main Menu) */}
+            <button
+                type="button"
+                className={styles.backBtn}
+                onClick={() => navigate("/main")}
+                >
+                ← Back to Main Menu
+            </button>
             <button onClick={() => navigate("/login")}>Go to Login</button>
         </div>
         );
