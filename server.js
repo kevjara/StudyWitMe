@@ -20,7 +20,6 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
   try {
     let extractedText = "";
 
-    // Get text from PDF if provided
     if (req.file) {
       const startPage = parseInt(req.body.startPage) || 1;
       const endPage = parseInt(req.body.endPage) || startPage;
@@ -33,7 +32,6 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
         const endIdx = Math.min(allPages.length, endPage);
         extractedText = allPages.slice(startIdx, endIdx).join("\n").trim();
       } else {
-        // Fallback to pdfjs for text extraction
         const pdfDataArray = new Uint8Array(req.file.buffer);
         const loadingTask = getDocument({ data: pdfDataArray });
         const pdfDoc = await loadingTask.promise;
@@ -46,7 +44,7 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
         for (let i = safeStart; i <= safeEnd; i++) {
           const page = await pdfDoc.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(" ");
+          const pageText = textContent.items.map((item) => item.str).join(" ");
           pagesText.push(pageText);
         }
         extractedText = pagesText.join("\n").trim();
@@ -63,7 +61,6 @@ app.post("/generate", upload.single("pdf"), async (req, res) => {
 
     const userInstructions = (req.body.instructions || "").trim();
 
-    // Same Gemini prompt as before
     const prompt = `
 You are a flashcard generator. Your goal is to create *high-quality study flashcards*
 based on the following text.
@@ -91,14 +88,15 @@ ${extractedText}
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
-
     const rawOutput = result.response.text().trim();
 
-    // Clean output
+
     let cleanedOutput = rawOutput
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .replace(/^\s*Here.*?:\s*/i, "")
+      .replace(/```json\s*/gi, "")   // remove starting ```json
+      .replace(/```/g, "")           // remove ending ```
+      .replace(/^[^{\[]*/, "")       // remove anything before JSON starts
+      .replace(/[^}\]]*$/, "")       // remove anything after JSON ends
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // remove control chars
       .trim();
 
     try {
@@ -107,20 +105,20 @@ ${extractedText}
         throw new Error("Response is not a JSON array.");
       }
       res.json({ output: jsonOutput });
-    } catch {
+    } catch (err) {
+      console.error("❌ Invalid JSON from Gemini:", rawOutput);
       res.status(500).json({
-        error: "Model returned invalid JSON. Please try again or shorten input.",
-        rawOutput,
-        cleanedAttempt: cleanedOutput,
+        error: "Model returned invalid JSON. Please try again or shorten your input/instructions.",
+        rawOutput: rawOutput.slice(0, 500), // show snippet for debugging
+        cleanedAttempt: cleanedOutput.slice(0, 500),
       });
     }
-
   } catch (err) {
+    console.error("❌ Server error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Start server
 app.listen(port, () => {
-  console.log(`✅ Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });

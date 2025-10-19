@@ -179,6 +179,13 @@ input[type="file"] {
     margin-top: 10px;
 }
 
+.loadingStatus {
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
 /* Flashcard viewer section */
 .flashcardViewer {
     margin-top: 25px;
@@ -242,6 +249,25 @@ input[type="file"] {
     gap: 10px;
 }
 
+/* Saved/Updated indicator (centered between action buttons) */
+.flashcardActions .savedIndicator {
+    flex: 1;
+    text-align: center;
+    color: #28a745 !important; /* force bright green */
+    font-weight: bold;
+    min-height: 1em; /* reserve space so layout doesn't shift */
+    line-height: 1.5em;
+    animation: fadeInOut 1.5s ease-in-out;
+}
+
+/* fade animation for smooth feedback */
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
 .flashcardActions button {
     background-color: #416d8e;
     color: white;
@@ -277,13 +303,6 @@ input[type="file"] {
     background-color: #218838;
 }
 
-/* Saved indicator */
-.savedIndicator {
-    margin-top: 10px;
-    color: #28a745;
-    font-weight: bold;
-    text-align: center;
-}
 
 /* Done message */
 .doneMessage {
@@ -398,4 +417,60 @@ input[type="file"] {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+.loadingScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+}
+
+.loadingDots {
+    display: flex;
+    gap: 6px;
+}
+
+.loadingDots span {
+    width: 12px;
+    height: 12px;
+    background-color: #555;
+    border-radius: 50%;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+.loadingDots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.loadingDots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.2); }
+}
+
+.loadingText {
+    margin-top: 10px;
+    font-weight: 500;
+    color: #555;
+}
+
+/* Transitional status screen */
+.statusScreen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    text-align: center;
+}
+
+.statusMessage {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1b3c4f;
+    animation: fadeInOut 2.5s ease-in-out;
 }
