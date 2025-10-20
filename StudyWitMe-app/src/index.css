@@ -1,0 +1,113 @@
+html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+/* Base font */
+:root {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove weird centering */
+body {
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: #edebe9;
+    color: #1b3c4f; /* default text color */
+}
+
+/* General heading style */
+h1, h2, h3 {
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Buttons (global fallback, can override in components) */
+button {
+    border-radius: 8px;
+    border: none;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+/* background squares & rectangles */
+.pattern::before,
+.pattern::after {
+    content: "";
+    position: absolute;
+    border-radius: 8px;
+    animation: float 8s ease-in-out infinite alternate;
+}
+
+/* Skinny rectangle styling */
+.shape.rectangle {
+    position: absolute;
+    background: #416D8E;
+    border-radius: 4px;
+    animation: float 8s infinite ease-in-out;
+}
+
+.shape.rectangle.bottom-left {
+    width: 150px;
+    height: 20px;
+    bottom: 40px;
+    left: 20px;
+}
+
+.shape.rectangle.bottom-right {
+    width: 200px;
+    height: 20px;
+    bottom: 100px;
+    right: 30px;
+}
+
+/* Circle styling */
+.shape.circle {
+    position: absolute;
+    border-radius: 50%;
+    animation: bubble 10s infinite ease-in-out;
+    opacity: 0.7;
+}
+
+/* Filled circle */
+    .shape.circle.filled {
+    background: #254457;
+}
+
+/* Hollow circle */
+.shape.circle.hollow {
+    border: 3px solid #254457;
+    background: transparent;
+}
+
+/* Bubble animation */
+@keyframes bubble {
+    0% {
+        transform: translateY(100vh) scale(0.5);
+        opacity: 0;
+    }
+    25% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-20vh) scale(1.2);
+        opacity: 0;
+    }
+}
+/* Float animation */
+@keyframes float {
+    0%   { transform: translateY(0) translateX(0); }
+    50%  { transform: translateY(-15px) translateX(10px); }
+    100% { transform: translateY(0) translateX(0); }
+}

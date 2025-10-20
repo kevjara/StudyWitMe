@@ -1,0 +1,198 @@
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1; /* always behind page content */
+    overflow: hidden;
+}
+
+/* Square (top-left, darker) */
+.pattern::before {
+    width: 150px;
+    height: 150px;
+    background-color: #1b3c4f;  /* darker blue */
+    top: 10%;
+    left: 15%;
+    opacity: 0.5;
+    animation-delay: 0s;
+}
+
+/* Rectangle (bottom-right) */
+.pattern::after {
+    width: 300px;
+    height: 100px;
+  background-color: #416d8e;  /* mid-blue */
+    bottom: 10%;
+    right: 20%;
+    opacity: 0.4;
+    animation-delay: 2s;
+}
+
+/* Big boxes */
+.shape.box {
+    position: absolute;
+    background: #d3d2d8; /* light gray */
+    border-radius: 12px;
+    animation: floatBox 12s infinite ease-in-out;
+    opacity: 0.3;
+}
+
+.shape.box.top-left {
+    width: 180px;
+    height: 180px;
+    top: 40px;
+    left: 60px;
+}
+
+.shape.box.top-right {
+    width: 220px;
+    height: 220px;
+    top: 80px;
+    right: 80px;
+}
+
+.shape.box.bottom-left-large {
+    width: 200px;
+    height: 200px;
+    bottom: 60px;
+    left: 50px;
+}
+
+.shape.box.bottom-right-large {
+    width: 250px;
+    height: 250px;
+    bottom: 40px;
+    right: 100px;
+}
+
+/* Box animation */
+@keyframes floatBox {
+    0%   { transform: translateY(0) scale(1); }
+    50%  { transform: translateY(-20px) scale(1.05); }
+    100% { transform: translateY(0) scale(1); }
+}/* Big boxes */
+.shape.box {
+position: absolute;
+    background: #d3d2d8; /* light gray */
+    border-radius: 12px;
+    opacity: 0; /* start invisible, will fade in */
+    animation-name: glideBox;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+.shape.box.top-left {
+    width: 180px;
+    height: 180px;
+    top: 40px;
+    left: 0;
+    animation-duration: 25s;
+    animation-delay: 0s;
+}
+
+.shape.box.top-right {
+    width: 220px;
+    height: 220px;
+    top: 80px;
+    left: -220px;
+    animation-duration: 35s;
+    animation-delay: 5s;
+}
+
+.shape.box.bottom-left-large {
+    width: 200px;
+    height: 200px;
+    bottom: 60px;
+    left: -200px;
+    animation-duration: 40s;
+    animation-delay: 10s;
+}
+
+.shape.box.bottom-right-large {
+    width: 250px;
+    height: 250px;
+    bottom: 40px;
+    left: -250px;
+    animation-duration: 50s;
+    animation-delay: 15s;
+}
+
+/* Box animation - glide left to right */
+@keyframes glideBox {
+    0% {
+        transform: translateX(-120%);
+        opacity: 0;  /* invisible at start */
+    }
+    10% {
+        opacity: 0.3; /* fade in as it enters */
+    }
+    90% {
+        opacity: 0.7; /* stay visible while crossing */
+    }
+    100% {
+        transform: translateX(120vw);
+        opacity: 0;  /* fade out as it exits */
+    }
+}
+
+
+/* skinny rectangles */
+.shape.rectangle {
+    position: absolute;
+    background: #416D8E;
+    border-radius: 4px;
+    animation: float 8s infinite ease-in-out;
+}
+.shape.rectangle.bottom-left {
+    width: 150px;
+    height: 20px;
+    bottom: 40px;
+    left: 20px;
+}
+.shape.rectangle.bottom-right {
+    width: 200px;
+    height: 20px;
+    bottom: 100px;
+    right: 30px;
+}
+
+/* circle styling */
+.shape.circle {
+    position: absolute;
+    border-radius: 50%;
+    animation: bubble 10s infinite ease-in-out;
+    opacity: 0.7;
+
+    /* Force them off screen at start */
+    bottom: -100px;  
+}
+.shape.circle.filled {
+    background: #254457;
+}
+.shape.circle.hollow {
+    border: 3px solid #254457;
+    background: transparent;
+}
+
+/* animations */
+@keyframes bubble {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+    25% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-110vh) scale(1.2);
+        opacity: 0;
+    }
+}
+
+@keyframes float {
+    0%   { transform: translateY(0) translateX(0); }
+    50%  { transform: translateY(-15px) translateX(10px); }
+    100% { transform: translateY(0) translateX(0); }
+}

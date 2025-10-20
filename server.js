@@ -3,6 +3,8 @@ import multer from "multer";
 import pdfParse from "pdf-parse";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 const port = 3000;

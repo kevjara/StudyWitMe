@@ -1,0 +1,476 @@
+.flashcardGenerator {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 60px 30px 30px;
+    background: #d3d2d8;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    position: relative;
+}
+
+.flashcardGenerator h2 {
+    color: #1b3c4f;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.generatorForm {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.generatorForm label {
+    display: flex;
+    flex-direction: column;
+    font-weight: bold;
+    color: #1b3c4f;
+}
+
+textarea {
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    min-height: 100px;
+    font-size: 1rem;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.charCounter {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #444;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+input[type="file"] {
+    margin-top: 8px;
+}
+
+.fileUploadWrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.uploadButton {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.uploadButton:hover {
+    background-color: #2f546e;
+}
+
+.fileName {
+    font-size: 0.9rem;
+    color: #333;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hiddenFileInput {
+    display: none;
+}
+
+.fileUploadLabel {
+    font-weight: 500;
+    display: block;
+    margin-top: 10px;
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.removeFileBtn {
+    background: transparent;
+    border: none;
+    color: #c0392b;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.2s ease;
+}
+
+.removeFileBtn:hover {
+    color: #e74c3c;
+    transform: scale(1.1);
+}
+
+.pageRangeContainer {
+    display: flex;
+    align-items: center;
+    justify-content: left;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.pageLabel {
+    font-size: 0.9rem;
+    color: #1b3c4f;
+}
+
+.pageInput {
+    width: 70px;
+    padding: 4px 6px;
+    font-size: 0.9rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.endPageLabel {
+    margin-left: 10px;
+}
+
+.generateBtn {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.generateBtn:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+}
+
+.generateBtn:hover:not(:disabled) {
+    background-color: #2f546e;
+}
+
+.backBtn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #1b3c4f;
+    cursor: pointer;
+}
+
+.backBtn:hover {
+    color: #416d8e;
+}
+
+/* Status message */
+.status {
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    margin-top: 10px;
+}
+
+.loadingStatus {
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+/* Flashcard viewer section */
+.flashcardViewer {
+    margin-top: 25px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    position: relative;
+}
+
+.flashcardViewer h3 {
+    color: #1b3c4f;
+    margin-bottom: 15px;
+}
+
+.flashcardViewer p {
+    margin: 6px 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+/* Cancel button */
+.cancelBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+
+/* User answer box */
+.flashcardViewer textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    margin-top: 10px;
+    resize: vertical; /* allow user to resize vertically */
+    box-sizing: border-box; /* so padding doesn’t break width */
+}
+
+.typeBtn {
+    justify-content: right;
+}
+
+/* Flashcard navigation + actions */
+.flashcardActions {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Saved/Updated indicator (centered between action buttons) */
+.flashcardActions .savedIndicator {
+    flex: 1;
+    text-align: center;
+    color: #28a745 !important; /* force bright green */
+    font-weight: bold;
+    min-height: 1em; /* reserve space so layout doesn't shift */
+    line-height: 1.5em;
+    animation: fadeInOut 1.5s ease-in-out;
+}
+
+/* fade animation for smooth feedback */
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.flashcardActions button {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.flashcardActions button:hover {
+    background-color: #2f546e;
+}
+
+/* Done button row */
+.doneRow {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.doneBtn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.doneBtn:hover {
+    background-color: #218838;
+}
+
+
+/* Done message */
+.doneMessage {
+    margin-top: 25px;
+    padding: 20px;
+    background: #e0f7e9;
+    border: 1px solid #b2dfbc;
+    border-radius: 10px;
+    text-align: center;
+    color: #1b3c4f;
+}
+
+/* ===== Modal Overlay and Window Styles ===== */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5); /* dark transparent backdrop */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999; /* ensure it overlays everything */
+}
+
+.modal {
+    background: #ffffff;
+    padding: 25px 30px;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    max-width: 420px;
+    width: 90%;
+    color: #1b3c4f;
+    position: relative;
+    animation: fadeInScale 0.25s ease;
+}
+
+.modal h3 {
+    margin-top: 0;
+    text-align: center;
+    color: #1b3c4f;
+    margin-bottom: 15px;
+}
+
+.modal p {
+    text-align: center;
+    font-size: 1rem;
+    margin-bottom: 20px;
+}
+
+.modal label {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.modal input,
+.modal textarea {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.modal textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.modalActions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.modalActions button {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.modalActions button:hover {
+    background-color: #2f546e;
+}
+
+.modalActions button:last-child {
+    background-color: #e74c3c;
+}
+
+.modalActions button:last-child:hover {
+    background-color: #c0392b;
+}
+
+/* Small fade/scale animation */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.loadingScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+}
+
+.loadingDots {
+    display: flex;
+    gap: 6px;
+}
+
+.loadingDots span {
+    width: 12px;
+    height: 12px;
+    background-color: #555;
+    border-radius: 50%;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+.loadingDots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.loadingDots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.2); }
+}
+
+.loadingText {
+    margin-top: 10px;
+    font-weight: 500;
+    color: #555;
+}
+
+/* Transitional status screen */
+.statusScreen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    text-align: center;
+}
+
+.statusMessage {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1b3c4f;
+    animation: fadeInOut 2.5s ease-in-out;
+}
