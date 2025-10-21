@@ -6,10 +6,15 @@ import { db } from "../services/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import styles from "./FlashcardGenerator.module.css";
 import { categories } from "./categories";
+import ImagePicker from "./ImagePicker";
 
 function FlashcardGenerator() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+
+    //this is the stuff for the imagepicker/pixa
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
 
     const [textInput, setTextInput] = useState("");
     const [file, setFile] = useState(null);
@@ -193,7 +198,10 @@ function FlashcardGenerator() {
                 category: selectedCategory,
                 collaborators: [],
                 //we can add image stuff here when decided
-                imagePath: "",
+                imageUrl: selectedImage?.webformatURL || null,
+                imageAttribution: selectedImage
+                    ? { pageURL: selectedImage.pageURL, user: selectedImage.user }
+                    : null,
 
             };
             const deckDocRef = await addDoc(collection(db, "deck"), deckData);
@@ -234,6 +242,7 @@ function FlashcardGenerator() {
                 setDeckDescription("");
                 setStatus("");
                 setShowDeckPrompt(false);
+                setSelectedImage(null);
             }, 800);
         } catch (err) {
             console.error("Error saving deck:", err);
@@ -527,7 +536,7 @@ function FlashcardGenerator() {
                     </div>
                 )}
 
-                {/* Deck title + description prompt */}
+                {/* Deck title + description prompt +added pixaBay stuff */}
                 {showDeckPrompt && (
                     <div className={styles.modalOverlay} role="dialog" aria-modal="true">
                         <div className={styles.modal}>
@@ -590,6 +599,45 @@ function FlashcardGenerator() {
                                 />
                             </label>
 
+                            {/* PIxabay deck image (optional for users) */}
+                            <label>
+                                Deck Image (optional):
+                                <div className={styles.fileUploadWrapper} style={{ gap: 12, marginTop: 8 }}>
+                                    <button
+                                        type="button"
+                                        className={styles.uploadButton}
+                                        onClick={() => setPickerOpen(true)}
+                                    >
+                                        Browse Pixabay
+                                    </button>
+
+                                    {selectedImage ? (
+                                        <>
+                                            <img
+                                                src={selectedImage.previewURL || selectedImage.webformatURL}
+                                                alt="selected"
+                                                style={{ height: 44, borderRadius: 6, border: "1px solid #ccc" }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className={styles.removeFileBtn}
+                                                title="Remove"
+                                                onClick={() => setSelectedImage(null)}
+                                            >
+                                                ✕
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <span className={styles.fileName}>No image selected</span>
+                                    )}
+                                </div>
+                                {selectedImage && (
+                                    <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                                        Photo by <strong>{selectedImage.user}</strong> on Pixabay
+                                    </div>
+                                )}
+                            </label>
+
                             <div className={styles.modalActions}>
                                 <button
                                     onClick={() => {
@@ -626,6 +674,14 @@ function FlashcardGenerator() {
                     </div>
                 </div>
             )}
+            <ImagePicker
+                open={pickerOpen}
+                onClose={() => setPickerOpen(false)}
+                onSelect={(img) => {
+                    setSelectedImage(img);   // the Pixabay hit returned by the picker
+                    setPickerOpen(false);
+                }}
+            />
             <div ref={bottomRef}></div>
         </div>
     );

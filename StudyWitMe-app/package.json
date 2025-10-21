@@ -7,13 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server.js"
   },
   "dependencies": {
-<<<<<<< Updated upstream
     "dotenv": "^17.2.3",
-=======
->>>>>>> Stashed changes
     "firebase": "^12.4.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -28,10 +26,6 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
-<<<<<<< Updated upstream
-    "vite": "^7.1.10"
-=======
     "vite": "^7.1.11"
->>>>>>> Stashed changes
   }
 }

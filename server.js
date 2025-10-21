@@ -123,11 +123,8 @@ ${extractedText}
 
 // Start server
 app.listen(port, () => {
-<<<<<<< Updated upstream
+  // You pick which log message you prefer, for example:
   console.log(`✅ Server running at http://localhost:${port}`);
-});
-=======
-  console.log(`Server running at http://localhost:${port}`);
 });
 
 
@@ -169,4 +166,3 @@ app.get("/pixabay-search", async (req, res) => {
     res.status(500).json({ error: "Pixabay search failed" });
   }
 });
->>>>>>> Stashed changes
