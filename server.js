@@ -16,6 +16,9 @@ app.use(express.static("public"));
 // Gemini client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// -----------------------------
+// /generate route
+// -----------------------------
 app.post("/generate", upload.single("pdf"), async (req, res) => {
   try {
     let extractedText = "";
@@ -76,12 +79,6 @@ SYSTEM RULES (ALWAYS OBEY THESE):
 USER INSTRUCTIONS (only use if compatible with rules):
 "${userInstructions}"
 
-When generating questions:
-- Emphasize conceptual or factual importance.
-- Avoid structural or meta questions like "What is Chapter 5 about?".
-- Prefer “why”, “how”, and “what does this mean” style questions that test understanding.
-- Ensure each question has a directly relevant quote as its answer.
-
 TEXT TO ANALYZE:
 ${extractedText}
 `;
@@ -90,32 +87,100 @@ ${extractedText}
     const result = await model.generateContent(prompt);
     const rawOutput = result.response.text().trim();
 
+    console.log("📘 /generate raw output:", rawOutput);
 
     let cleanedOutput = rawOutput
-      .replace(/```json\s*/gi, "")   // remove starting ```json
-      .replace(/```/g, "")           // remove ending ```
-      .replace(/^[^{\[]*/, "")       // remove anything before JSON starts
-      .replace(/[^}\]]*$/, "")       // remove anything after JSON ends
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // remove control chars
+      .replace(/```json\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/^[^{\[]*/, "")
+      .replace(/[^}\]]*$/, "")
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
       .trim();
 
     try {
       const jsonOutput = JSON.parse(cleanedOutput);
-      if (!Array.isArray(jsonOutput)) {
-        throw new Error("Response is not a JSON array.");
-      }
+      if (!Array.isArray(jsonOutput)) throw new Error("Response is not a JSON array.");
       res.json({ output: jsonOutput });
     } catch (err) {
       console.error("❌ Invalid JSON from Gemini:", rawOutput);
       res.status(500).json({
-        error: "Model returned invalid JSON. Please try again or shorten your input/instructions.",
-        rawOutput: rawOutput.slice(0, 500), // show snippet for debugging
+        error: "Model returned invalid JSON.",
+        rawOutput: rawOutput.slice(0, 500),
         cleanedAttempt: cleanedOutput.slice(0, 500),
       });
     }
   } catch (err) {
     console.error("❌ Server error:", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------
+// /study route
+// -----------------------------
+app.post("/study", async (req, res) => {
+  try {
+    const flashcards = req.body.flashcards || [];
+
+    if (!Array.isArray(flashcards) || flashcards.length === 0) {
+      return res.status(400).json({ error: "No flashcards provided." });
+    }
+
+    const prompt = `
+You are a flashcard practice generator.
+You will receive an array of flashcards, each with:
+- "question": the front side
+- "relevantText": the back side (the answer)
+- "isMultipleChoice": true or false
+
+For each flashcard:
+- If isMultipleChoice is false, return ONLY the "relevantText".
+- If isMultipleChoice is true, return four possible answers (A, B, C, D) separated by commas — the FIRST one must always be the correct answer.
+
+SYSTEM RULES:
+1. Return ONLY valid JSON — an array of strings, one for each flashcard, in the same order.
+2. Each element must be:
+   - a single string (for short response cards), or
+   - one string containing four comma-separated options (for multiple choice).
+3. Do NOT include explanations, formatting, or markdown.
+
+FLASHCARDS INPUT:
+${JSON.stringify(flashcards, null, 2)}
+`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const rawOutput = result.response.text().trim();
+
+    console.log("📘 /study raw output:", rawOutput);
+
+    let cleanedOutput = rawOutput
+      .replace(/```json\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/^[^{\[]*/, "")
+      .replace(/[^}\]]*$/, "")
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .trim();
+
+    let jsonOutput = [];
+    try {
+      jsonOutput = JSON.parse(cleanedOutput);
+      if (!Array.isArray(jsonOutput)) throw new Error("Response is not an array");
+    } catch (err) {
+      console.error("❌ Invalid JSON from Gemini /study:", rawOutput);
+      // fallback: return basic flashcard answers
+      jsonOutput = flashcards.map((f) =>
+        f.isMultipleChoice
+          ? `${f.relevantText}, Option B, Option C, Option D`
+          : f.relevantText
+      );
+    }
+
+    console.log("✅ /study processed output:", jsonOutput);
+    res.json({ output: jsonOutput });
+  } catch (err) {
+    console.error("❌ Study route error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

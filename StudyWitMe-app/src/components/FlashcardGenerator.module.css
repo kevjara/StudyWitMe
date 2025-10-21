@@ -474,3 +474,34 @@ input[type="file"] {
     color: #1b3c4f;
     animation: fadeInOut 2.5s ease-in-out;
 }
+
+.studySection {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.studyButton {
+  background-color: #4a4a4a;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.studyButton:hover {
+  background-color: #5c5c5c;
+}
+
+.studyBox {
+  margin-top: 20px;
+  background-color: #d3d3d3;
+  border-radius: 12px;
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  color: #333;
+}

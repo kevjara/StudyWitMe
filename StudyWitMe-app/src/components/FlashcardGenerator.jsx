@@ -41,6 +41,29 @@ function FlashcardGenerator() {
     //manage view states ("form", "loading", "viewer")
     const [view, setView] = useState("form");
 
+    // -------------------- Study Mode Section --------------------
+    const [isStudying, setIsStudying] = useState(false);
+    // -----------------------------
+    // Dummy flashcards for study testing
+    const dummyFlashcards = [
+    {
+        question: "What is the capital of France?",
+        relevantText: "Paris",
+        isMultipleChoice: false,
+    },
+    {
+        question: "Which of the following are prime numbers?",
+        relevantText: "2, 3, 4, 5",
+        isMultipleChoice: true,
+    },
+    {
+        question: "Who wrote 'To Kill a Mockingbird'?",
+        relevantText: "Harper Lee",
+        isMultipleChoice: false,
+    },
+    ];
+    // -------------------- Study Mode Section --------------------
+
     const MAX_CHARACTERS = 3_500_000;
     const bottomRef = useRef(null);
 
@@ -66,6 +89,24 @@ function FlashcardGenerator() {
             e.target.value = ""; // reset the input’s value safely
         }
     };
+
+   {/* -------------------- Study Mode Section -------------------- */}
+    const handleStartStudying = async () => {
+        try {
+            const response = await fetch("/study", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ flashcards: dummyFlashcards }),
+            });
+
+            const data = await response.json();
+            console.log("📘 Study API response:", data.output || data.error);
+        } catch (err) {
+            console.error("❌ Error calling /study:", err);
+        }
+    };
+    {/* -------------------- Study Mode Section -------------------- */}
+
 
     // Generate flashcards (called on form submit)
     const handleSubmit = async (e) => {
@@ -257,6 +298,7 @@ function FlashcardGenerator() {
                     createdAt: serverTimestamp(),
                     isPublic: false,
                     category: selectedCategory,
+                    isMultipleChoice: !!card.isMultipleChoice,
                     //I will pul the stuff here for the image on the cards
                     imagePath: "",
                 };
@@ -575,15 +617,40 @@ function FlashcardGenerator() {
                                         return copy;
                                         });
 
+                                        // Update flashcardPairs to include isMultipleChoice flag while preserving existing shape
+                                        setFlashcardPairs((prev) => {
+                                            const updated = [...prev];
+                                            const existing = updated[currentFlashcardIndex];
+                                            if (existing && typeof existing === "object") {
+                                                if (Array.isArray(existing)) {
+                                                    existing.isMultipleChoice = flashcardType === "Multiple Choice";
+                                                    updated[currentFlashcardIndex] = existing;
+                                                } else {
+                                                    updated[currentFlashcardIndex] = { ...existing, isMultipleChoice: flashcardType === "Multiple Choice" };
+                                                }
+                                            } else {
+                                                updated[currentFlashcardIndex] = [question, relevant];
+                                                updated[currentFlashcardIndex].isMultipleChoice = flashcardType === "Multiple Choice";
+                                            }
+                                            return updated;
+                                        });
+
                                         // Update savedFlashcards list
                                         setSavedFlashcards((prev) => {
                                         const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
+                                        const cardData = {
+                                            index: currentFlashcardIndex,
+                                            front: question,
+                                            back: answer,
+                                            isMultipleChoice: flashcardType === "Multiple Choice",
+                                        };
+
                                         if (existingIdx !== -1) {
                                             const copy = [...prev];
-                                            copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer };
+                                            copy[existingIdx] = cardData;
                                             return copy;
                                         } else {
-                                            return [...prev, { index: currentFlashcardIndex, front: question, back: answer }];
+                                            return [...prev, cardData];
                                         }
                                         });
 
@@ -735,8 +802,74 @@ function FlashcardGenerator() {
                 </div>
             )}
             <div ref={bottomRef}></div>
+
+
+
+           {/* -------------------- Study Mode Section -------------------- */}
+            <div className={styles.studySection}>
+                <button
+                    onClick={async () => {
+                        if (!isStudying) {
+                        try {
+                            setStatus("Fetching study flashcards...");
+
+                            const response = await fetch("/study", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ flashcards: dummyFlashcards }),
+                            });
+
+                            if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            const message = errorData.error || "Unknown error from server.";
+                            console.error("Study API error:", message);
+                            setStatus(`${message}`);
+                            return;
+                            }
+
+                            const data = await response.json();
+
+                            if (!data.output || !Array.isArray(data.output)) {
+                            setStatus("No valid study flashcards returned.");
+                            console.error("No output:", data);
+                            return;
+                            }
+
+                            // Build new array: [question, response, isMultipleChoice]
+                            const processedFlashcards = dummyFlashcards.map((fc, idx) => [
+                            fc.question,
+                            data.output[idx] || "", // fallback in case server output is shorter
+                            fc.isMultipleChoice,
+                            ]);
+
+                            console.log("📘 Processed flashcards:", processedFlashcards);
+                            setStatus(`Study flashcards received: ${processedFlashcards.length}`);
+                        } catch (err) {
+                            console.error("Error calling /study:", err);
+                            setStatus(`Unexpected error: ${err.message}`);
+                        }
+                        }
+
+                        setIsStudying(!isStudying);
+                    }}
+                    className={styles.studyButton}
+                    >
+                    {isStudying ? "Hide Study Box" : "Start Studying (Dummy Data)"}
+                </button>
+
+                {isStudying && (
+                    <div className={styles.studyBox}>
+                        <p>Study mode started! (Dummy flashcards loaded)</p>
+                    </div>
+                )}
+            </div>
+            {/* ------------------------------------------------------------- */}
+
         </div>
     );
 }
+
+
+
 
 export default FlashcardGenerator;
