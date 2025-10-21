@@ -33,21 +33,8 @@ function MainMenu() {
             <header className="menu-header">
                 <nav className="nav-buttons">
                     <button onClick={() => navigate("/profile")}>Profile</button>
-
-                    <div className="dropdown">
-                        <button onClick={() => setShowDropdown(!showDropdown)}>
-                            Flashcards ▾
-                        </button>
-                        {showDropdown && (
-                            <div className="dropdown-menu">
-                                <button onClick={() => navigate("/flashcards/create")}>Create</button>
-                                <button onClick={() => navigate("/flashcards/study")}>Study</button>
-                                <button disabled>Manage (Coming Soon)</button>
-                                <button disabled>Share (Coming Soon)</button>
-                            </div>
-                        )}
-                    </div>
-
+                    <button onClick={() => navigate("/flashcards")}>Flashcards</button>
+                    <button onClick={() => navigate("/create")}>Create</button>
                     <button onClick={() => navigate("/play")}>Play</button>
 
                     {/* Conditionally render auth button */}

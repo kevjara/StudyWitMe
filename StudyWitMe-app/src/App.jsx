@@ -15,8 +15,8 @@ function App() {
         <Route path="/" element={<TitleScreen />} />
         <Route path="/login" element={<Login />} />
         <Route path="/main" element={<MainMenu />} />
-        <Route path="/flashcards/create" element={<FlashcardGenerator />} />
-        <Route path="/flashcards/study" element={<Flashcards />} />
+        <Route path="/create" element={<FlashcardGenerator />} />
+        <Route path="/flashcards" element={<Flashcards />} />
         <Route path="profile" element={<Profile />} />
       </Routes>
     </>

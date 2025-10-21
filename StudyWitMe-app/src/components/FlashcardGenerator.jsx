@@ -21,7 +21,7 @@ function FlashcardGenerator() {
     const [showDeckPrompt, setShowDeckPrompt] = useState(false);
     const [deckTitle, setDeckTitle] = useState("");
     const [deckDescription, setDeckDescription] = useState("");
-    const [flashcardType, setFlashcardType] = useState("Short Response"); // default
+    const [flashcardTypes, setFlashcardTypes] = useState([]);
     const [savedIndices, setSavedIndices] = useState(new Set());
     const [userAnswers, setUserAnswers] = useState([]); // per-card answers
     const [flashcardsGenerated, setFlashcardsGenerated] = useState(false);
@@ -34,6 +34,7 @@ function FlashcardGenerator() {
     //Used in Finalize Deck
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedSubcategory, setSelectedSubcategory] = useState("");
+    const [isFinishLocked, setIsFinishLocked] = useState(false);
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -50,6 +51,20 @@ function FlashcardGenerator() {
         setEditedAnswer(saved);
     }, [currentFlashcardIndex, userAnswers]);
 
+    // When switching cards, load the saved flashcard type (or default if none)
+    useEffect(() => {
+    const savedCard = savedFlashcards.find(
+        (card) => card.index === currentFlashcardIndex
+    );
+    if (savedCard) {
+        setFlashcardTypes((prev) => {
+        const copy = [...prev];
+        copy[currentFlashcardIndex] = savedCard.type || "Short Response";
+        return copy;
+        });
+    }
+    }, [currentFlashcardIndex, savedFlashcards]);
+
     useEffect(() => {
     if (bottomRef.current) {
         bottomRef.current.scrollIntoView({ behavior: "smooth" });
@@ -65,6 +80,15 @@ function FlashcardGenerator() {
             // If the user canceled, do nothing — keep the existing file
             e.target.value = ""; // reset the input’s value safely
         }
+    };
+
+    // Keep per-card flashcard type
+    const handleTypeChange = (value) => {
+    setFlashcardTypes((prev) => {
+        const copy = [...prev];
+        copy[currentFlashcardIndex] = value;
+        return copy;
+    });
     };
 
     // Generate flashcards (called on form submit)
@@ -223,57 +247,54 @@ function FlashcardGenerator() {
     };
 
     const handleUpdateAnswer = () => {
+        setIsButtonLocked(true);
         handleAnswerChange(editedAnswer);
         setStatus("Updated ✓");
         setTimeout(() => setStatus(""), 1500); // clears after 1.5s
+        setIsButtonLocked(false);
     };
 
     const handleDoneConfirmYes = async () => {
-    setStatus("Saving deck...");
-    try {
-        //First we save the deck 
-        const deckData = {
-            ownerId: currentUser.uid,
-            title: deckTitle.trim() || "Untitled Deck",
-            description: deckDescription,
-            createdAt: serverTimestamp(),
-            isPublic: false,
-            category: selectedCategory,
-            collaborators: [],
-            //we can add image stuff here when decided
-            imagePath: "",
+        setView("status");
+        setStatus("Saving deck...");
+        try {
+            //First we save the deck 
+            const deckData = {
+                ownerId: currentUser.uid,
+                title: deckTitle.trim() || "Untitled Deck",
+                description: deckDescription,
+                createdAt: serverTimestamp(),
+                isPublic: false,
+                category: selectedCategory,
+                collaborators: [],
+                //we can add image stuff here when decided
+                imagePath: "",
 
-        };
-        const deckDocRef = await addDoc(collection(db, "deck"), deckData);
-        const newDeckId = deckDocRef.id;
-        //Then we save the flashcards
-        if (savedFlashcards.length > 0) {
-            const flashcardPromises = savedFlashcards.map((card) => {
-                const flashcardData = {
-                    deckId: newDeckId,
-                    ownerId: currentUser.uid,
-                    front: card.front,
-                    back: card.back,
-                    createdAt: serverTimestamp(),
-                    isPublic: false,
-                    category: selectedCategory,
-                    //I will pul the stuff here for the image on the cards
-                    imagePath: "",
-                };
-                return addDoc(collection(db, "flashcard"), flashcardData);
-            });
-            await Promise.all(flashcardPromises); // Execute all saves concurrently
+            };
+            const deckDocRef = await addDoc(collection(db, "deck"), deckData);
+            const newDeckId = deckDocRef.id;
+            //Then we save the flashcards
+            if (savedFlashcards.length > 0) {
+                const flashcardPromises = savedFlashcards.map((card) => {
+                    const flashcardData = {
+                        deckId: newDeckId,
+                        ownerId: currentUser.uid,
+                        front: card.front,
+                        back: card.back,
+                        createdAt: serverTimestamp(),
+                        isPublic: false,
+                        category: selectedCategory,
+                        //I will pull the stuff here for the image on the cards
+                        imagePath: "",
+                        type: card.type || "Multiple Choice",
+                    };
+                    return addDoc(collection(db, "flashcard"), flashcardData);
+                });
+                await Promise.all(flashcardPromises); // Execute all saves concurrently
         }
         console.log("Simulated deck save. Deck contents:", savedFlashcards);
         await new Promise((res) => setTimeout(res, 400));
-        setShowDeckPrompt(false);
         setStatus("Deck saved successfully!");
-        setView("status");
-        setTimeout(() => {
-            setStatus("");       // clear after showing
-            setView("form");     // go back to start
-        }, 3000);
-
         // Delay resetting UI so user sees the success message briefly
         setTimeout(() => {
             // Reset/refresh generator so user can create more flashcards
@@ -298,7 +319,8 @@ function FlashcardGenerator() {
                 fileInputRef.current.value = "";
             }
             setView("form");
-        }, 800);
+            setIsFinishLocked(false); // ✅ unlock button after save
+        }, 3000);
         } catch (err) {
             console.error("Error saving deck:", err);
             setStatus("Error saving deck. Check console.");
@@ -529,10 +551,10 @@ function FlashcardGenerator() {
 
                                 {/* Type selector */}
                                 <select
-                                    value={flashcardType}
+                                    value={flashcardTypes[currentFlashcardIndex] || "Multiple Choice"}
                                     className={styles.typeBtn}
-                                    onChange={(e) => setFlashcardType(e.target.value)}
-                                >
+                                    onChange={(e) => handleTypeChange(e.target.value)}
+                                    >
                                     <option value="Short Response">Short Response</option>
                                     <option value="Multiple Choice">Multiple Choice</option>
                                 </select>
@@ -568,22 +590,15 @@ function FlashcardGenerator() {
                                         // Determine if this card has already been saved before
                                         const isUpdating = savedIndices.has(currentFlashcardIndex);
 
-                                        // Update userAnswers
-                                        setUserAnswers((prev) => {
-                                        const copy = [...prev];
-                                        copy[currentFlashcardIndex] = answer;
-                                        return copy;
-                                        });
-
                                         // Update savedFlashcards list
                                         setSavedFlashcards((prev) => {
                                         const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
                                         if (existingIdx !== -1) {
                                             const copy = [...prev];
-                                            copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer };
+                                            copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer, type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice"};
                                             return copy;
                                         } else {
-                                            return [...prev, { index: currentFlashcardIndex, front: question, back: answer }];
+                                            return [...prev, { index: currentFlashcardIndex, front: question, back: answer, type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice", }];
                                         }
                                         });
 
@@ -702,6 +717,7 @@ function FlashcardGenerator() {
 
                 <div className={styles.modalActions}>
                     <button
+                    disabled={isFinishLocked}
                     onClick={() => {
                         if (!deckTitle.trim()) {
                         alert("Please enter a deck title first.");
@@ -711,6 +727,12 @@ function FlashcardGenerator() {
                         alert("Please select a category.");
                         return;
                         }
+                        // Lock button to prevent double click
+                        setIsFinishLocked(true);
+
+                        // Close modal instantly so user sees deck creation
+                        setShowDeckPrompt(false);
+
                         handleDoneConfirmYes();
                     }}
                     >
