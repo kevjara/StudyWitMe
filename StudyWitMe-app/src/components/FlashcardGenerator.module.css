@@ -320,6 +320,8 @@ input[type="file"] {
     color: #1b3c4f;
     position: relative;
     animation: fadeInScale 0.25s ease;
+    max-height: 85vh;
+    overflow: auto;
 }
 
 .modal h3 {
@@ -399,3 +401,6 @@ input[type="file"] {
         transform: scale(1);
     }
 }
+
+
+

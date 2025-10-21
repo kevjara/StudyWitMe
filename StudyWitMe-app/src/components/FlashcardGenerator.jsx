@@ -631,6 +631,19 @@ function FlashcardGenerator() {
                                         <span className={styles.fileName}>No image selected</span>
                                     )}
                                 </div>
+                                {pickerOpen && (
+                                    <div style={{ marginTop: 12 }}>
+                                        <ImagePicker
+                                            mode="inline"
+                                            open={pickerOpen}
+                                            onClose={() => setPickerOpen(false)}
+                                            onSelect={(img) => {
+                                                setSelectedImage(img);
+                                                setPickerOpen(false);
+                                            }}
+                                        />
+                                    </div>
+                                )}
                                 {selectedImage && (
                                     <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
                                         Photo by <strong>{selectedImage.user}</strong> on Pixabay
@@ -674,14 +687,6 @@ function FlashcardGenerator() {
                     </div>
                 </div>
             )}
-            <ImagePicker
-                open={pickerOpen}
-                onClose={() => setPickerOpen(false)}
-                onSelect={(img) => {
-                    setSelectedImage(img);   // the Pixabay hit returned by the picker
-                    setPickerOpen(false);
-                }}
-            />
             <div ref={bottomRef}></div>
         </div>
     );
