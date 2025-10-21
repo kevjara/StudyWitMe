@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 dotenv.config();
 
 const app = express();
@@ -122,5 +123,50 @@ ${extractedText}
 
 // Start server
 app.listen(port, () => {
+<<<<<<< Updated upstream
   console.log(`✅ Server running at http://localhost:${port}`);
 });
+=======
+  console.log(`Server running at http://localhost:${port}`);
+});
+
+
+//This is for the pixabay api stuff
+app.get("/pixabay-search", async (req, res) => {
+  try {
+    const q = (req.query.q || "").trim();
+    const page = Number(req.query.page || 1);
+    const per_page = Math.min(Number(req.query.per_page || 30), 50);
+    if (!q) return res.status(400).json({ error: "Missing query 'q'" });
+    const url =new URL("https://pixabay.com/api/");
+    url.searchParams.set("key", process.env.PIXABAY_API_KEY);
+    url.searchParams.set("q",q);
+    url.searchParams.set("image_type","photo");
+    url.searchParams.set("safesearch","true");
+    url.searchParams.set("orientation","horizontal");
+    url.searchParams.set("page",page);
+    url.searchParams.set("per_page", per_page);
+    const r = await fetch(url.toString());
+    if (!r.ok) {
+      const text = await r.text();
+      return res.status(r.status).json({ error: text });
+    }
+    const data = await r.json();
+
+    //this is to return whatever we request
+    const hits = (data.hits || []).map(h => ({
+      id: h.id,
+      previewURL: h.previewURL,
+      webformatURL: h.webformatURL,
+      largeImageURL: h.largeImageURL,
+      pageURL: h.pageURL,
+      user: h.user,
+      tags: h.tags
+    }));
+    res.json({ total: data.total, totalHits: data.totalHits, hits, page, per_page });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Pixabay search failed" });
+  }
+});
+>>>>>>> Stashed changes
