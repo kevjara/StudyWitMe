@@ -24,8 +24,6 @@ export default function ImagePicker({ open, onClose, onSelect, mode = "overlay" 
   }
 
   useEffect(() => { if (open) search(1); }, [open]);
-
-  // When used inline inside the Finalize Deck modal
   if (mode === "inline") {
     if (!open) return null;
     return (
@@ -41,15 +39,12 @@ export default function ImagePicker({ open, onClose, onSelect, mode = "overlay" 
             style={{ display: "block", width: "100%", marginTop: 6, padding: 8 }}
           />
         </label>
-
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button onClick={() => search(1)}>Search</button>
           <button onClick={onClose}>Close</button>
         </div>
-
         {loading && <p className="status">Searching…</p>}
         {err && <p className="status" style={{ color: "#c0392b" }}>{err}</p>}
-
         <div
           style={{
             marginTop: 10,
@@ -87,13 +82,11 @@ export default function ImagePicker({ open, onClose, onSelect, mode = "overlay" 
       </div>
     );
   }
-
-  // Default overlay mode (not used inside Finalize Deck anymore)
   if (!open) return null;
   return (
     <div className="modalOverlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxHeight: "85vh", overflow: "auto" }}>
-        {/* …same content as above, without the border wrapper… */}
+        {/* …same as above, without the border wrapper(in other words use if not inline)… */}
       </div>
     </div>
   );
