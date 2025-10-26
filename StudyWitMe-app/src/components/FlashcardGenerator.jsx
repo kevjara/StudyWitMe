@@ -344,6 +344,10 @@ function FlashcardGenerator() {
         setSavedIndices(new Set());
         setCurrentFlashcardIndex(0);
         setFlashcardsGenerated(false);
+        setSelectedCategory("");
+        setSelectedSubcategory("");
+        setDeckTitle("");
+        setDeckDescription("");
         setTextInput("");
         setFile(null);
         setAiPrompt("");

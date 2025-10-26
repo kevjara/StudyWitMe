@@ -6,6 +6,7 @@ import FlashcardGenerator from "./components/FlashcardGenerator";
 import Background from "./components/Background";
 import Flashcards from "./components/Flashcards";
 import Profile from "./components/Profile";
+import Settings from "./components/Settings";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/create" element={<FlashcardGenerator />} />
         <Route path="/flashcards" element={<Flashcards />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
       </Routes>
     </>
   );

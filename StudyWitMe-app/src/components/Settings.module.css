@@ -1,0 +1,165 @@
+.settingsContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    position: relative;
+}
+
+.settingsCard {
+    background-color: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    width: 320px;
+    text-align: center;
+}
+
+
+/* Back button now solid and easier to see */
+.backButton {
+    align-self: flex-start;
+    background-color: #1b3c4f;
+    border: none;
+    color: #ffffff;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-bottom: 10px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.backButton:hover {
+    background-color: #00bfff;
+    transform: translateX(-2px);
+}
+
+/* Bright, opaque title */
+.title {
+    font-size: 2rem;
+    color: #416d8e;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+/* Button group layout unchanged */
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+/* Buttons are now solid with clear color contrast */
+.optionButton {
+    background-color: #1b3c4f;
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 1.1rem;
+    padding: 12px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.optionButton:hover {
+    background-color: #00bfff;
+    color: #ffffff;
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);
+}
+
+.musicOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.label {
+    font-size: 1.2rem;
+    color: #416d8e;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.inlineButtons {
+    display: flex;
+    gap: 10px;
+}
+
+.toggleButton {
+    background-color: #1b3c4f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.toggleButton:hover {
+    background-color: #00bfff;
+}
+
+.toggleButton.active {
+    background-color: #00bfff;
+    transform: scale(1.05);
+}
+
+.volumeControl {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.volumeButton {
+    background-color: #1b3c4f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 14px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background-color 0.2s ease;
+}
+
+.volumeButton:hover {
+    background-color: #00bfff;
+}
+
+.progressBar {
+    flex: 1;                
+    height: 14px;            
+    background-color: #111215;
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progressFill {
+    height: 100%;
+    background-color: #23d738;  
+    width: 0%;                 
+    transition: width 0.3s ease-in-out;
+    border-radius: 7px 0 0 7px;
+}
+
+
+.volumeText {
+    color: #111215;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
