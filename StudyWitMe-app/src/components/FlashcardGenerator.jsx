@@ -43,25 +43,74 @@ function FlashcardGenerator() {
 
     // -------------------- Study Mode Section --------------------
     const [isStudying, setIsStudying] = useState(false);
-    // -----------------------------
+    const [processedFlashcards, setProcessedFlashcards] = useState([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [selectedOption, setSelectedOption] = useState(null);
+    const [showResult, setShowResult] = useState(false);
+    const [shortResponse, setShortResponse] = useState("");
+    const [correctOption] = useState("A"); // Always A per backend rules
+
+    const resetStudyState = () => {
+    setSelectedOption(null);
+    setShowResult(false);
+    setShortResponse("");
+    };
+
+    // -------------------- Study Mode Section --------------------
     // Dummy flashcards for study testing
     const dummyFlashcards = [
     {
-        question: "What is the capital of France?",
-        relevantText: "Paris",
+        question: "Explain the concept of entropy in thermodynamics and how it relates to the Second Law.",
+        relevantText: "Entropy measures the disorder of a system; according to the Second Law of Thermodynamics, the total entropy of an isolated system always increases over time.",
         isMultipleChoice: false,
     },
     {
-        question: "Which of the following are prime numbers?",
-        relevantText: "2, 3, 4, 5",
+        question: "Which of the following best describes the primary function of the Golgi apparatus?",
+        relevantText: "Modifies, sorts, and packages proteins and lipids for secretion or delivery to other organelles.",
         isMultipleChoice: true,
     },
     {
-        question: "Who wrote 'To Kill a Mockingbird'?",
-        relevantText: "Harper Lee",
+        question: "What is the significance of the P-value in hypothesis testing?",
+        relevantText: "The P-value indicates the probability of obtaining results at least as extreme as those observed, assuming the null hypothesis is true.",
         isMultipleChoice: false,
     },
+    {
+        question: "Which philosopher is most associated with the concept of the 'categorical imperative'?",
+        relevantText: "Immanuel Kant",
+        isMultipleChoice: true,
+    },
+    {
+        question: "Define polymorphism in the context of object-oriented programming.",
+        relevantText: "Polymorphism allows objects of different classes to be treated as objects of a common superclass, typically through method overriding or interface implementation.",
+        isMultipleChoice: false,
+    },
+    {
+        question: "Which of the following molecules acts as the main electron carrier in cellular respiration?",
+        relevantText: "NADH",
+        isMultipleChoice: true,
+    },
+    {
+        question: "Describe the relationship between supply elasticity and total revenue when demand changes.",
+        relevantText: "When supply is elastic, producers can respond quickly to price changes, potentially stabilizing total revenue; when inelastic, total revenue fluctuates more with demand shifts.",
+        isMultipleChoice: false,
+    },
+    {
+        question: "Which statistical test is most appropriate for comparing means between two related samples?",
+        relevantText: "Paired t-test",
+        isMultipleChoice: true,
+    },
+    {
+        question: "What is the main distinction between deontological and consequentialist ethics?",
+        relevantText: "Deontological ethics focuses on the morality of actions themselves, while consequentialism judges actions based on their outcomes.",
+        isMultipleChoice: false,
+    },
+    {
+        question: "Which of the following sorting algorithms has the best average-case time complexity?",
+        relevantText: "Merge Sort",
+        isMultipleChoice: true,
+    },
     ];
+
     // -------------------- Study Mode Section --------------------
 
     const MAX_CHARACTERS = 3_500_000;
@@ -100,9 +149,9 @@ function FlashcardGenerator() {
             });
 
             const data = await response.json();
-            console.log("📘 Study API response:", data.output || data.error);
+            console.log("Study API response:", data.output || data.error);
         } catch (err) {
-            console.error("❌ Error calling /study:", err);
+            console.error("Error calling /study:", err);
         }
     };
     {/* -------------------- Study Mode Section -------------------- */}
@@ -805,63 +854,186 @@ function FlashcardGenerator() {
 
 
 
-           {/* -------------------- Study Mode Section -------------------- */}
+         {/* -------------------- Study Mode Section -------------------- */}
             <div className={styles.studySection}>
-                <button
-                    onClick={async () => {
-                        if (!isStudying) {
-                        try {
-                            setStatus("Fetching study flashcards...");
+            <button
+                onClick={async () => {
+                if (!isStudying) {
+                    try {
+                    setStatus("Fetching study flashcards...");
 
-                            const response = await fetch("/study", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ flashcards: dummyFlashcards }),
-                            });
+                    const response = await fetch("/study", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ flashcards: dummyFlashcards }),
+                    });
 
-                            if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            const message = errorData.error || "Unknown error from server.";
-                            console.error("Study API error:", message);
-                            setStatus(`${message}`);
-                            return;
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        const message = errorData.error || "Unknown error from server.";
+                        console.error("Study API error:", message);
+                        setStatus(`${message}`);
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    if (!data.output || !Array.isArray(data.output)) {
+                        setStatus("No valid study flashcards returned.");
+                        console.error("No output:", data);
+                        return;
+                    }
+
+                    // Build new array [question, response, isMultipleChoice]
+                    const processed = dummyFlashcards.map((fc, idx) => [
+                        fc.question,
+                        data.output[idx] || "",
+                        fc.isMultipleChoice,
+                    ]);
+
+                    console.log("Processed flashcards:", processed);
+                    setProcessedFlashcards(processed); // store it
+                    setCurrentIndex(0);
+                    setStatus(`Study flashcards received: ${processed.length}`);
+                    } catch (err) {
+                    console.error("Error calling /study:", err);
+                    setStatus(`Unexpected error: ${err.message}`);
+                    }
+                }
+
+                setIsStudying(!isStudying);
+                }}
+                className={styles.studyButton}
+            >
+                {isStudying ? "Hide Study Box" : "Start Studying (Dummy Data)"}
+            </button>
+
+            {isStudying && processedFlashcards.length > 0 && (
+                <div className={styles.studyBox}>
+                {(() => {
+                    const [question, response, isMC] =
+                    processedFlashcards[currentIndex] || [];
+                    const options = isMC
+                    ? response.split("|||").filter((s) => s.trim() && !["A", "B", "C", "D"].includes(s.trim()))
+                    : [];
+
+                    return (
+                    <div>
+                        {/* Flashcard question */}
+                        <h3>{question}</h3>
+
+                        {/* Multiple Choice Mode */}
+                        {isMC ? (
+                        <div>
+                            <div className={styles.optionRow}>
+                            {["A", "B", "C", "D"].map((label, i) => (
+                                <button
+                                key={label}
+                                className={`${styles.optionButton} ${
+                                    selectedOption === label
+                                    ? styles.selectedOption
+                                    : ""
+                                } ${
+                                    showResult &&
+                                    label === correctOption &&
+                                    styles.correctOption
+                                } ${
+                                    showResult &&
+                                    selectedOption === label &&
+                                    selectedOption !== correctOption &&
+                                    styles.incorrectOption
+                                }`}
+                                onClick={() => !showResult && setSelectedOption(label)}
+                                >
+                                <strong>{label})</strong>{" "}
+                                {options[i] ? options[i].trim() : ""}
+                                </button>
+                            ))}
+                            </div>
+
+                            <button
+                            className={styles.submitButton}
+                            onClick={() => {
+                                if (!selectedOption) return;
+                                setShowResult(true);
+                            }}
+                            >
+                            Submit
+                            </button>
+                        </div>
+                        ) : (
+                        /* Short Response Mode */
+                        <div className={styles.shortResponseContainer}>
+                            <textarea
+                            className={styles.shortResponseInput}
+                            placeholder="Type your answer..."
+                            value={shortResponse}
+                            onChange={(e) => setShortResponse(e.target.value)}
+                            />
+                           <button
+                                className={styles.submitButton}
+                                onClick={async () => {
+                                    if (!shortResponse.trim()) return;
+
+                                    setStatus("Checking your answer...");
+
+                                    try {
+                                    const res = await fetch("/compare", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                        userAnswer: shortResponse,
+                                        correctAnswer: response,
+                                        }),
+                                    });
+                                    const data = await res.json();
+
+                                    if (data.correct) {
+                                        setStatus("Correct!");
+                                    } else {
+                                        setStatus(`Incorrect — the correct answer was: ${response}`);
+                                    }
+                                    } catch (err) {
+                                    console.error("Error comparing answers:", err);
+                                    setStatus("Error checking your answer.");
+                                    }
+                                }}
+                                >
+                                Submit
+                                </button>
+                        </div>
+                        )}
+
+                        {/* Navigation */}
+                        <div className={styles.navButtons}>
+                        <button
+                            className={styles.navButton}
+                            onClick={() => {
+                            if (currentIndex > 0) {
+                                setCurrentIndex(currentIndex - 1);
+                                resetStudyState();
                             }
-
-                            const data = await response.json();
-
-                            if (!data.output || !Array.isArray(data.output)) {
-                            setStatus("No valid study flashcards returned.");
-                            console.error("No output:", data);
-                            return;
+                            }}
+                        >
+                            &lt;-
+                        </button>
+                        <button
+                            className={styles.navButton}
+                            onClick={() => {
+                            if (currentIndex < processedFlashcards.length - 1) {
+                                setCurrentIndex(currentIndex + 1);
+                                resetStudyState();
                             }
-
-                            // Build new array: [question, response, isMultipleChoice]
-                            const processedFlashcards = dummyFlashcards.map((fc, idx) => [
-                            fc.question,
-                            data.output[idx] || "", // fallback in case server output is shorter
-                            fc.isMultipleChoice,
-                            ]);
-
-                            console.log("📘 Processed flashcards:", processedFlashcards);
-                            setStatus(`Study flashcards received: ${processedFlashcards.length}`);
-                        } catch (err) {
-                            console.error("Error calling /study:", err);
-                            setStatus(`Unexpected error: ${err.message}`);
-                        }
-                        }
-
-                        setIsStudying(!isStudying);
-                    }}
-                    className={styles.studyButton}
-                    >
-                    {isStudying ? "Hide Study Box" : "Start Studying (Dummy Data)"}
-                </button>
-
-                {isStudying && (
-                    <div className={styles.studyBox}>
-                        <p>Study mode started! (Dummy flashcards loaded)</p>
+                            }}
+                        >
+                            -&gt;
+                        </button>
+                        </div>
                     </div>
-                )}
+                    );
+                })()}
+                </div>
+            )}
             </div>
             {/* ------------------------------------------------------------- */}
 
