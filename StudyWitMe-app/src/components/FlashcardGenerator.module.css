@@ -421,10 +421,6 @@ input[type="file"] {
     }
 }
 
-<<<<<<< HEAD
-
-
-=======
 .loadingScreen {
     display: flex;
     flex-direction: column;
@@ -480,4 +476,3 @@ input[type="file"] {
     color: #1b3c4f;
     animation: fadeInOut 2.5s ease-in-out;
 }
->>>>>>> frontend-website/game-UI/Elvis

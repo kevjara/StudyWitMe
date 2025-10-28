@@ -10,8 +10,8 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setCurrentUser(user);
-        setLoading(false);
+            setCurrentUser(user);
+            setLoading(false);
         });
         return () => unsubscribe();
     }, []);
@@ -19,12 +19,12 @@ export function AuthProvider({ children }) {
     const logout = () => signOut(auth);
 
     return (
-        <AuthContext.Provider value={{ currentUser, logout }}>
+        <AuthContext.Provider value={{ currentUser, logout, loading }}>
         {!loading && children}
         </AuthContext.Provider>
     );
-    }
+}
 
-    export function useAuth() {
+export function useAuth() {
     return useContext(AuthContext);
 }
