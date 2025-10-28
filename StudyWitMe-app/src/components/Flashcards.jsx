@@ -241,7 +241,7 @@ export default function Flashcards() {
             <div className={styles.deckToolbar}>
             <div className={styles.toolbarLeft}>
                 {/* 🔹 Delete toggler */}
-               <button
+                <button
                     onClick={() => {
                         console.log("Delete mode:", deleteMode, "Selected decks:", selectedDecks);
 
@@ -262,7 +262,7 @@ export default function Flashcards() {
                         setSelectedDecks([]);
                         }
                     }}
-                    >
+                >
                     {deleteMode ? "Done" : "Delete"}
                 </button>
                 <button onClick={() => navigate("/flashcards/share")}>Share</button>

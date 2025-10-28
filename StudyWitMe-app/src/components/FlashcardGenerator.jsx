@@ -15,6 +15,7 @@ function FlashcardGenerator() {
     const [file, setFile] = useState(null);
     const [aiPrompt, setAiPrompt] = useState("");
     const [status, setStatus] = useState("");
+    const statusTimeoutRef = useRef(null);
     const [flashcardPairs, setFlashcardPairs] = useState([]); // [question, relevantText]
     const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
     const [savedFlashcards, setSavedFlashcards] = useState([]);
@@ -43,7 +44,6 @@ function FlashcardGenerator() {
     const [view, setView] = useState("form");
 
     const MAX_CHARACTERS = 3_500_000;
-    const bottomRef = useRef(null);
 
     // When switching cards, load the saved answer (or blank if none)
     useEffect(() => {
@@ -65,11 +65,21 @@ function FlashcardGenerator() {
     }
     }, [currentFlashcardIndex, savedFlashcards]);
 
-    useEffect(() => {
-    if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    //Handle Status Messages
+    function showStatus(message, duration = 3000) {
+        // Clear any previous timer
+        if (statusTimeoutRef.current) {
+            clearTimeout(statusTimeoutRef.current);
+        }
+
+        setStatus(message);
+
+        statusTimeoutRef.current = setTimeout(() => {
+            setStatus("");
+            statusTimeoutRef.current = null;
+        }, duration);
     }
-    }, [flashcardPairs, currentFlashcardIndex, showCancelConfirm]);
+
 
     //Handle File Upload
     const handleFileChange = (e) => {
@@ -113,14 +123,13 @@ function FlashcardGenerator() {
                 const end = parseInt(endPage, 10);      // endPage is state
 
                 if (isNaN(start) || isNaN(end) || start > end) {
-                    setStatus("Invalid page range.");
+                    showStatus("Invalid page range.");
                     return;
                 }
 
                 formData.append("startPage", start);
                 formData.append("endPage", end)
                 formData.append("instructions", aiPrompt);
-                setStatus("");
                 // Show loading animation
                 setView("loading")
 
@@ -132,11 +141,11 @@ function FlashcardGenerator() {
                 // --- Direct text input ---
                 const textToSend = textInput.trim();
                 if (!file && !textToSend) {
-                    setStatus("Please enter some text or upload a file.");
+                    showStatus("Please enter some text or upload a file.");
                     return;
                 }
                 if (textToSend.length > MAX_CHARACTERS) {
-                    setStatus(`Text too long (${textToSend.length} chars). Please shorten it.`);
+                    showStatus(`Text too long (${textToSend.length} chars). Please shorten it.`);
                     return;
                 }
 
@@ -158,7 +167,7 @@ function FlashcardGenerator() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const message = errorData.error || "Unknown error from server.";
-                setStatus(`❌ ${message}`);
+                showStatus(`❌ ${message}`);
                 // stay in form view if error occurs
                 setView("form");
                 return;
@@ -167,7 +176,7 @@ function FlashcardGenerator() {
             const data = await response.json();
 
             if (!data.output) {
-                setStatus("No flashcards returned.");
+                showStatus("No flashcards returned.");
                 setView("form");
                 return;
             }
@@ -178,7 +187,7 @@ function FlashcardGenerator() {
             if (Array.isArray(output)) {
                 const pairs = output.map(f => [f.question, f.relevantText]);
                 setFlashcardPairs(pairs);
-                setStatus(`✅ Generated ${pairs.length} flashcards`);
+                showStatus(`✅ Generated ${pairs.length} flashcards`);
             } 
             
             // --- Case 2: backend returned JSON text ---
@@ -195,10 +204,10 @@ function FlashcardGenerator() {
                     const parsed = JSON.parse(cleanOutput);
                     const pairs = parsed.map(f => [f.question, f.relevantText]);
                     setFlashcardPairs(pairs);
-                    setStatus(`✅ Generated ${pairs.length} flashcards`);
+                    showStatus(`✅ Generated ${pairs.length} flashcards`);
                 } catch (err) {
                     console.error("Failed to parse backend output:", cleanOutput, err);
-                    setStatus("❌ Error: Could not parse backend output. Check console.");
+                    showStatus("❌ Error: Could not parse backend output. Check console.");
                     setView("form");
                     return;
                 }
@@ -218,7 +227,7 @@ function FlashcardGenerator() {
 
         } catch (err) {
             console.error("Unexpected error:", err);
-            setStatus(`❌ Unexpected error: ${err.message}`);
+            showStatus(`❌ Unexpected error: ${err.message}`);
             setView("form");
         }
     };
@@ -242,21 +251,19 @@ function FlashcardGenerator() {
 
     const handleSaveAnswer = () => {
         handleAnswerChange(editedAnswer);
-        setStatus("Saved ✓");
-        setTimeout(() => setStatus(""), 1500); // clears after 1.5s
+        showStatus("Saved ✓");
     };
 
     const handleUpdateAnswer = () => {
         setIsButtonLocked(true);
         handleAnswerChange(editedAnswer);
-        setStatus("Updated ✓");
-        setTimeout(() => setStatus(""), 1500); // clears after 1.5s
+        showStatus("Updated ✓");
         setIsButtonLocked(false);
     };
 
     const handleDoneConfirmYes = async () => {
         setView("status");
-        setStatus("Saving deck...");
+        showStatus("Saving deck...");
         try {
             //First we save the deck 
             const deckData = {
@@ -294,7 +301,7 @@ function FlashcardGenerator() {
         }
         console.log("Simulated deck save. Deck contents:", savedFlashcards);
         await new Promise((res) => setTimeout(res, 400));
-        setStatus("Deck saved successfully!");
+        showStatus("Deck saved successfully!");
         // Delay resetting UI so user sees the success message briefly
         setTimeout(() => {
             // Reset/refresh generator so user can create more flashcards
@@ -323,7 +330,7 @@ function FlashcardGenerator() {
         }, 3000);
         } catch (err) {
             console.error("Error saving deck:", err);
-            setStatus("Error saving deck. Check console.");
+            showStatus("Error saving deck. Check console.");
         }
     };
 
@@ -354,7 +361,7 @@ function FlashcardGenerator() {
         setStartPage('1');
         setEndPage('1');
         setView("status")
-        setStatus("⚠️Deck canceled and discarded.");
+        showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
             setStatus("");       // clear after showing
             setView("form");     // go back to start
@@ -363,7 +370,7 @@ function FlashcardGenerator() {
 
     const handleCancelConfirmNo = () => {
         setShowCancelConfirm(false);
-        setStatus("Continue editing your flashcards.");
+        showStatus("Continue editing your flashcards.")
     };
 
     // Render current flashcard
@@ -476,7 +483,7 @@ function FlashcardGenerator() {
                             min="1"
                             />
 
-                            <label htmlFor="endPage" className={styles.pageLabelEndPageLabel}>End Page</label>
+                            <label htmlFor="endPage" className={styles.pageLabel}>End Page</label>
                             <input
                             type="number"
                             id="endPage"
@@ -632,6 +639,7 @@ function FlashcardGenerator() {
                                         newSet.delete(currentFlashcardIndex);
                                         return newSet;
                                         });
+                                        showStatus("Removed flashcard from deck.")
                                     }}
                                     >
                                     Remove
@@ -760,7 +768,6 @@ function FlashcardGenerator() {
                 </div>
                 </div>
             )}
-            <div ref={bottomRef}></div>
         </div>
     );
 }

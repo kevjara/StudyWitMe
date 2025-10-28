@@ -10,10 +10,13 @@
 
 .menuBackdrop {
     background-color: #fdfdfd;
+    color: #1b3c4f;
     padding: 32px;
     border-radius: 12px;
     width: 100%;
     max-width: 1200px;
+    margin-bottom: 35px;
+    font-size: 2rem;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
@@ -41,43 +44,71 @@
 .stickyBackButton {
     background: none;
     border: none;
-    color: #2563eb;
+    color: #1b3c4f;
     font-weight: 500;
-    font-size: 0.95rem;
+    font-size: 1rem;
     cursor: pointer;
     margin-right: auto;     /* pushes other buttons to the right */
     transition: color 0.2s;
 }
 
 .stickyBackButton:hover {
-    color: #1e40af;
+    color: #416d8e;
 }
 
 /* =======================
             TOOLBAR
    ====================== */
 .deckToolbar {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
     margin-bottom: 24px;
     width: 100%;
     max-width: 1000px;
 }
 
-.toolbarLeft button,
-.toolbarRight select {
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    cursor: pointer;
-    font-weight: 500;
-    background-color: #fff;
+/* Ensure buttons inside each toolbar section have spacing */
+.toolbarLeft,
+.toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 12px; 
 }
 
-.toolbarLeft button:hover {
-    background-color: #f1f1f1;
+.toolbarLeft button,
+.toolbarRight button,
+.toolbarLeft select,
+.toolbarRight select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #416d8e;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    line-height: 1.4;
+    height: 40px; /* consistent button height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px; /* ensures visual balance */
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+/* Hover + active states */
+.toolbarLeft button:hover,
+.toolbarRight button:hover,
+.toolbarLeft select:hover,
+.toolbarRight select:hover {
+    background-color: #f5f7fa;
+    border-color: #bfc8d2;
 }
 
 .dropdown {
@@ -316,7 +347,7 @@
 
 .categoryTag {
     font-size: 0.85rem;
-    color: #2563eb;
+    color: #1b3c4f;
     font-weight: 500;
     margin-top: 4px;
 }
@@ -334,7 +365,7 @@
     font-size: 0.85rem;
     padding: 4px 0;
     border-radius: 6px;
-    background-color: #2f80ed;
+    background-color: #416d8e;
     color: white;
     border: none;
     cursor: pointer;
@@ -361,7 +392,7 @@
     font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 0.6rem;
-    color: #2563eb;
+    color: #1b3c4f;
     border-bottom: 1px solid #eee;
     padding-bottom: 0.4rem;
 }

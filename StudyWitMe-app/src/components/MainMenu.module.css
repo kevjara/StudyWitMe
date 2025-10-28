@@ -3,46 +3,63 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    color: #1b3c4f;
 }
 
+/* === HEADER === */
 .menuHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 40px;
-    background-color: #d3d2d8;
+    padding: 24px 48px;
+    background-color: #e4e6ea;
     border-bottom: 4px solid #1b3c4f;
     position: relative;
     z-index: 1;
 }
 
+/* === NAVIGATION BUTTONS === */
 .navButtons button {
-    margin-right: 15px;
-    padding: 10px 16px;
+    margin-right: 20px;
+    padding: 12px 24px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: #416d8e;
-    color: white;
+    color: #fff;
     font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
     cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
 }
 
 .navButtons button:hover {
     background-color: #2f546e;
+    transform: translateY(-2px);
 }
 
+.navButtons button:active {
+    transform: translateY(0);
+}
+
+/* === LOGO === */
 .logo {
     height: 60px;
     width: auto;
+    border-radius: 8px;
 }
 
+/* === BODY === */
 .menuBody {
     text-align: center;
-    margin-top: 50px;
+    margin-top: 80px;
     position: relative;
     z-index: 1;
 }
 
+/* === SIGNOUT MODAL === */
 .signoutOverlay {
     position: fixed;
     inset: 0;
@@ -54,40 +71,64 @@
 }
 
 .signoutModal {
-    background-color: white;
-    padding: 30px 50px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    font-size: 1.5rem;
-    font-weight: 600;
+    background-color: #ffffff;
+    padding: 40px 60px;
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     text-align: center;
     animation: fadeIn 0.3s ease;
 }
 
+.signoutModal h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #1b3c4f;
+}
+
+.signoutModal p {
+    font-size: 1rem;
+    margin-bottom: 24px;
+    color: #333;
+}
+
+.signoutModal button {
+    padding: 10px 22px;
+    border-radius: 8px;
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+}
+
+.signoutModal button:hover {
+    background-color: #2f546e;
+}
+
+/* === ANIMATIONS === */
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.9); }
     to { opacity: 1; transform: scale(1); }
 }
 
-/* ⚙️ Standalone Gear Icon Button */
+/* === SETTINGS ICON === */
 .settingsIcon {
-    width: 38px;
-    height: 38px;
-    margin-left: 10px;
+    width: 40px;
+    height: 40px;
+    margin-left: 12px;
     cursor: pointer;
     transition: transform 0.3s ease, filter 0.3s ease;
-    vertical-align: middle; 
-    position: relative; 
-    bottom: 3px
+    vertical-align: middle;
+    position: relative;
+    bottom: 3px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .settingsIcon:hover {
-    transform: rotate(20deg);
-    filter: brightness(0.7);
+    transform: rotate(20deg) scale(1.05);
+    filter: brightness(0.8);
 }
 
-
-/* Shake animation — plays once when first hovered */
 @keyframes shake {
     0% { transform: rotate(0deg); }
     25% { transform: rotate(10deg); }
@@ -99,4 +140,5 @@
 .shakeOnce:hover {
     animation: shake 0.4s ease;
 }
+
 
