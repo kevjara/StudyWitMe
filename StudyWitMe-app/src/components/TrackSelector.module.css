@@ -1,0 +1,93 @@
+.trackSelectorContainer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.playButton {
+    background: transparent;
+    color: #416d8e;
+    border: none;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.trackWheel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    overflow: hidden;
+    height: 90px;
+    width: 200px; /* slightly wider for text balance */
+    border-radius: 3px;
+    background: transparent;
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.3s;
+}
+
+/* Core item styling */
+.trackItem {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 160px; /* fixed width for all items */
+    opacity: 0.6;
+    transform: scale(0.9);
+    transition: 
+        opacity 0.3s, 
+        transform 0.3s,
+        margin-left 0.3s ease;
+    font-weight: 500;
+}
+
+/* Icon alignment */
+.trackItem img {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1));
+}
+
+/* Text alignment */
+.trackTitle {
+    display: inline-block;
+    max-width: 120px; /* consistent title width */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Active track styling */
+.trackItem.current {
+    opacity: 1;
+    transform: scale(1.1);
+    font-weight: 700;
+    color: var(--accent);
+    margin-left: 0; /* center position */
+}
+
+/* Depth illusion */
+.trackItem.prev {
+    color: var(--muted);
+    margin-left: 10px; /* moves inward */
+}
+
+.trackItem.next {
+    color: var(--muted);
+    margin-left: 10px; /* moves inward */
+}
+
+.trackItem.prev img,
+.trackItem.next img {
+    transform: scale(0.9);
+    opacity: 0.8;
+}
+

@@ -11,16 +11,16 @@ import Settings from "./components/Settings";
 function App() {
   return (
     <>
-      <Background />
-      <Routes>
-        <Route path="/" element={<TitleScreen />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/main" element={<MainMenu />} />
-        <Route path="/create" element={<FlashcardGenerator />} />
-        <Route path="/flashcards" element={<Flashcards />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="settings" element={<Settings />} />
-      </Routes>
+        <Background/>
+          <Routes>
+            <Route path="/" element={<TitleScreen />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/main" element={<MainMenu />} />
+            <Route path="/create" element={<FlashcardGenerator />} />
+            <Route path="/flashcards" element={<Flashcards />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="settings" element={<Settings />} />
+          </Routes>
     </>
   );
 }

@@ -7,7 +7,9 @@ export function useMusic() {
 
 export function MusicProvider({ children }) {
     const songs = [
-        { title: "Main Theme", file: "Music/bossa-nova-14396.mp3" },
+        { title: "Bossa Nova", file: "Music/bossa-nova-14396.mp3" }, 
+        { title: "Jazz Lounge", file: "Music/jazz-lounge-relaxing-background-music-412597.mp3"},
+        { title: "Whispers", file: "Music/whispers-in-the-smoke-2-424935.mp3"}
     ];
 
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
@@ -29,21 +31,20 @@ export function MusicProvider({ children }) {
     }, []);
 
     const playMusic = () => {
+        // If no audio instance, create one for the currentSongIndex
         if (!audioRef.current) {
             const song = songs[currentSongIndex];
             const audio = new Audio(song.file);
-            audio.loop = false; // disable native loop, we’ll handle it manually
-            audio.volume = 0.4;
+            audio.loop = false;
+            audio.volume = volume;
             audioRef.current = audio;
 
-            // Handle manual looping with fade-in
             audio.addEventListener("ended", () => {
-                fadeOutAndStop(500).then(() => {
-                    // Restart with fade-in
-                    audio.currentTime = 0;
-                    audio.play().catch((err) => console.log("Autoplay blocked:", err));
-                    fadeInAudio(audio, 1000); // fade in over 1 second
-                });
+            fadeOutAndStop(500).then(() => {
+                audio.currentTime = 0;
+                audio.play().catch((err) => console.log("Autoplay blocked:", err));
+                fadeInAudio(audio, 1000);
+            });
             });
         }
 
@@ -51,7 +52,7 @@ export function MusicProvider({ children }) {
         audio.play().catch((err) => console.log("Autoplay blocked:", err));
         setIsPlaying(true);
         setHasStartedOnce(true);
-        fadeInAudio(audio, 1000); // initial fade-in when starting
+        fadeInAudio(audio, 1000);
     };
 
     const fadeInAudio = (audio, duration = 1000) => {
@@ -86,14 +87,47 @@ export function MusicProvider({ children }) {
         setIsPlaying(true);
     };
 
-    const changeSong = (index) => {
+    // MusicProvider.jsx — replace existing changeSong implementation with this
+    const changeSong = (index, autoplay = false) => {
         if (index < 0 || index >= songs.length) return;
+
+        // update provider state immediately
         setCurrentSongIndex(index);
+
+        // If there is currently an audio instance, stop and drop it
         if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current = null; // will be recreated by useEffect
+            try { audioRef.current.pause(); } catch (e) {}
+            audioRef.current = null;
+        }
+
+        // If caller asked to autoplay, create an audio instance for the new index and start it.
+        if (autoplay) {
+            const song = songs[index];
+            const audio = new Audio(song.file);
+            audio.loop = false;
+            audio.volume = volume; // use provider volume state
+            audioRef.current = audio;
+
+            // Reuse the ended handler logic (manual looping + fade behavior)
+            audio.addEventListener("ended", () => {
+            fadeOutAndStop(500).then(() => {
+                // Restart with fade-in
+                audio.currentTime = 0;
+                audio.play().catch((err) => console.log("Autoplay blocked:", err));
+                fadeInAudio(audio, 1000);
+            });
+            });
+
+            audio.play().catch((err) => console.log("Autoplay blocked:", err));
+            setIsPlaying(true);
+            setHasStartedOnce(true);
+            fadeInAudio(audio, 1000);
+        } else {
+            // Not autoplaying — keep isPlaying false (caller may call playMusic later)
+            setIsPlaying(false);
         }
     };
+
 
     const fadeOutAndStop = (duration = 2000) => {
         return new Promise((resolve) => {
