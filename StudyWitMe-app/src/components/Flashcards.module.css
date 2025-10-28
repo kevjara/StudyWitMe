@@ -1,0 +1,721 @@
+/* =======================
+       GENERAL LAYOUT
+   ====================== */
+.overlay {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.menuBackdrop {
+    background-color: #fdfdfd;
+    color: #1b3c4f;
+    padding: 32px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 35px;
+    font-size: 2rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Sticky toolbar containing Back + Manage/Share/Sort/Filter */
+.stickyToolbar {
+    position: sticky;       /* sticks to top while scrolling */
+    top: 0;                 /* starts at the top of container */
+    left: 0;
+    width: 100%;
+    background: #fdfdfd;    /* match menu backdrop */
+    z-index: 150;
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Back button in sticky toolbar */
+.stickyBackButton {
+    background: none;
+    border: none;
+    color: #1b3c4f;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-right: auto;     /* pushes other buttons to the right */
+    transition: color 0.2s;
+}
+
+.stickyBackButton:hover {
+    color: #416d8e;
+}
+
+/* =======================
+          TOOLBAR
+   ====================== */
+.deckToolbar {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 1000px;
+}
+
+/* Ensure buttons inside each toolbar section have spacing */
+.toolbarLeft,
+.toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbarLeft button,
+.toolbarRight button,
+.toolbarLeft select,
+.toolbarRight select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #416d8e;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    line-height: 1.4;
+    height: 40px; /* consistent button height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px; /* ensures visual balance */
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Hover + active states */
+.toolbarLeft button:hover,
+.toolbarRight button:hover,
+.toolbarLeft select:hover,
+.toolbarRight select:hover {
+    background-color: #2f546e;
+    border-color: #bfc8d2;
+}
+
+.dropdown {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-weight: 500;
+}
+
+/* =======================
+        FILTER DROPDOWN
+   ====================== */
+.filterWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdownButton {
+    background: #416d8e;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.dropdownButton:hover {
+    background: #2f546e;
+}
+
+.filterDropdown {
+    position: absolute;
+    top: 44px;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    z-index: 120;
+    padding: 12px;
+    width: 800px;
+    animation: fadeIn 0.15s ease-in;
+    max-height: 400px;
+    overflow-y: auto;
+    columns: 2 140px;
+    column-gap: 12px;
+}
+
+@media (max-width: 1000px) {
+    .filterDropdown {
+        columns: 2;
+    }
+}
+
+.filterItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #222;
+}
+
+.filterItem input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.filterItem:hover {
+    background: #f7f9fb;
+}
+
+.filterButtons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    gap: 6px;
+}
+
+.filterButtons button {
+    flex: 1;
+    padding: 6px 10px;
+    background-color: #416d8e;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.filterButtons button:hover {
+    background-color: #2f546e;
+}
+
+/* =======================
+        GALLERY WRAPPER
+   ====================== */
+/* Always use .flashcardGallery as the wrapper.
+    Inside it we will have either:
+    - a grid container (normal sorts) which is .categoryGrid used as a top-level grid
+    - or multiple .categorySection blocks, each with its own .categoryGrid (in category-sort)
+*/
+.flashcardGallery {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* =======================
+   DEFAULT GRID (for non-Category sorts)
+   Applies when .categoryGrid is a direct child of .flashcardGallery
+   NOTE: This is overridden/supplemented by the wider categoryGrid rule below.
+   ====================== */
+.flashcardGallery > .categoryGrid {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(200px, 1fr));
+    gap: 24px;
+    justify-content: start;  /* left-align grid within page card */
+}
+
+@media (max-width: 1100px) {
+    .flashcardGallery > .categoryGrid {
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .flashcardGallery > .categoryGrid {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 500px) {
+    .flashcardGallery > .categoryGrid {
+        grid-template-columns: 1fr;
+        justify-items: center;
+    }
+}
+
+/* Widen the deck editor cards (From second snippet) */
+/* This rule will apply to other uses of .categoryGrid, e.g., in an editor view */
+.categoryGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 18px;
+}
+
+
+/* =======================
+        DECK CARD
+   ====================== */
+/* Improve the card container (From second snippet) - **This overrides the first block's deckCard rules for border/shadow/bg** */
+.deckCard {
+    border-radius: 16px; /* NEW */
+    border: 1px solid #e5e7eb; /* NEW */
+    background: #fff; /* NEW */
+    box-shadow: 0 6px 18px rgba(2, 8, 23, 0.05); /* NEW */
+
+    /* Properties from first snippet's deckCard */
+    padding: 16px;
+    transition: transform 0.18s, box-shadow 0.18s;
+    position: relative;
+    width: 100%;
+    max-width: 260px;
+    height: 280px; /* fixed height for consistency across all sorts */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+.deckCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Optional: taller textareas by default (From second snippet) */
+.deckCard textarea {
+    min-height: 110px;
+}
+
+/* Keep internal layout stable */
+.deckCardContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+/* Deck title */
+.deckCardContent h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 4px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Deck description */
+.deckDescription {
+    font-size: 0.88rem;
+    color: #555;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* show max 2 lines */
+    -webkit-box-orient: vertical;
+}
+
+/* Card count & category tag (bottom content) */
+.deckMeta {
+    margin-top: 8px;
+}
+
+.deckMeta p {
+    margin: 4px 0; /* ✅ reduces vertical gap between lines */
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Progress bar container */
+.progressBar {
+    width: 100%;
+    height: 8px;
+    background-color: #111215;
+    border-radius: 4px;
+    margin: 8px 0;
+    display: block; /* ensure it's a block element */
+    overflow: hidden;
+    position: relative;
+}
+
+/* Filled portion of progress bar */
+.progressFill {
+    height: 100%;
+    background-color: #23d738;
+    width: 2%; /* ✅ keep small visible width even if 0% */
+    transition: width 0.4s ease-in-out;
+    border-radius: 4px;
+    display: block;
+}
+
+
+.categoryTag {
+    font-size: 0.85rem;
+    color: #1b3c4f;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* Buttons anchored at bottom */
+.deckButtons {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.deckButtonSmall {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    border-radius: 6px;
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.deckButtonSmall:hover {
+    background-color: #2563eb;
+}
+
+
+/* =======================
+    CATEGORY MODE (Sort by Category)
+    .categorySection contains a title and a .categoryGrid that behaves like a row
+   ====================== */
+.categorySection {
+    width: 100%;
+    display: block;
+    margin-bottom: 2rem;
+    padding: 8px 0;
+}
+
+.categoryHeader {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    color: #1b3c4f;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.4rem;
+}
+
+/* When .categoryGrid is inside a categorySection, make it a wrap row */
+.categorySection > .categoryGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; /* spacing between cards in the category row */
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+/* Ensure each card in category rows gets a stable width */
+.categorySection > .categoryGrid > .deckCard {
+    flex: 0 0 240px;
+    max-width: 240px;
+    height: 260px; /* fixed height for consistency */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+    overflow: hidden; /* prevent content overflow */
+}
+
+/* A small separator between category groups */
+.categorySection + .categorySection {
+    border-top: 1px solid #f0f0f0;
+    padding-top: 1rem;
+}
+
+/* =======================
+    EMPTY DECK STATE
+   ====================== */
+.noCards .placeholderCard {
+    width: 120px;
+    height: 120px;
+    background-color: #eee;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    cursor: pointer;
+    margin: 16px 0;
+}
+
+.plusSign {
+    font-weight: bold;
+}
+
+/* =======================
+        ANIMATIONS
+   ====================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =======================
+        Delete Mode
+   ======================= */
+.deleteSelectButton {
+    position: absolute;
+    top: 1px;
+    right: 6px;
+    display: flex; /* ⬅ enables centering */
+    align-items: center; /* ⬅ vertical centering */
+    justify-content: center; /* ⬅ horizontal centering */
+    background-color: white;
+    border: 2px solid #888;
+    border-radius: 50%;
+    width: 26px;
+    height: 28px;
+    font-weight: bold;
+    font-size: 16px; /* ensures ✓ and ✕ look balanced */
+    cursor: pointer;
+    transition: 0.2s;
+    line-height: 1;
+    z-index: 5;
+}
+
+.deleteSelectButton:hover {
+    background-color: #e6f0ff;
+    border-color: #4a90e2;
+}
+
+.selectedDeck {
+    border: 2px solid #4a90e2;
+    transition: border-color 0.2s ease;
+}
+
+.selected {
+    background-color: #4a90e2;
+    color: white;
+    border-color: #4a90e2;
+}
+
+/* =======================
+    Confirmation Modal
+   ======================= */
+
+/* Modal / confirmation backdrop (do NOT replace .overlay used for page layout) */
+.modalOverlay {
+    position: fixed;
+    inset: 0; /* top:0; right:0; bottom:0; left:0; */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1200; /* above main page content */
+    padding: 20px;
+}
+/* The white confirmation box */
+.confirmationBox {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+    padding: 22px;
+    position: relative;
+    color: #111;
+}
+
+/* Top-left Change Selection button inside the modal */
+.changeSelectionButton {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #e6f0ff;
+    border: 1px solid #4a90e2;
+    color: #114b8a;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.changeSelectionButton:hover {
+    background: #4a90e2;
+    color: #fff;
+}
+
+/* Content area inside the confirmation box */
+.confirmationContent {
+    text-align: center;
+    padding: 8px 6px;
+}
+
+.confirmationContent h3 {
+    margin: 8px 0 6px;
+    font-size: 1.1rem;
+}
+
+.confirmationContent p {
+    margin: 0 0 12px;
+    color: #444;
+}
+
+/* Buttons row */
+.confirmationButtons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+/* Confirm (primary) */
+.confirmButton {
+    background: #4a90e2;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* Cancel (secondary) */
+.cancelButton {
+    background: #f1f1f1;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.confirmButton:hover {
+    background: #357ab8;
+}
+
+.cancelButton:hover {
+    background: #e0e0e0;
+}
+
+/* Small responsive tweak so the modal fits on very small screens */
+@media (max-width: 420px) {
+    .confirmationBox {
+        padding: 16px;
+    }
+    .changeSelectionButton {
+        top: 8px;
+        left: 8px;
+        padding: 5px 8px;
+    }
+}
+
+/* =======================
+    Big picker modal (From second snippet)
+   ======================= */
+.pickerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+}
+.pickerDialog {
+    width: min(1100px, 94vw);
+    height: min(82vh, 900px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(2, 8, 23, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+.pickerBody {
+    padding: 16px;
+    overflow: auto;
+}
+.pickerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+}
+.pickerCell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.pickerThumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+.pickerCell button {
+    margin: 8px;
+}
+
+
+/* If using CSS Modules, wrap each rule with :global(...) */
+.picker-grid-wrapper .image-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    gap: 16px !important;
+}
+
+.picker-grid-wrapper .image-card {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.picker-grid-wrapper .image-card img {
+    width: 100% !important;
+    height: 140px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
+}
+
+.picker-grid-wrapper .controls { /* search bar row */
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+.picker-grid-wrapper .pager {
+    margin-top: 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+}

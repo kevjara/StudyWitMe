@@ -30,6 +30,28 @@
     animation-delay: 2s;
 }
 
+/* Skinny rectangle styling */
+.shape.rectangle {
+    position: absolute;
+    background: #416D8E;
+    border-radius: 4px;
+    animation: float 8s infinite ease-in-out;
+}
+
+.shape.rectangle.bottom-left {
+    width: 150px;
+    height: 20px;
+    bottom: 40px;
+    left: 20px;
+}
+
+.shape.rectangle.bottom-right {
+    width: 200px;
+    height: 20px;
+    bottom: 100px;
+    right: 30px;
+}
+
 /* Big boxes */
 .shape.box {
     position: absolute;

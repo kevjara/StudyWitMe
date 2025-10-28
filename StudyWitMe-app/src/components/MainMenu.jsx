@@ -3,13 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../services/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import logo from "../assets/Logo.png";
-import "./MainMenu.css";
+import { useMusic } from "../context/MusicProvider";
+import settingsIcon from "../assets/settings.svg";
+import TrackSelector from "./TrackSelector";
+import styles from "./MainMenu.module.css";
 
 
 function MainMenu() {
     const navigate = useNavigate();
-    const [showDropdown, setShowDropdown] = useState(false);
     const [user, setUser] = useState(null);
+    const { hasStartedOnce, playMusic, fadeOutAndStop } = useMusic();
+    const [showSignOutModal, setShowSignOutModal] = useState(false);
+    const [hasHoveredSettings, setHasHoveredSettings] = useState(false);
+
+    useEffect(() => {
+        if (!hasStartedOnce) {
+            playMusic();
+        }
+    }, [hasStartedOnce, playMusic]);
 
     useEffect(() => {
         // Listen for Firebase auth state
@@ -20,34 +31,26 @@ function MainMenu() {
     }, []);
 
     const handleSignOut = async () => {
+        setShowSignOutModal(true);
+
         try {
+            await fadeOutAndStop(2000); // wait for fade
             await signOut(auth);
-            navigate("/"); // back to TitleScreen
+            setShowSignOutModal(false);
+            navigate("/"); // go to TitleScreen
         } catch (error) {
             console.error("Error signing out:", error);
         }
     };
 
+
     return (
-        <div className="main-menu">
-            <header className="menu-header">
-                <nav className="nav-buttons">
+        <div className={styles.mainMenu}>
+            <header className={styles.menuHeader}>
+                <nav className={styles.navButtons}>
                     <button onClick={() => navigate("/profile")}>Profile</button>
-
-                    <div className="dropdown">
-                        <button onClick={() => setShowDropdown(!showDropdown)}>
-                            Flashcards ▾
-                        </button>
-                        {showDropdown && (
-                            <div className="dropdown-menu">
-                                <button onClick={() => navigate("/flashcards/create")}>Create</button>
-                                <button onClick={() => navigate("/flashcards/study")}>Study</button>
-                                <button disabled>Manage (Coming Soon)</button>
-                                <button disabled>Share (Coming Soon)</button>
-                            </div>
-                        )}
-                    </div>
-
+                    <button onClick={() => navigate("/flashcards")}>Flashcards</button>
+                    <button onClick={() => navigate("/create")}>Create</button>
                     <button onClick={() => navigate("/play")}>Play</button>
 
                     {/* Conditionally render auth button */}
@@ -56,11 +59,26 @@ function MainMenu() {
                     ) : (
                         <button onClick={() => navigate("/login")}>Sign In</button>
                     )}
+
+                    {/* ⚙️ Settings Icon */}
+                    <img
+                        src={settingsIcon}
+                        alt="Settings"
+                        className={`${styles.settingsIcon} ${
+                        !hasHoveredSettings ? styles.shakeOnce : ""
+                        }`}
+                        onMouseEnter={() => setHasHoveredSettings(true)}
+                        onClick={() => navigate("/settings")}
+                        title="Settings"
+                    />
                 </nav>
-                <img src={logo} alt="Logo" className="logo" />
+                <div className={styles.music}>
+                    <TrackSelector />
+                </div>
+                <img src={logo} alt="Logo" className={styles.logo} />
             </header>
 
-            <div className="menu-body">
+            <div className={styles.menuBody}>
                 <h2>Welcome to StudyWitMe!</h2>
                 {user ? (
                     <p>You are signed in as {user.email}</p>
@@ -68,6 +86,14 @@ function MainMenu() {
                     <p>You are browsing as a guest.</p>
                 )}
             </div>
+            {/* 🔹 Sign Out Modal Overlay */}
+            {showSignOutModal && (
+                <div className={styles.signoutOverlay}>
+                    <div className={styles.signoutModal}>
+                        <h3>Signing out...</h3>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
