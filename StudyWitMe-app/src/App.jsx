@@ -7,6 +7,9 @@ import Background from "./components/Background";
 import Flashcards from "./components/Flashcards";
 import Profile from "./components/Profile";
 import Settings from "./components/Settings";
+import Play from "./components/Play";
+import GameScreen from "./components/GameScreen";
+import GameConnection from "./components/GameConnection";
 
 function App() {
   return (
@@ -20,6 +23,12 @@ function App() {
         <Route path="/flashcards" element={<Flashcards />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+
+        <Route element={<GameConnection />}>
+          <Route path="/play" element={<Play />} />
+          <Route path="/game/:roomCode" element={<GameScreen/>} />
+        </Route>
+
       </Routes>
     </>
   );
