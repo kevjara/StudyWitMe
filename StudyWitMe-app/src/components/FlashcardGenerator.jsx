@@ -884,12 +884,37 @@ function FlashcardGenerator() {
                         return;
                     }
 
-                    // Build new array [question, response, isMultipleChoice]
-                    const processed = dummyFlashcards.map((fc, idx) => [
-                        fc.question,
-                        data.output[idx] || "",
-                        fc.isMultipleChoice,
-                    ]);
+                   // Build new array [question, randomizedOptions, isMultipleChoice, correctLabel]
+                    const processed = dummyFlashcards.map((fc, idx) => {
+                        const raw = data.output[idx] || "";
+                        if (!fc.isMultipleChoice) return [fc.question, raw, false, null];
+
+                        // Extract all options in order (A always correct per backend)
+                        const parts = raw.split("|||").filter((s) => s.trim() && !["A", "B", "C", "D"].includes(s.trim()));
+                        const options = parts.map((text, i) => ({
+                            label: ["A", "B", "C", "D"][i],
+                            text: text.trim(),
+                            isCorrect: i === 0, // A = correct answer
+                        }));
+
+                        // Randomize order
+                        for (let i = options.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [options[i], options[j]] = [options[j], options[i]];
+                        }
+
+                        // Assign new labels A–D after shuffle
+                        const randomized = options.map((opt, i) => ({
+                            label: ["A", "B", "C", "D"][i],
+                            text: opt.text,
+                            isCorrect: opt.isCorrect,
+                        }));
+
+                        // Find which label is now correct
+                        const correctLabel = randomized.find((o) => o.isCorrect)?.label || "A";
+
+                        return [fc.question, randomized, true, correctLabel];
+                    });
 
                     console.log("Processed flashcards:", processed);
                     setProcessedFlashcards(processed); // store it
@@ -911,11 +936,9 @@ function FlashcardGenerator() {
             {isStudying && processedFlashcards.length > 0 && (
                 <div className={styles.studyBox}>
                 {(() => {
-                    const [question, response, isMC] =
-                    processedFlashcards[currentIndex] || [];
-                    const options = isMC
-                    ? response.split("|||").filter((s) => s.trim() && !["A", "B", "C", "D"].includes(s.trim()))
-                    : [];
+                    const [question, response, isMC, correctLabel] = processedFlashcards[currentIndex] || [];
+                    const options = isMC ? response : [];
+
 
                     return (
                     <div>
@@ -926,29 +949,24 @@ function FlashcardGenerator() {
                         {isMC ? (
                         <div>
                             <div className={styles.optionRow}>
-                            {["A", "B", "C", "D"].map((label, i) => (
+                            {options.map(({ label, text }) => (
                                 <button
-                                key={label}
-                                className={`${styles.optionButton} ${
-                                    selectedOption === label
-                                    ? styles.selectedOption
-                                    : ""
-                                } ${
-                                    showResult &&
-                                    label === correctOption &&
-                                    styles.correctOption
-                                } ${
+                                    key={label}
+                                    className={`${styles.optionButton} ${
+                                    selectedOption === label ? styles.selectedOption : ""
+                                    } ${
+                                    showResult && label === correctLabel && styles.correctOption
+                                    } ${
                                     showResult &&
                                     selectedOption === label &&
-                                    selectedOption !== correctOption &&
+                                    selectedOption !== correctLabel &&
                                     styles.incorrectOption
-                                }`}
-                                onClick={() => !showResult && setSelectedOption(label)}
+                                    }`}
+                                    onClick={() => !showResult && setSelectedOption(label)}
                                 >
-                                <strong>{label})</strong>{" "}
-                                {options[i] ? options[i].trim() : ""}
+                                    <strong>{label})</strong> {text}
                                 </button>
-                            ))}
+                                ))}
                             </div>
 
                             <button
