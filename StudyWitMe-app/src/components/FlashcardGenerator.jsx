@@ -59,7 +59,7 @@ function FlashcardGenerator() {
     if (savedCard) {
         setFlashcardTypes((prev) => {
         const copy = [...prev];
-        copy[currentFlashcardIndex] = savedCard.type || "Short Response";
+        copy[currentFlashcardIndex] = savedCard.type || "Multiple Choice";
         return copy;
         });
     }

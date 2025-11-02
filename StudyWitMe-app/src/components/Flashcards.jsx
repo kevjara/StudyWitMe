@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { collection, onSnapshot, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import styles from "./Flashcards.module.css";
 
 export default function Flashcards() {
@@ -60,7 +60,9 @@ export default function Flashcards() {
             counts[deck.id] = cardSnapshot.size;
             }
             setDeckCounts(counts);
-            setIsLoading(false);
+            setTimeout(() => {
+                setIsLoading(false);
+            }, 3000)
         },
         (error) => {
             console.error("Error fetching decks:", error);
@@ -187,11 +189,8 @@ export default function Flashcards() {
             <div className={styles.menuBackdrop}>
             <h2>Oops, you're not signed in</h2>
             <p>
-                Please <Link to="/login">sign in</Link> to view your decks.
+                Please sign in to view your decks.
             </p>
-            <button className={styles.backButton} onClick={() => navigate("/main")}>
-                ← Back to Main Menu
-            </button>
             </div>
         </div>
         );
@@ -200,8 +199,8 @@ export default function Flashcards() {
     if (isLoading) {
         return (
         <div className={styles.overlay}>
-            <div className={styles.menuBackdrop}>
-            <h2>Loading decks...</h2>
+            <div className={styles.loadingToolbar}>
+                <h1 className={styles.loadingTitle}>Loading Decks...</h1>
             </div>
         </div>
         );
@@ -229,103 +228,98 @@ export default function Flashcards() {
 
     return (
         <div className={styles.overlay}>
-        <div className={styles.menuBackdrop}>
-            <h2>Your Decks</h2>
             <div className={styles.stickyToolbar}>
-            {/* Back button */}
-            <button className={styles.stickyBackButton} onClick={() => navigate("/main")}>
-                ← Back to Main Menu
-            </button>
 
-            {/* Top Toolbar */}
-            <div className={styles.deckToolbar}>
-            <div className={styles.toolbarLeft}>
-                {/* 🔹 Delete toggler */}
-                <button
-                    onClick={() => {
-                        console.log("Delete mode:", deleteMode, "Selected decks:", selectedDecks);
+                {/* Top Toolbar */}
+                <div className={styles.deckToolbar}>
+                <div className={styles.toolbarLeft}>
+                    {/* 🔹 Delete toggler */}
+                    <button
+                        onClick={() => {
+                            console.log("Delete mode:", deleteMode, "Selected decks:", selectedDecks);
 
-                        if (!deleteMode) {
-                        // entering delete mode
-                        setDeleteMode(true);
-                        setSelectedDecks([]);
-                        return;
-                        }
+                            if (!deleteMode) {
+                            // entering delete mode
+                            setDeleteMode(true);
+                            setSelectedDecks([]);
+                            return;
+                            }
 
-                        // ✅ exiting delete mode
-                        if (selectedDecks.length > 0) {
-                        console.log("Opening confirmation...");
-                        setShowDeleteConfirm(true);
-                        } else {
-                        console.log("No decks selected, exiting delete mode...");
-                        setDeleteMode(false);
-                        setSelectedDecks([]);
-                        }
-                    }}
-                >
-                    {deleteMode ? "Done" : "Delete"}
-                </button>
-                <button onClick={() => navigate("/flashcards/share")}>Share</button>
-            </div>
+                            // ✅ exiting delete mode
+                            if (selectedDecks.length > 0) {
+                            console.log("Opening confirmation...");
+                            setShowDeleteConfirm(true);
+                            } else {
+                            console.log("No decks selected, exiting delete mode...");
+                            setDeleteMode(false);
+                            setSelectedDecks([]);
+                            }
+                        }}
+                    >
+                        {deleteMode ? "Done" : "Delete"}
+                    </button>
+                    <button onClick={() => navigate("/flashcards/share")}>Share</button>
+                </div>
 
+                <h1 className={styles.toolbarTitle}>Your Decks</h1>
 
-            <div className={styles.toolbarRight}>
-                {/* Sort Dropdown */}
-                <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className={styles.dropdown}
-                >
-                <option value="category">Category</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="az">A–Z</option>
-                <option value="za">Z–A</option>
-                </select>
+                <div className={styles.toolbarRight}>
+                    {/* Sort Dropdown */}
+                    <select
+                    value={sortOption}
+                    onChange={(e) => setSortOption(e.target.value)}
+                    className={styles.dropdown}
+                    >
+                    <option value="category">Category</option>
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="az">A–Z</option>
+                    <option value="za">Z–A</option>
+                    </select>
 
-                {/* Filter Button + Floating Panel */}
-                <div className={styles.filterWrapper} ref={filterRef}>
-                <button
-                    className={styles.dropdownButton}
-                    onClick={() => setShowFilter((prev) => !prev)}
-                >
-                    Filter ▾
-                </button>
+                    {/* Filter Button + Floating Panel */}
+                    <div className={styles.filterWrapper} ref={filterRef}>
+                    <button
+                        className={styles.dropdownButton}
+                        onClick={() => setShowFilter((prev) => !prev)}
+                    >
+                        Filter ▾
+                    </button>
 
-                {showFilter && (
-                    <div className={styles.filterDropdown}>
-                    {categories.length > 0 ? (
-                        <>
-                        {categories.map((cat) => (
-                            <label key={cat} className={styles.filterItem}>
-                            <input
-                                type="checkbox"
-                                checked={selectedCategories.includes(cat)}
-                                onChange={() => toggleCategory(cat)}
-                            />
-                            <span>{cat}</span>
-                            </label>
-                        ))}
+                    {showFilter && (
+                        <div className={styles.filterDropdown}>
+                        {categories.length > 0 ? (
+                            <>
+                            {categories.map((cat) => (
+                                <label key={cat} className={styles.filterItem}>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedCategories.includes(cat)}
+                                    onChange={() => toggleCategory(cat)}
+                                />
+                                <span>{cat}</span>
+                                </label>
+                            ))}
 
-                        <div className={styles.filterButtons}>
-                            <button type="button" onClick={handleSelectAll}>
-                            Select All
-                            </button>
-                            <button type="button" onClick={handleClearFilter}>
-                            Clear Filter
-                            </button>
+                            <div className={styles.filterButtons}>
+                                <button type="button" onClick={handleSelectAll}>
+                                Select All
+                                </button>
+                                <button type="button" onClick={handleClearFilter}>
+                                Clear Filter
+                                </button>
+                            </div>
+                            </>
+                        ) : (
+                            <p style={{ padding: 12 }}>No categories found</p>
+                        )}
                         </div>
-                        </>
-                    ) : (
-                        <p style={{ padding: 12 }}>No categories found</p>
                     )}
                     </div>
-                )}
+                </div>
                 </div>
             </div>
-            </div>
-            </div>
-
+        <div className={styles.menuBackdrop}>
             {/* 🔹 Deck Gallery */}
             <div className={styles.flashcardGallery}>
                 {sortOption === "category" ? (
@@ -386,7 +380,7 @@ export default function Flashcards() {
                                             <div className={styles.deckButtons}>
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
+                                                    onClick={() => navigate("/flashcards_study", { state: { deck } })}
                                                 >
                                                     Study
                                                 </button>
@@ -458,7 +452,7 @@ export default function Flashcards() {
                                     <div className={styles.deckButtons}>
                                         <button
                                             className={styles.deckButtonSmall}
-                                            onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
+                                            onClick={() => navigate("/flashcards_study", { state: { deck } })}
                                         >
                                             Study
                                         </button>
@@ -540,4 +534,3 @@ export default function Flashcards() {
         </div>
     );
 }
-

@@ -4,56 +4,117 @@
 .overlay {
     min-height: 100vh;
     display: flex;
+    flex-direction: column; /* stack children vertically */
+    align-items: center;    /* keep content centered horizontally */
+    gap: 4px;
+}
+
+/* =======================
+    LOADING ANIMATION
+   ======================= */
+@keyframes slideDownToolbar {
+    0% {
+        transform: translateY(-10px); /* only slightly above the border-bottom */
+        opacity: 0;
+    }
+    40% {
+        transform: translateY(4px); /* small overshoot for natural feel */
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInText {
+    0%, 50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Special version of the toolbar for loading */
+.loadingToolbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #1b3c4f;
+    z-index: 150;
+    padding: 20px 0;
+    display: flex;
     justify-content: center;
-    padding: 40px 20px;
+    align-items: center;
+    animation: slideDownToolbar 0.6s ease-out forwards;
+}
+
+.loadingTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    opacity: 0;
+    animation: fadeInText 1s ease-in forwards;
+    animation-delay: 0.3s; /* text appears after toolbar slides in */
+}
+
+/* =======================
+    CATEGORY & CARD LOADING ANIMATION
+   ======================= */
+
+/* 1. Slide category headers upward (one by one) */
+@keyframes slideUpCategory {
+    0% {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    70% {
+        transform: translateY(-4px); /* slight overshoot for realism */
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .menuBackdrop {
-    background-color: #fdfdfd;
+    background-color: none;
     color: #1b3c4f;
     padding: 32px;
-    border-radius: 12px;
+    border-radius: none;
     width: 100%;
     max-width: 1200px;
     margin-bottom: 35px;
     font-size: 2rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* Sticky toolbar containing Back + Manage/Share/Sort/Filter */
+/* Sticky toolbar containing Manage/Share/Sort/Filter */
 .stickyToolbar {
     position: sticky;       /* sticks to top while scrolling */
     top: 0;                 /* starts at the top of container */
     left: 0;
     width: 100%;
-    background: #fdfdfd;    /* match menu backdrop */
+    background: #1b3c4f;
     z-index: 150;
-    padding: 12px 20px;
+    padding: 1px 20px;
+    justify-content: center;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: none;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-/* Back button in sticky toolbar */
-.stickyBackButton {
-    background: none;
-    border: none;
-    color: #1b3c4f;
-    font-weight: 500;
-    font-size: 1rem;
-    cursor: pointer;
-    margin-right: auto;     /* pushes other buttons to the right */
-    transition: color 0.2s;
-}
-
-.stickyBackButton:hover {
-    color: #416d8e;
+.toolbarTitle {
+    text-align: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0; 
+    padding: 0;
 }
 
 /* =======================
@@ -86,21 +147,18 @@
     -moz-appearance: none;
     background-color: #416d8e;
     border: 1px solid #d0d0d0;
+    margin-right: 20px;
+    padding: 12px 24px;
+    border: none;
     border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 0.95rem;
-    font-weight: 500;
+    background-color: #416d8e;
     color: #fff;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    line-height: 1.4;
-    height: 40px; /* consistent button height */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 90px; /* ensures visual balance */
-    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
-    font-family: "Inter", "Segoe UI", sans-serif;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.25s ease, transform 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
 }
 
 /* Hover + active states */
@@ -393,7 +451,8 @@
     font-weight: 700;
     margin-bottom: 0.6rem;
     color: #1b3c4f;
-    border-bottom: 1px solid #eee;
+    border-bottom: 3px solid rgba(27, 60, 79, 0.5);
+    border-top: 3px solid rgba(27, 60, 79, 0.5);
     padding-bottom: 0.4rem;
 }
 
@@ -420,7 +479,6 @@
 
 /* A small separator between category groups */
 .categorySection + .categorySection {
-    border-top: 1px solid #f0f0f0;
     padding-top: 1rem;
 }
 

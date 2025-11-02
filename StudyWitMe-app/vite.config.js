@@ -7,6 +7,8 @@ export default defineConfig({
     server: {
     proxy: {
       "/generate": "http://localhost:3000",
+        "/study": "http://localhost:3000",
+      "/compare": "http://localhost:3000",
     }
   }
 })

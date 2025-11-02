@@ -29,6 +29,8 @@
     cursor: grab;
     user-select: none;
     transition: transform 0.3s;
+    touch-action: none; /* disables touch scrolling */
+    overscroll-behavior: contain;
 }
 
 /* Core item styling */

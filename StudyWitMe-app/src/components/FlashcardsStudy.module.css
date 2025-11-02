@@ -1,0 +1,106 @@
+
+.studySection {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.studyButton {
+    background-color: #4a4a4a;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.studyButton:hover {
+    background-color: #5c5c5c;
+}
+
+.studyBox {
+    margin-top: 20px;
+    background-color: #d3d3d3;
+    border-radius: 12px;
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    color: #333;
+}
+
+.optionRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.optionButton {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: #333;
+    color: white;
+    cursor: pointer;
+}
+
+.selectedOption {
+    border: 2px solid #007bff;
+}
+
+.correctOption {
+    background-color: #28a745 !important;
+}
+
+.incorrectOption {
+    background-color: #dc3545 !important;
+}
+
+.shortResponseContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.shortResponseInput {
+    width: 100%;
+    min-height: 60px;
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+.submitButton {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: white;
+    color: black;
+    cursor: pointer;
+}
+
+.navButtons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.navButton {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: #555;
+    color: white;
+    cursor: pointer;
+}
+
+/* Status message */
+.status {
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    margin-top: 10px;
+}
