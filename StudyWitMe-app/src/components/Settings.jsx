@@ -18,14 +18,18 @@ function Settings() {
 
     const handleBack = () => {
         if (page === "music") setPage("main");
-        else navigate("/main");
+        else if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate("/main");
+        }
     };
 
     return (
         <div className={styles.settingsContainer}>
         <div className={styles.settingsCard}>
             <button className={styles.backButton} onClick={handleBack}>
-            ← {page === "music" ? "Back" : "Back to Main Menu"}
+            ← Back
             </button>
 
             {page === "main" && (

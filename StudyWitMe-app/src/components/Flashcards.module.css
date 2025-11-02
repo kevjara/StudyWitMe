@@ -18,7 +18,7 @@
         opacity: 0;
     }
     40% {
-        transform: translateY(4px); /* small overshoot for natural feel */
+        transform: translateY(-2px);
         opacity: 0.7;
     }
     100% {
@@ -48,7 +48,7 @@
 }
 
 .loadingTitle {
-    font-size: 2.5rem;
+    font-size: 2.4rem;
     font-weight: 700;
     color: #fff;
     opacity: 0;
@@ -108,6 +108,20 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
+
+/* =======================
+            TOOLBAR
+   ====================== */
+.deckToolbar {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 1000px;
+}
+
 .toolbarTitle {
     text-align: center;
     font-size: 3rem;
@@ -117,25 +131,30 @@
     padding: 0;
 }
 
-/* =======================
-            TOOLBAR
-   ====================== */
-.deckToolbar {
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    width: 100%;
-    max-width: 1000px;
-}
-
 /* Ensure buttons inside each toolbar section have spacing */
 .toolbarLeft,
 .toolbarRight {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
-    gap: 12px; 
+    gap: 12px;
+}
+
+.toolbarLeft {
+    left: 0; /* stick to left */
+}
+
+/* Make Delete/Done button fixed size to prevent shifting */
+.toolbarLeft button.deleteToggle {
+    width: 100px;            /* fixed width for Delete/Done */
+    text-align: center;      /* center text inside */
+    flex-shrink: 0;          /* prevent it from shrinking */
+}
+
+.toolbarRight {
+    right: 0; /* stick to right */
 }
 
 .toolbarLeft button,
@@ -431,7 +450,7 @@
 }
 
 .deckButtonSmall:hover {
-    background-color: #2563eb;
+    background-color: #2f546e;
 }
 
 

@@ -76,19 +76,18 @@ export default function Flashcards() {
     // 🔹 Gather unique categories (derived from loaded decks)
     const categories = [...new Set(decks.map((d) => d.category).filter(Boolean))];
 
-    // Initialize selectedCategories to all categories once, after first decks load.
     useEffect(() => {
+        // Initialize selectedCategories once, after first decks load
         if (!didInitCategoriesRef.current && categories.length > 0) {
-        setSelectedCategories([...categories]); // default: all checked
-        didInitCategoriesRef.current = true;
+            setSelectedCategories([...categories]);
+            didInitCategoriesRef.current = true;
         }
-        // If categories becomes empty (no decks), ensure selectedCategories is empty array
-        if (categories.length === 0) {
-        setSelectedCategories([]);
+
+        // If categories becomes empty, clear selectedCategories only if not already empty
+        if (categories.length === 0 && selectedCategories.length > 0) {
+            setSelectedCategories([]);
         }
-        // We intentionally do not include selectedCategories in deps to avoid clobbering user choices
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [categories]);
+    }, [categories, selectedCategories]);
 
     // 🔹 Close the filter panel when clicking outside
     useEffect(() => {
@@ -234,10 +233,9 @@ export default function Flashcards() {
                 <div className={styles.deckToolbar}>
                 <div className={styles.toolbarLeft}>
                     {/* 🔹 Delete toggler */}
-                    <button
+                    <button className={styles.deleteToggle}
                         onClick={() => {
                             console.log("Delete mode:", deleteMode, "Selected decks:", selectedDecks);
-
                             if (!deleteMode) {
                             // entering delete mode
                             setDeleteMode(true);
