@@ -16,6 +16,7 @@ import Settings from "./components/Settings";
 import FlashcardsStudy from "./components/FlashcardsStudy";
 import Layout from "./components/Layout";
 import Quiz from "./components/FlashcardsQuiz";
+import ManageDeck from "./components/ManageDeck";
 
 function App() {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/flashcards_study" element={<FlashcardsStudy />} />
               <Route path="/flashcards_quiz" element={<Quiz />} />
+              <Route path="/manage/:deckId" element={<ManageDeck />} />
             </Route>
           </Routes>
     </>

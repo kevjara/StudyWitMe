@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../services/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import settingsIcon from "../assets/settings.svg";
 import logo from "../assets/Logo.png";
 import home from "../assets/home.svg";
@@ -21,15 +19,6 @@ function Header({ handleSignOut }) {
             playMusic();
         }
     }, [hasStartedOnce, playMusic]);
-
-    useEffect(() => {
-        // Listen for Firebase auth state
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-        });
-        return () => unsubscribe();
-    }, []);
-
 
     return (
         <header className={styles.header}>

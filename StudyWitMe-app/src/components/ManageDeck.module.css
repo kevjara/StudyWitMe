@@ -1,0 +1,598 @@
+/* =======================
+        GENERAL LAYOUT
+   ====================== */
+.overlay {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; /* stack children vertically */
+    align-items: center;    /* keep content centered horizontally */
+    gap: 4px;
+}
+
+/* =======================
+    LOADING ANIMATION
+   ======================= */
+@keyframes slideDownToolbar {
+    0% {
+        transform: translateY(-10px); /* only slightly above the border-bottom */
+        opacity: 0;
+    }
+    40% {
+        transform: translateY(-2px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInText {
+    0%, 50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Special version of the toolbar for loading */
+.loadingToolbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #1b3c4f;
+    z-index: 150;
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: slideDownToolbar 0.6s ease-out forwards;
+}
+
+.loadingTitle {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #fff;
+    opacity: 0;
+    animation: fadeInText 1s ease-in forwards;
+    animation-delay: 0.3s; /* text appears after toolbar slides in */
+}
+
+/* === Sticky Toolbar (same as Flashcards.jsx) === */
+/* =======================
+            TOOLBAR
+   ====================== */
+.stickyToolbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #1b3c4f;
+    z-index: 150;
+    padding: 10px 20px;
+    justify-content: center; /* Align back button to the left */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    border-bottom: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Reuse back button styling for visual consistency */
+.backButton {
+    position: absolute;
+    top: 12px;
+    left: 40px;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: white; /* contrast with dark background */
+    cursor: pointer;
+    padding: 10px 0;
+}
+
+.backButton:hover {
+    color: #9fc6de;
+}
+
+.deckToolbar {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 1000px;
+}
+
+.toolbarTitle {
+    text-align: center;
+    font-size: 2.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0; 
+    padding: 0;
+}
+
+/* Ensure buttons inside each toolbar section have spacing */
+.toolbarLeft,
+.toolbarRight {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toolbarLeft {
+    left: 0; /* stick to left */
+}
+
+/* Make Delete/Done button fixed size to prevent shifting */
+.toolbarLeft button.deleteToggle {
+    width: 100px;            /* fixed width for Delete/Done */
+    text-align: center;      /* center text inside */
+    flex-shrink: 0;          /* prevent it from shrinking */
+}
+
+.toolbarRight {
+    right: 0; /* stick to right */
+}
+
+.toolbarLeft button,
+.toolbarRight button,
+.toolbarLeft select,
+.toolbarRight select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #416d8e;
+    border: 1px solid #d0d0d0;
+    margin-right: 20px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background-color: #416d8e;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+/* Hover + active states */
+.toolbarLeft button:hover,
+.toolbarRight button:hover,
+.toolbarLeft select:hover,
+.toolbarRight select:hover {
+    background-color: #2f546e;
+    border-color: #bfc8d2;
+}
+
+
+.menuBackdrop {
+    background-color: none;
+    color: #1b3c4f;
+    padding: 32px;
+    border-radius: none;
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 35px;
+    font-size: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.dropdown {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-weight: 500;
+}
+
+/* =======================
+    Deck Editing Cover Card
+   ======================= */
+.coverCard {
+    position: relative;
+    width: 800px;
+    max-width: 95%;
+    margin: 0 auto 32px auto;
+    background-color: #f5f5f5;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 30px;
+    overflow: hidden;
+    gap: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Textarea */
+.coverCard .textArea {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 60px;         /* smaller height */
+    max-height: 120px;        /* limit expansion */
+    padding: 10px 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    resize: vertical;         /* allow resize if user wants */
+    background-color: #fff;
+    color: #333;
+    box-sizing: border-box;   /* ensures padding doesn’t break width */
+}
+
+/* Category + Public toggle row */
+.categoryRow {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.categoryColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Checkbox + label styling */
+.publicToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.publicLabel {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #222;
+}
+
+/* Save Button */
+.saveButton {
+    width: fit-content;
+    align-self: flex-end;
+    margin-top: 16px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 8px;
+    background-color: #416d8e;
+    color: white;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.25s ease, transform 0.15s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+    background-color: #2f546e;
+    transform: translateY(-2px);
+}
+
+.saveButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =======================
+        DECK CARD
+   ====================== */
+.deckCard {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 16px;
+    transition: transform 0.18s, box-shadow 0.18s;
+    position: relative;
+    width: 100%;
+    max-width: 260px;
+    height: 280px; /* fixed height for consistency across all sorts */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+}
+
+.deckCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Keep internal layout stable */
+.deckCardContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+/* Deck title */
+.deckCardContent h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 4px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Deck description */
+.deckDescription {
+    font-size: 0.88rem;
+    color: #555;
+    margin-bottom: 6px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* show max 2 lines */
+    -webkit-box-orient: vertical;
+}
+
+/* Card count & category tag (bottom content) */
+.deckMeta {
+    margin-top: 8px;
+}
+
+.deckMeta p {
+    margin: 4px 0; /* ✅ reduces vertical gap between lines */
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Buttons anchored at bottom */
+.deckButtons {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.deckButtonSmall {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    border-radius: 6px;
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.deckButtonSmall:hover {
+    background-color: #2f546e;
+}
+
+/* =======================
+    Big picker modal (From second snippet)
+   ======================= */
+.pickerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+}
+.pickerDialog {
+    width: min(1100px, 94vw);
+    height: min(82vh, 900px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(2, 8, 23, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+.pickerBody {
+    padding: 16px;
+    overflow: auto;
+}
+.pickerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+}
+.pickerCell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.pickerThumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+.pickerCell button {
+    margin: 8px;
+}
+
+
+/* If using CSS Modules, wrap each rule with :global(...) */
+.picker-grid-wrapper .image-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    gap: 16px !important;
+}
+
+.picker-grid-wrapper .image-card {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.picker-grid-wrapper .image-card img {
+    width: 100% !important;
+    height: 140px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
+}
+
+.picker-grid-wrapper .controls { /* search bar row */
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+.picker-grid-wrapper .pager {
+    margin-top: 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+}
+
+/* =======================
+   STATUS PILL (Toast / Message)
+   ======================= */
+.statusPill {
+    background-color: #1b3c4f;      /* dark teal background to match toolbar */
+    color: #ffffff;                 /* white readable text */
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 20px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+    margin-top: 16px;
+    text-align: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0.95;
+}
+
+.statusPill:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+/* Grid container for cards (1 per row) */
+.categoryGrid {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr; /* 1 card per row */
+    gap: 24px;
+}
+
+/* Each flashcard styling to match coverCard */
+.flashcard {
+    width: 100%;
+    max-width: 800px; /* same as coverCard */
+    min-height: 420px; 
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Image container for card image + buttons */
+.flashcardImageRow {
+    display: flex;
+    gap: 12px;
+}
+
+.flashcardImageBox {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    color: #374151;
+}
+
+.flashcardImageBox img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Buttons next to image */
+.flashcardImageButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Type dropdown wrapper */
+.flashcardType {
+    margin-top: 10px;
+}
+
+.flashcardType label {
+    font-weight: 600;
+}
+
+.flashcardType select {
+    margin-top: 4px;
+}
+
+/* Textareas for Front and Back */
+.flashcardTextarea {
+    display: flex;
+    flex-direction: column;
+}
+
+.flashcardTextarea label {
+    font-weight: 600;
+}
+
+.flashcardTextarea textarea {
+    min-height: 100px;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    resize: vertical;
+}
+
+/* Info strip at bottom */
+.flashcardInfo {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 8px;
+}
+
+/* Deck buttons at bottom (Save / Delete) */
+.flashcardButtons {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+}
