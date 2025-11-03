@@ -384,7 +384,7 @@ export default function Flashcards() {
                                                 </button>
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
+                                                    onClick={() => navigate("/flashcards_quiz", { state: { deck } })}
                                                 >
                                                     Quiz
                                                 </button>
@@ -456,7 +456,7 @@ export default function Flashcards() {
                                         </button>
                                         <button
                                             className={styles.deckButtonSmall}
-                                            onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
+                                            onClick={() => navigate("/flashcards_quiz", { state: { deck } })}
                                         >
                                             Quiz
                                         </button>
