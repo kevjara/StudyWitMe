@@ -16,6 +16,9 @@ import Settings from "./components/Settings";
 import FlashcardsStudy from "./components/FlashcardsStudy";
 import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
+import Play from "./components/Play";
+import GameScreen from "./components/GameScreen";
+import GameConnection from "./components/GameConnection";
 
 function App() {
   const navigate = useNavigate();
@@ -50,6 +53,10 @@ function App() {
             {/* Routes WITHOUT layout */}
             <Route path="/" element={<TitleScreen />} />
             <Route path="/login" element={<Login />} />
+            <Route element={<GameConnection />}>
+              <Route path="/play" element={<Play />} />
+              <Route path="/game/:roomCode" element={<GameScreen/>} />
+            </Route>
 
             {/* Routes WITH layout */}
             <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>

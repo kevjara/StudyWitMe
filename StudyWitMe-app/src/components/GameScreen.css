@@ -1,0 +1,324 @@
+.host-lobby-overlay{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.host-lobby-container{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    max-width: 500px;
+    min-height: 400px;
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.host-lobby-container h1{
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.player-display{
+    text-align: center;
+}
+
+.player-display p{
+    position: absolute;
+    top: 6rem;
+    left: 2rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.player-display ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.host-lobby-start-game-btn{
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    background-color: blue;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.join-lobby-overlay{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.join-lobby-container{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 90%;
+    max-width: 500px;
+    min-height: 400px;
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.join-lobby-container h1{
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #555;
+}
+
+.game-host-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 900;
+    width: 100vw;
+    height: 100vh;
+}
+
+.game-host-container{
+    display: flex;
+    flex-direction: row;
+    width: 90%;
+    max-width: 900px;
+    min-height: 500px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.game-host-main {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem;
+    border-radius: 1px solid #eee;
+}
+
+.game-host-scoreboard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem;
+    max-height: 500px;
+}
+
+.game-host-timer {
+    align-self: flex-end;
+    font-size: 1rem;
+    color: #888;
+}
+
+.game-host-q-number {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #555;
+    margin: 0;
+}
+
+.game-host-q-text{
+    text-align: center;
+    font-size: 1.8rem;
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+    min-height: 80px;
+}
+
+.game-options-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+.game-result-message{
+    margin-top: 2rem;
+    min-height: 30px;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.game-host-scoreboard h4{
+    text-align: center;
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.game-host-scoreboard ul{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+}
+
+.game-host-scoreboard li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
+    padding: 10px 5px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.player-trivia-screen-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 900;
+    width: 100vw;
+    height: 100vh;
+}
+
+.player-trivia-screen-container{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    max-width: 600px;
+    min-height: 150px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    padding: 2rem;
+}
+
+.player-trivia-waiting-text {
+    font-size: 1.5rem;
+}
+
+.player-trivia-status-title {
+    width: 100%;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+}
+
+.player-trivia-options-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+.player-trivia-options-btn{
+    width: 100%;
+    min-height: 60px;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    border: 2px;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.player-trivia-result-message {
+    margin-top: 2rem;
+    min-height: 30px;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.player-trivia-result-message p {
+    margin: 0;
+}
+
+.gameover-screen-overlay{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.gameover-screen-container{
+    display: flex;
+    flex-direction: column;
+    width: 90%;
+    max-width: 500px;
+    min-height: 300px;
+    background-color: white;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    padding: 2rem;
+}
+
+.gameover-screen-container h1 {
+    width: 100%;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    color: black;
+}
+
+.gameover-screen-scoreboard h2{
+    align-self: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 80%;
+}
+
+.gameover-screen-scoreboard li{
+    text-align: center;
+    font-size: 1.1rem;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
