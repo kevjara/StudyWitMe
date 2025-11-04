@@ -13,6 +13,7 @@ import {
   deleteDoc,
   addDoc,
   serverTimestamp,
+  orderBy,
 } from "firebase/firestore";
 import ImagePicker from "./ImagePicker";
 import ModalPortal from "./ModalPortal";
@@ -20,6 +21,8 @@ import {categories} from "./categories";
 import styles from "./ManageDeck.module.css";
 
 export default function ManageDeck() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [justAddedCard, setJustAddedCard] = useState(false);
   const { deckId } = useParams();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +41,7 @@ export default function ManageDeck() {
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editSubcategory, setEditSubcategory] = useState("");
   const [editIsPublic, setEditIsPublic] = useState(false);
   const [deckIsDirty, setDeckIsDirty] = useState(false);
   const [deckSaving, setDeckSaving] = useState(false);
@@ -57,6 +61,7 @@ export default function ManageDeck() {
       setEditTitle(deck.title || "");
       setEditDescription(deck.description || "");
       setEditCategory(deck.category || "");
+      setEditSubcategory(deck.subcategory || "");
       setEditIsPublic(deck.isPublic || false);
       setDeckIsDirty(false); // Reset dirty status on initial load/deck change
     }
@@ -80,7 +85,12 @@ export default function ManageDeck() {
       try {
         const dref = doc(db, "deck", deckId);
         const snap = await getDoc(dref);
-        if (snap.exists()) setDeck({ id: snap.id, ...snap.data() });
+        if (snap.exists()) {
+          const data = snap.data();
+          // normalize the imagePath field to imageUrl
+          const normalizedImageUrl = data.imageUrl || data.imagePath || null;
+          setDeck({ id: snap.id, ...data, imageUrl: normalizedImageUrl });
+        }
         else toast("Deck not found");
       } catch {
         toast("Failed to load deck");
@@ -90,7 +100,8 @@ export default function ManageDeck() {
     const qCards = query(
       cref,
       where("deckId", "==", deckId),
-      where("ownerId", "==", currentUser.uid)
+      where("ownerId", "==", currentUser.uid),
+      orderBy("createdAt", "asc") // oldest first → new cards appear at the end
     );
     const unsub = onSnapshot(
       qCards,
@@ -174,24 +185,57 @@ export default function ManageDeck() {
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this card?")) return;
-    await deleteDoc(doc(db, "flashcard", id));
-    toast("Card deleted");
+
+    const deletedIndex = cards.findIndex(c => c.id === id);
+
+    try {
+      await deleteDoc(doc(db, "flashcard", id));
+      toast("Card deleted");
+
+      // adjust currentIndex
+      setCurrentIndex(prev => {
+        if (cards.length === 1) return 0; // deleted the only card
+        if (deletedIndex === prev && prev === cards.length - 1) {
+          return prev - 1; // deleted the last card, go back
+        }
+        return prev; // otherwise keep same index
+      });
+    } catch (e) {
+      console.error(e);
+      toast("Failed to delete card");
+    }
   };
 
+
   const handleAddCard = async () => {
-    await addDoc(collection(db, "flashcard"), {
-      deckId,
-      ownerId: currentUser.uid,
-      front: "",
-      back: "",
-      type: "Multiple Choice",
-      imagePath: null,
-      category: deck?.category || "",
-      createdAt: serverTimestamp(),
-      isPublic: false,
-    });
-    toast("Added new card");
+    try {
+      await addDoc(collection(db, "flashcard"), {
+        deckId,
+        ownerId: currentUser.uid,
+        front: "",
+        back: "",
+        type: "Multiple Choice",
+        imagePath: null,
+        category: deck?.category || "",
+        createdAt: serverTimestamp(),
+        isPublic: false,
+      });
+
+      toast("Added new card");
+      setJustAddedCard(true);
+    } catch (e) {
+      console.error(e);
+      toast("Failed to add card");
+    }
   };
+
+  useEffect(() => {
+    if (justAddedCard && cards.length > 0) {
+      setCurrentIndex(cards.length - 1); // jump to last card
+      setJustAddedCard(false);
+    }
+  }, [cards, justAddedCard]);
+
   if (!currentUser)
     return (
       <div className={styles.overlay}>
@@ -220,7 +264,7 @@ export default function ManageDeck() {
           <div className={styles.deckToolbar}>
           <div className={styles.toolbarLeft}>
           </div>
-          <h2 className={styles.toolbarTitle}>Manage Deck: {deck?.title || "Untitled Deck"}</h2>
+          <h2 className={styles.toolbarTitle}>Manage Deck</h2>
         </div>
         </div>
       <div className={styles.menuBackdrop}>
@@ -259,6 +303,24 @@ export default function ManageDeck() {
                 </option>
               ))}
             </select>
+
+            {/* Subcategory dropdown */}
+            <label className={styles.subcategoryLabel}>Subcategory</label>
+            <select
+              className={styles.dropdown}
+              value={editSubcategory}
+              onChange={(e) => setEditSubcategory(e.target.value)}
+              disabled={!editCategory} // disable if no category selected
+            >
+              <option value="">--Select Subcategory--</option>
+              {categories
+                .find((cat) => cat.name === editCategory)
+                ?.subcategories?.map((sub) => (
+                  <option key={sub} value={sub}>
+                    {sub}
+                  </option>
+                ))}
+            </select>
           </div>
 
           <div className={styles.publicToggle}>
@@ -274,18 +336,6 @@ export default function ManageDeck() {
           </div>
         </div>
 
-        {/* Save Button */}
-        <button
-          onClick={handleSaveDeckInfo}
-          disabled={!deckIsDirty || deckSaving}
-          className={styles.saveButton}
-        >
-          {deckSaving ? "Saving Deck Info..." : deckIsDirty ? "Save Deck Info" : "Deck Info Saved"}
-        </button>
-      </div>
-      {/* END DECK EDITING FORM */}
-
-        {/* deck Image controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
           <div
             style={{
@@ -317,6 +367,7 @@ export default function ManageDeck() {
               </div>
             )}
           </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             className={styles.deckButtonSmall}
             onClick={() => setPickerForDeck(true)}
@@ -335,83 +386,56 @@ export default function ManageDeck() {
               Remove
             </button>
           )}
-        </div>
-        <div className={styles.deckToolbar}>
-          <button onClick={handleAddCard}>+ Add Card</button>
-          {status && <span className={styles.statusPill}>{status}</span>}
+          </div>
         </div>
 
-        {/*Flashcards (Card Editing)*/}
-        <div 
-            className={styles.categoryGrid}
-            //fixed bug, CSS fix here
-            style={{ 
-                maxWidth: '1000px', 
-                margin: '0 auto', 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', // Use a larger min-width for columns
-                gap: '24px' // Increased gap for visual separation
-            }}
+        {/* Save Button */}
+        <button
+          onClick={handleSaveDeckInfo}
+          disabled={!deckIsDirty || deckSaving}
+          className={styles.saveButton}
         >
-          {cards.map((c) => (
-            <div 
-              key={c.id} 
-              className={styles.deckCard}
-              style={{ 
-                minHeight: '420px', 
-                height: 'auto', 
-                maxWidth: '100%', 
-                display: 'flex', 
-                flexDirection: 'column',
-                gap: '12px',
-                padding: '20px', 
-                boxSizing: 'border-box'
-              }}
-            >
-              
+          {deckSaving ? "Saving Deck Info..." : deckIsDirty ? "Save Deck Info" : "Deck Info Saved"}
+        </button>
+      </div>
+      {/* END DECK EDITING FORM */}
+
+      <div className={styles.deckToolbar}>
+        <button onClick={handleAddCard}>+ Add Card</button>
+        {status && <span className={styles.statusPill}>{status}</span>}
+      </div>
+
+      {/* Flashcard Viewer */}
+      <div className={styles.flashcardViewer}>
+        {cards.length > 0 && (
+          <>
+            <div className={styles.flashcard}>
               {/* Image */}
-              <div style={{ display: "flex", gap: 12 }}>
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    background: "#f3f4f6",
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
-                  {c._imagePath ? (
+              <div className={styles.imageRow}>
+                <div className={styles.imageBox}>
+                  {cards[currentIndex]._imagePath ? (
                     <img
-                      src={c._imagePath}
+                      src={cards[currentIndex]._imagePath}
                       alt=""
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      className={styles.cardImage}
                     />
                   ) : (
-                    <div
-                      style={{
-                        display: "grid",
-                        placeItems: "center",
-                        height: "100%",
-                        fontSize: 12,
-                        color: "#374151",
-                      }}
-                    >
-                      No image
-                    </div>
+                    <div className={styles.noImage}>No image</div>
                   )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div className={styles.imageButtons}>
                   <button
                     className={styles.deckButtonSmall}
-                    onClick={() => setPickerForCard(c.id)}
+                    onClick={() => setPickerForCard(cards[currentIndex].id)}
                   >
-                    {c._imagePath ? "Change Image" : "Add Image"}
+                    {cards[currentIndex]._imagePath ? "Change Image" : "Add Image"}
                   </button>
-                  {c._imagePath && (
+                  {cards[currentIndex]._imagePath && (
                     <button
                       className={styles.deckButtonSmall}
-                      onClick={() => handleFieldEdit(c.id, "_imagePath", null)}
+                      onClick={() =>
+                        handleFieldEdit(cards[currentIndex].id, "_imagePath", null)
+                      }
                     >
                       Remove Image
                     </button>
@@ -420,13 +444,14 @@ export default function ManageDeck() {
               </div>
 
               {/* Type Dropdown */}
-              <div style={{ marginTop: 10 }}>
-                <label style={{ fontWeight: '600' }}>Type</label>
+              <div className={styles.typeRow}>
+                <label className={styles.typeLabel}>Type</label>
                 <select
                   className={styles.dropdown}
-                  value={c._type}
-                  onChange={(e) => handleFieldEdit(c.id, "_type", e.target.value)}
-                  style={{ marginTop: '4px' }}
+                  value={cards[currentIndex]._type}
+                  onChange={(e) =>
+                    handleFieldEdit(cards[currentIndex].id, "_type", e.target.value)
+                  }
                 >
                   <option value="Short Response">Short Response</option>
                   <option value="Multiple Choice">Multiple Choice</option>
@@ -434,45 +459,72 @@ export default function ManageDeck() {
               </div>
 
               {/* Front Textarea */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontWeight: '600' }}>Front</label>
+              <div className={styles.textAreaRow}>
+                <label className={styles.textAreaLabel}>Front</label>
                 <textarea
-                  value={c._front}
-                  onChange={(e) => handleFieldEdit(c.id, "_front", e.target.value)}
-                  style={{ minHeight: '100px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', resize: 'vertical' }}
+                  value={cards[currentIndex]._front}
+                  onChange={(e) =>
+                    handleFieldEdit(cards[currentIndex].id, "_front", e.target.value)
+                  }
+                  className={styles.textArea}
                 />
               </div>
-              
+
               {/* Back Textarea */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontWeight: '600' }}>Back</label>
+              <div className={styles.textAreaRow}>
+                <label className={styles.textAreaLabel}>Back</label>
                 <textarea
-                  value={c._back}
-                  onChange={(e) => handleFieldEdit(c.id, "_back", e.target.value)}
-                  style={{ minHeight: '100px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', resize: 'vertical' }}
+                  value={cards[currentIndex]._back}
+                  onChange={(e) =>
+                    handleFieldEdit(cards[currentIndex].id, "_back", e.target.value)
+                  }
+                  className={styles.textArea}
                 />
-              </div>
-
-
-              {/* Info strip */}
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
-                <div>ID: {c.id}</div>
-                <div>Deck: {c.deckId}</div>
-                <div>Owner: {c.ownerId}</div>
               </div>
 
               <div className={styles.deckButtons}>
                 <button
-                  disabled={!c._dirty || c._saving}
-                  onClick={() => handleSave(c.id)}
+                  disabled={!cards[currentIndex]._dirty || cards[currentIndex]._saving}
+                  onClick={() => handleSave(cards[currentIndex].id)}
                 >
-                  {c._saving ? "Saving…" : c._dirty ? "Save" : "Saved"}
+                  {cards[currentIndex]._saving
+                    ? "Saving…"
+                    : cards[currentIndex]._dirty
+                    ? "Save"
+                    : "Saved"}
                 </button>
-                <button onClick={() => handleDelete(c.id)}>Delete</button>
+                <button onClick={() => handleDelete(cards[currentIndex].id)}>
+                  Delete
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Navigation */}
+            <div className={styles.navButtons}>
+              <button
+                onClick={() =>
+                  setCurrentIndex((prev) => Math.max(prev - 1, 0))
+                }
+                disabled={currentIndex === 0}
+              >
+                ← Previous
+              </button>
+              <span>
+                {currentIndex + 1} / {cards.length}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentIndex((prev) => Math.min(prev + 1, cards.length - 1))
+                }
+                disabled={currentIndex === cards.length - 1}
+              >
+                Next →
+              </button>
+            </div>
+          </>
+        )}
+        {cards.length === 0 && <p>No cards in this deck.</p>}
+      </div>
 
         {/* Deck Image Picker Modal (Unchanged) */}
         {pickerForDeck && (

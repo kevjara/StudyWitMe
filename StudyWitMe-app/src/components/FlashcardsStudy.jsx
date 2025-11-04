@@ -22,6 +22,7 @@ function FlashcardsStudy() {
     const [shortResponse, setShortResponse] = useState("");
     const statusTimeoutRef = useRef(null);
     const [cardStatuses, setCardStatuses] = useState([]);
+     const [mode, setMode] = useState(null); // null | "practice" | "review"
     const [isFlipped, setIsFlipped] = useState(false);
 
     // Safety check: no deck
@@ -92,12 +93,20 @@ function FlashcardsStudy() {
             setStatus("Creating study session...");
             setIsStudying(false);
 
-            // Format flashcards
-            const formatted = flashcards.map((fc) => ({
-                question: fc.front,
-                relevantText: fc.back,
-                isMultipleChoice: fc.type === "Multiple Choice",
-            }));
+        // Filter out empty-front cards
+        const filteredFlashcards = flashcards.filter(fc => fc.front && fc.front.trim() !== "");
+
+        if (filteredFlashcards.length === 0) {
+            setStatus("No flashcards with content to study.");
+            return;
+        }
+
+        // Format flashcards for Gemini
+        const formatted = filteredFlashcards.map(fc => ({
+            question: fc.front,
+            relevantText: fc.back,
+            isMultipleChoice: fc.type === "Multiple Choice",
+        }));
 
             const response = await fetch("/study", {
                 method: "POST",
@@ -115,11 +124,12 @@ function FlashcardsStudy() {
                 throw new Error("Invalid study response from server");
             }
 
-            const processed = flashcards.map((fc, idx) => {
-                const raw = data.output[idx] || "";
-                if (fc.type !== "Multiple Choice") {
-                    return [fc.front, raw, false, null];
-                }
+        // Use filteredFlashcards here
+        const processed = filteredFlashcards.map((fc, idx) => {
+            const raw = data.output[idx] || "";
+            if (fc.type !== "Multiple Choice") {
+                return [fc.front, raw, false, null];
+            }
 
                 const parts = raw
                     .split("|||")
@@ -151,6 +161,7 @@ function FlashcardsStudy() {
             setCurrentIndex(0);
             showStatus(`Study session ready (${processed.length} cards).`);
             setIsStudying(true);
+            setMode("practice");
         } catch (err) {
             console.error("Study error:", err);
             showStatus(`Error: ${err.message}`);
@@ -158,12 +169,23 @@ function FlashcardsStudy() {
     };
 
     function setCardStatus(message) {
-    setCardStatuses((prev) => {
-        const newStatuses = [...prev];
-        newStatuses[currentIndex] = message; // store status for current card
-        return newStatuses;
-    });
-}
+        setCardStatuses((prev) => {
+            const newStatuses = [...prev];
+            newStatuses[currentIndex] = message; // store status for current card
+            return newStatuses;
+        });
+    }
+
+        // --- Review Mode ---
+    const startReview = () => {
+            if (flashcards.length === 0) {
+                setStatus("No flashcards found in this deck.");
+                return;
+            }
+            setMode("review");
+            setCurrentIndex(0);
+            setIsFlipped(false);
+    };
 
     if (loading) return <div className={styles.studySection}><p>Loading flashcards...</p></div>;
     if (!deck) return <div className={styles.studySection}><p>No deck selected.</p></div>;
@@ -171,17 +193,35 @@ function FlashcardsStudy() {
     return (
         <>
             <div className={styles.stickyToolbar}>
-                <button className={styles.backButton} onClick={() => navigate("/flashcards")}>
-                    ← Back
+                <button
+                        className={styles.backButton}
+                        onClick={() => {
+                            if (mode === "review" || mode === "practice") {
+                                setMode(null); // go back to deck cover
+                            } else {
+                                navigate("/flashcards"); // leave the page
+                            }
+                        }}
+                    >
+                        ← Back
                 </button>
             </div>
 
             <div className={styles.studySection}>
-                <h2 className={styles.deckTitle}>{deck.title || "Untitled Deck"}</h2>
 
-                {!isStudying ? (
+                {!mode && (
                     <div className={styles.coverCard}>
                         <div className={styles.deckInfo}>
+                            <h2
+                                className={styles.deckTitle}
+                                title={deck.title || "Untitled Deck"} // <-- tooltip shows full title on hover
+                            >
+                                {deck.title
+                                    ? deck.title.length > 50
+                                        ? deck.title.slice(0, 50) + "…"
+                                        : deck.title
+                                    : "Untitled Deck"}
+                            </h2>
                             <p className={styles.deckCategory}>
                                 <strong>Category:</strong> {deck.category || "Uncategorized"}
                             </p>
@@ -201,13 +241,79 @@ function FlashcardsStudy() {
                             </p>
                         </div>
 
-                        <button className={styles.studyButton} onClick={startStudying}>
-                            Start Studying
-                        </button>
+                        {deck.imagePath && (
+                            <div className={styles.deckCoverImage}>
+                                <img src={deck.imagePath} alt="Deck cover" />
+                            </div>
+                        )}
+
+                        <div className={styles.buttonRow}>
+                            <button
+                                className={styles.reviewButton}
+                                onClick={startReview}
+                            >
+                                Review
+                            </button>
+
+                            <button className={styles.studyButton} onClick={startStudying}>
+                                Practice
+                            </button>
+                        </div>
                         <p className={styles.status}>{status}</p>
                     </div>
-                ) : (
-                    processedFlashcards.length > 0 && (
+                )}
+                {mode === "review" && flashcards[currentIndex] && (
+                    <>
+                        <div className={styles.flashcardContainer}>
+                            <div
+                                className={`${styles.flashcard} ${isFlipped ? styles.flipped : ""}`}
+                                onClick={() => setIsFlipped(!isFlipped)}
+                            >
+                                <div className={styles.front}>
+                                    <h3>{flashcards[currentIndex].front}</h3>
+                                    {/* Display image if available */}
+                                    {flashcards[currentIndex].imagePath && (
+                                        <img
+                                            src={flashcards[currentIndex].imagePath}
+                                            alt="Flashcard visual"
+                                            className={styles.flashcardImage}
+                                        />
+                                    )}
+                                </div>
+                                <div className={styles.back}>
+                                    <h3>{flashcards[currentIndex].back}</h3>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={styles.navButtons}>
+                            <button
+                                className={styles.navButton}
+                                onClick={() => {
+                                    setIsFlipped(false);
+                                    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+                                }}
+                            >
+                                &lt;-
+                            </button>
+                            <button
+                                className={styles.navButton}
+                                onClick={() => {
+                                    setIsFlipped(false);
+                                    if (currentIndex < flashcards.length - 1)
+                                        setCurrentIndex(currentIndex + 1);
+                                }}
+                            >
+                                -&gt;
+                            </button>
+                        </div>
+
+                        <p className={styles.status}>
+                            Card {currentIndex + 1} of {flashcards.length}
+                        </p>
+                    </>
+                )}
+                {mode === "practice" && processedFlashcards.length > 0 && ((
                         <div className={styles.studyBox}>
                             {(() => {
                                 const [question, response, isMC, correctLabel] = processedFlashcards[currentIndex] || [];

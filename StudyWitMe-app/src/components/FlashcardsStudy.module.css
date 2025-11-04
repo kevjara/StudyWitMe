@@ -1,3 +1,14 @@
+/* =======================
+        GENERAL LAYOUT
+   ====================== */
+.overlay {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; /* stack children vertically */
+    align-items: center;    /* keep content centered horizontally */
+    gap: 4px;
+}
+
 /* === Sticky Toolbar (same as Flashcards.jsx) === */
 .stickyToolbar {
     position: sticky;
@@ -38,11 +49,38 @@
     padding-bottom: 20px;
 }
 
-/* Buttons */
+/* Button container: side by side, left aligned */
+.buttonRow {
+    display: flex;
+    justify-content: flex-start; /* left align both buttons */
+    gap: 16px; /* spacing between buttons */
+    margin-top: 20px;
+}
+
+/* Review button */
+.buttonRow .reviewButton {
+    position: absolute;
+    bottom: 50px;
+    left: 30%;
+    background-color: #416d8e; /* same as Practice button */
+    color: white;
+    padding: 16px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.reviewButton:hover {
+    background-color: #2f546e;
+}
+
 .studyButton {
     position: absolute;
-    bottom: 60px;
-    left: 50%;
+    bottom: 50px;
+    left: 60%;
     transform: translateX(-50%);
     background-color: #416d8e;
     color: white;
@@ -68,7 +106,7 @@
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
     padding: 30px;
@@ -89,9 +127,16 @@
     font-size: 36px;
     margin-bottom: 25px;
     text-align: center;
+
+    /* Restrict long titles */
+    white-space: nowrap;        /* prevent wrapping */
+    overflow: hidden;           /* hide overflow text */
+    text-overflow: ellipsis;    /* show "..." for long titles */
+    max-width: 100%;            /* fit container */
 }
 
 .deckInfo {
+    flex: 1;
     position: absolute;
     top: 40px;
     left: 50%;
@@ -99,6 +144,23 @@
     width: 90%;
     max-width: 700px;
     text-align: left;
+}
+
+.deckCoverImage {
+    position: absolute;
+    height: 190px;
+    flex: 1; /* right column */
+    top: 25%;
+    left:50%;
+    display: flex;
+}
+
+.deckCoverImage img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .deckCategory {
@@ -184,6 +246,15 @@
     transform: rotateY(180deg);
 }
 
+.flashcardImage {
+    max-width: 90%;
+    max-height: 200px;
+    margin-top: 15px;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
 /* Navigation buttons */
 .navButtons {
     display: flex;
@@ -200,6 +271,7 @@
     cursor: pointer;
     font-size: 18px;
     transition: background-color 0.2s;
+    margin-bottom:40px;
 }
 
 .navButton:hover {
@@ -210,7 +282,7 @@
 /* Status message */
 .status {
     position: absolute;
-    bottom: 20px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;

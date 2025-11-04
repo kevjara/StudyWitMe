@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 
 export default function ImagePicker({ open, onClose, onSelect, mode = "overlay" }) {
-  const [q, setQ] = useState("space satellite");
+  const [q, setQ] = useState("image");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
