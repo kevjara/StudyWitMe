@@ -108,3 +108,14 @@ Make sure both the server and client are running simultaneously.
 - AI Functionality: Gemini API
 - Image Fetching: Pixabay API
 - Routing: React Router
+
+# Additional Help
+#### **This project assumes you already have:**
+- A Firebase project configured with Authentication and Firestore.
+- Access to the Gemini API (via Google AI Studio) for AI functionality.
+- A Pixabay API key for image fetching.
+
+#### If you need help obtaining these keys, refer to each platform’s official documentation:
+- [Firebase Setup Guide](https://firebase.google.com/docs/web/setup)
+- [Gemini API (Google AI Studio)](https://aistudio.google.com/)
+- [Pixabay API Docs](https://pixabay.com/api/docs/)
