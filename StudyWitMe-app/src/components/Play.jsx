@@ -2,6 +2,7 @@ import React, {useState, useEffect, use} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
+import "./Play.css";
 
 function Play() {
     const navigate = useNavigate();
@@ -71,13 +72,15 @@ function Play() {
 
     if (showLoginPrompt){
         return (
-            <div>
-                <div>
-                    <h2>Oops, you're not signed in</h2>
-                    <p>
-                        Please <Link to="/login">sign in</Link> to host a game.
-                    </p>
-                    <button onClick={() => setLoginPrompt(false)}>X</button>
+            <div className="login-prompt-overlay">
+                <div className="login-prompt-box">
+                    <button className="login-prompt-close-btn" onClick={() => setLoginPrompt(false)}>&times;</button>
+                    <div className="login-prompt-content">
+                        <h2>Oops, you're not signed in</h2>
+                        <p>
+                            Please <Link to="/login">sign in</Link> to host a game.
+                        </p>
+                    </div>
                 </div>
             </div>
         )
@@ -95,28 +98,34 @@ function Play() {
     if (mode === 'joining') {
         return (
             <>
-                <div>
-                    <button onClick={handleBackToMenu}>Back</button>
-                    <input
-                        placeholder="Enter Room Code"
-                        type="text"
-                        value={roomCode}
-                        onChange={(e) => setRoomCode(e.target.value)}
-                    />
-                    <button onClick={handleJoinGame}>
-                        Join
-                    </button>
-                    {error && <p>{error}</p>}
+                <div className="join-screen-overlay">
+                    <div className="join-screen-box">
+                        <button className="join-screen-back-btn" onClick={handleBackToMenu}>&times;</button>
+                        <div className="join-screen-contents">
+                            <input
+                                placeholder="Enter Room Code"
+                                type="text"
+                                value={roomCode}
+                                onChange={(e) => setRoomCode(e.target.value)}
+                            />
+                            <button onClick={handleJoinGame}>
+                                Join
+                            </button>
+                        </div>
+                        {error && <p className="join-error-text">{error}</p>}
+                    </div>
                 </div>
             </>
         );
     }
 
     return (
-        <>  
-            <div>
-                <button onClick={handleHostGame}>Host Game</button>
-                <button onClick={handleShowJoinMenu}>Join Game</button>
+        <> 
+            <div className="menu-overlay"> 
+                <div className="menu-button-box">
+                    <button onClick={handleHostGame}>Host Game</button>
+                    <button onClick={handleShowJoinMenu}>Join Game</button>
+                </div>
             </div>
         </>
     );

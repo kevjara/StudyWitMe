@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { socket } from '../context/socket';
+import "./GameScreen.css";
 
 function GameScreen() {
     const { roomCode } = useParams();
@@ -98,126 +99,137 @@ function GameScreen() {
     };
 
     const HostLobby = () => (
-        <div>
-            <h1>Room Code: <span>{roomCode}</span></h1>
-            <p>Players ({players.length})</p>
-            <ul>
-                {players.map((player) => (
-                    <li key={player.id}>{player.id.substring(0,5)}</li>
-                ))}
-            </ul>
-            <button onClick={handleStartGame} disabled={players.length < 1}>
-                Start Game
-            </button>
+        <div className="host-lobby-overlay">
+            <div className="host-lobby-container">
+                <h1>Room Code: <span>{roomCode}</span></h1>
+                <div className="player-display">
+                    <p>Players ({players.length}):</p>
+                    <ul>
+                        {players.map((player) => (
+                            <li key={player.id}>{player.id.substring(0,5)}</li>
+                        ))}
+                    </ul>
+                </div>
+                <button className="host-lobby-start-game-btn" onClick={handleStartGame} disabled={players.length < 1}>
+                    Start Game
+                </button>
+            </div>
         </div>
     );
 
     const PlayerLobby = () => (
-        <div>
-            <h1>Room Code: {roomCode}</h1>
-            <p>Waiting for host to start the game...</p>
+        <div className="join-lobby-overlay">
+            <div className="join-lobby-container">
+                <h1>Room Code: {roomCode}</h1>
+                <p>Waiting for host to start the game...</p>
+            </div>
         </div>
     )
 
     const HostGameView = () => (
-        <div>
-            {currentQuestion && ((
-                <>
-                    <div>Time remaining: {timer} </div>
-                    <h3>Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
-                    <h2>{currentQuestion.question}</h2>
-                    <div>
-                        {currentQuestion.options.map((option, index) => {
-                            let buttonClass = '';
-                            const isRoundOver = correctAnswerIndex !== null;
+        <div className="game-host-overlay">
+            <div className="game-host-container">
+                <div className="game-host-main">
+                    {currentQuestion && ((
+                        <>
+                            <div className="game-host-timer">Time remaining: {timer} </div>
+                            <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
+                            <h2 className="game-host-q-text">{currentQuestion.question}</h2>
+                            <div className="game-host-options-grid">
+                                {currentQuestion.options.map((option, index) => {
+                                    let buttonClass = '';
+                                    const isRoundOver = correctAnswerIndex !== null;
 
-                            if (isRoundOver){
-                                buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
-                            } else if (selectedAnswer === index ){
-                                buttonClass = 'selected';
-                            }
+                                    if (isRoundOver){
+                                        buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
+                                    } else if (selectedAnswer === index ){
+                                        buttonClass = 'selected';
+                                    }
 
-                            return(
-                                <button
-                                    //display only buttons
-                                    key={index}
-                                    disabled={true}
-                                    className={buttonClass}
-                                >
-                                    {option}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div>
-                        {correctAnswerIndex !== null && (
-                            <div>
-                                {roundWinner ?(
-                                    <p>{roundWinner === socket.id ? 'you got it correct' : `${roundWinner.substring(0,5)}... was first!`}</p>
-                                ) : (
-                                    <p>Times up</p>
+                                    return(
+                                        <button
+                                            //display only buttons
+                                            key={index}
+                                            className={buttonClass}
+                                        >
+                                            {option}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="host-game-result-message">
+                                {correctAnswerIndex !== null && (
+                                    <div>
+                                        {roundWinner ?(
+                                            <p>{roundWinner === socket.id ? 'you got it correct' : `${roundWinner.substring(0,5)}... was first!`}</p>
+                                        ) : (
+                                            <p>Times up</p>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-                </>
-            ))}
-
-            <div>
-                <h4>Scores:</h4>
-                <ul>
-                    {players.map(player => (
-                        <li key={player.id}>
-                            {player.id.substring(0,5)}: {scores[player.id] || 0}
-                        </li>
+                        </>
                     ))}
-                </ul>
+                </div>
+
+                <div className="game-host-scoreboard">
+                    <h4>Scores:</h4>
+                    <ul>
+                        {players.map(player => (
+                            <li key={player.id}>
+                                {player.id.substring(0,5)}: {scores[player.id] || 0}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             </div>
         </div>
     );
 
     const PlayerGameView = () => (
-        <div>
-            {!currentQuestion ? <p>Waiting for question...</p> : (
-                <>
-                    <h3>{correctAnswerIndex !==null ? "Round Over!" : "Choose an answer"}</h3>
-                    <div>
-                        {currentQuestion.options.map((option, index) => {
-                            let buttonClass = '';
-                            const isRoundOver = correctAnswerIndex !== null;
+        <div className="player-trivia-screen-overlay">
+            <div className="player-trivia-screen-container">
+                {!currentQuestion ? <p className="player-trivia-waiting-text">Waiting for question...</p> : (
+                    <>
+                        <h3 className="player-trivia-status-title">{correctAnswerIndex !==null ? "Round Over!" : "Choose an answer"}</h3>
+                        <div className="player-trivia-options-grid">
+                            {currentQuestion.options.map((option, index) => {
+                                let buttonClass = '';
+                                const isRoundOver = correctAnswerIndex !== null;
 
-                            if(isRoundOver){
-                                buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
-                            }
-                            else if (selectedAnswer === index){
-                                buttonClass = 'selected';
-                            }
+                                if(isRoundOver){
+                                    buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
+                                }
+                                else if (selectedAnswer === index){
+                                    buttonClass = 'selected';
+                                }
 
-                            return (
-                                <button
-                                    key={index}
-                                    onClick={() => handleAnswer(index)}
-                                    disabled={isRoundOver}
-                                    className={buttonClass}
-                                >
-                                    {option}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div>
-                        {correctAnswerIndex !== null && (
-                            <div>
-                                {roundWinner ?(
-                                    <p>{roundWinner === socket.id ? 'You got it correct' : 'someone else was first'}</p>
-                                ) : (
-                                    <p>Time's up</p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </>
-            )}
+                                return (
+                                    <button
+                                        key={index}
+                                        onClick={() => handleAnswer(index)}
+                                        disabled={isRoundOver}
+                                        className={buttonClass}
+                                    >
+                                        {option}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <div className="player-trivia-result-message">
+                            {correctAnswerIndex !== null && (
+                                <div>
+                                    {roundWinner ?(
+                                        <p>{roundWinner === socket.id ? 'You got it correct' : 'someone else was first'}</p>
+                                    ) : (
+                                        <p>Time's up</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 
@@ -225,16 +237,20 @@ function GameScreen() {
         const sortedPlayers = [...players].sort((a,b) => (scores[b.id] || 0) - (scores[a.id]||0));
 
         return (
-            <div>
-                <h1>Game Over!</h1>
-                <h2>Final Scores:</h2>
-                <ol>
-                    {sortedPlayers.map((player) => (
-                        <li>
-                            {player.id === socket.id ? `You` : player.id.substring(0,5)}: {scores[player.id] || 0} points
-                        </li>
-                    ))}
-                </ol>
+            <div className="gameover-screen-overlay">
+                <div className="gameover-screen-container">
+                    <h1>Game Over!</h1>
+                    <div className="gameover-screen-scoreboard">
+                        <h2>Final Scores:</h2>
+                        <ol>
+                            {sortedPlayers.map((player) => (
+                                <li>
+                                    {player.id === socket.id ? `You` : player.id.substring(0,5)}: {scores[player.id] || 0} points
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                </div>
             </div>
         );  
     }
