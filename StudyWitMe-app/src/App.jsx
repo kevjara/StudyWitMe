@@ -1,35 +1,71 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import { useMusic } from "./context/MusicProvider";
+import styles from "./components/Header.module.css";
+
+import TitleScreen from "./components/TitleScreen";
+import MainMenu from "./components/MainMenu";
+import Login from "./components/Login";
+import FlashcardGenerator from "./components/FlashcardGenerator";
+import Background from "./components/Background";
+import Flashcards from "./components/Flashcards";
+import Profile from "./components/Profile";
+import Settings from "./components/Settings";
+import FlashcardsStudy from "./components/FlashcardsStudy";
+import Layout from "./components/Layout";
+import Quiz from "./components/FlashcardsQuiz";
+import ManageDeck from "./components/ManageDeck";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const navigate = useNavigate();
+  const [showSignOutOverlay, setShowSignOutOverlay] = useState(false);
+  const { logout } = useAuth();
+  const { fadeOutAndStop } = useMusic();
+
+  const handleGlobalSignOut = async () => {
+    setShowSignOutOverlay(true);
+    try {
+      await logout();
+      await fadeOutAndStop(2000);
+      setShowSignOutOverlay(false);
+      navigate("/");
+    } catch (error) {
+        console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+        <Background/>
+          {showSignOutOverlay && (
+            <div className={styles.signoutOverlay}>
+              <div className={styles.signoutModal}>
+                <h2>Signing out...</h2>
+                <p>Please wait...</p>
+              </div>
+            </div>
+          )}
+          <Routes>
+            {/* Routes WITHOUT layout */}
+            <Route path="/" element={<TitleScreen />} />
+            <Route path="/login" element={<Login />} />
+
+            {/* Routes WITH layout */}
+            <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
+              <Route path="/main" element={<MainMenu />} />
+              <Route path="/create" element={<FlashcardGenerator />} />
+              <Route path="/flashcards" element={<Flashcards />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/flashcards_study" element={<FlashcardsStudy />} />
+              <Route path="/flashcards_quiz" element={<Quiz />} />
+              <Route path="/manage/:deckId" element={<ManageDeck />} />
+            </Route>
+          </Routes>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

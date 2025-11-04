@@ -1,0 +1,411 @@
+/* =======================
+        GENERAL LAYOUT
+   ====================== */
+.overlay {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column; /* stack children vertically */
+    align-items: center;    /* keep content centered horizontally */
+    gap: 4px;
+}
+
+/* === Sticky Toolbar (same as Flashcards.jsx) === */
+.stickyToolbar {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #1b3c4f;
+    z-index: 150;
+    padding: 1px 20px;
+    justify-content: flex-start; /* Align back button to the left */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    border-bottom: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Reuse back button styling for visual consistency */
+.backButton {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: white; /* contrast with dark background */
+    cursor: pointer;
+    padding: 10px 0;
+}
+
+.backButton:hover {
+    color: #9fc6de;
+}
+
+.studySection {
+    position: relative;
+    margin-top: 30px;
+    text-align: center;
+    font-family: "Arial", sans-serif;
+    padding-bottom: 20px;
+}
+
+/* Button container: side by side, left aligned */
+.buttonRow {
+    display: flex;
+    justify-content: flex-start; /* left align both buttons */
+    gap: 16px; /* spacing between buttons */
+    margin-top: 20px;
+}
+
+/* Review button */
+.buttonRow .reviewButton {
+    position: absolute;
+    bottom: 50px;
+    left: 30%;
+    background-color: #416d8e; /* same as Practice button */
+    color: white;
+    padding: 16px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.reviewButton:hover {
+    background-color: #2f546e;
+}
+
+.studyButton {
+    position: absolute;
+    bottom: 50px;
+    left: 60%;
+    transform: translateX(-50%);
+    background-color: #416d8e;
+    color: white;
+    padding: 16px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: background-color 0.2s;
+}
+
+.studyButton:hover {
+    background-color: #2f546e;
+}
+
+/* Deck cover card */
+.coverCard {
+    position: relative;
+    width: 800px;
+    height: 350px;
+    margin: 0 auto;
+    background-color: #f5f5f5;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    overflow: hidden;
+}
+
+.coverCard h2 {
+    font-size: 32px;
+    margin-bottom: 15px;
+}
+
+.coverCard p {
+    margin: 8px 0;
+    font-size: 20px;
+}
+
+.deckTitle {
+    font-size: 36px;
+    margin-bottom: 25px;
+    text-align: center;
+
+    /* Restrict long titles */
+    white-space: nowrap;        /* prevent wrapping */
+    overflow: hidden;           /* hide overflow text */
+    text-overflow: ellipsis;    /* show "..." for long titles */
+    max-width: 100%;            /* fit container */
+}
+
+.deckInfo {
+    flex: 1;
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 700px;
+    text-align: left;
+}
+
+.deckCoverImage {
+    position: absolute;
+    height: 190px;
+    flex: 1; /* right column */
+    top: 25%;
+    left:50%;
+    display: flex;
+}
+
+.deckCoverImage img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.deckCategory {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.deckDescription {
+    margin-bottom: 20px;
+}
+
+.descLabel {
+    font-size: 20px;
+    margin-bottom: 5px;
+}
+
+.descText {
+    font-size: 18px;
+    margin: 0;
+    text-align: left;
+    color: #444;
+    line-height: 1.4;
+}
+
+.deckMeta {
+    font-size: 18px;
+    color: #555;
+    margin: 4px 0;
+}
+
+/* Flashcard styling */
+.flashcardContainer {
+    perspective: 1200px; /* Needed for 3D flip */
+    margin-bottom: 80px;
+}
+
+.flashcard {
+    width: 800px;
+    height: 350px;
+    margin: 0 auto;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 26px;
+    color: #333;
+    cursor: pointer;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+}
+
+.flashcard.flipped {
+    transform: rotateY(180deg);
+}
+
+.flashcard .front,
+.flashcard .back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    -webkit-backface-visibility: hidden; /* ✅ Safari fix */
+    backface-visibility: hidden; /* ✅ prevents mirrored text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    text-align: center;
+    top: 0;
+    left: 0;
+}
+
+.flashcard .front {
+    background-color: #ffffff;
+}
+
+.flashcard .back {
+    background-color: #f0f0f0;
+    transform: rotateY(180deg);
+}
+
+.flashcardImage {
+    max-width: 90%;
+    max-height: 200px;
+    margin-top: 15px;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Navigation buttons */
+.navButtons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.navButton {
+    padding: 12px 18px;
+    border-radius: 10px;
+    background-color: #416d8e;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.2s;
+    margin-bottom:40px;
+}
+
+.navButton:hover {
+    background-color: #2f546e;
+    transform: translateY(-2px);;
+}
+
+/* Status message */
+.status {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    margin-top: 15px;
+    font-size: 18px;
+}
+
+/* === Quiz Status (for Study Session loaded state) === */
+.quizStatus {
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    font-size: 18px;
+    margin: 0 auto 25px auto; /* centers and adds space below */
+    padding-top: 10px;
+    width: 100%;
+}
+
+.cardCount {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    margin-top: 15px;
+    font-size: 18px;
+}
+
+/* === Study Quiz Styles (from FlashcardsQuiz, renamed for Study) === */
+.studyBox {
+    margin: 40px auto;
+    max-width: 800px;
+    background: #f9f9f9;
+    border-radius: 16px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    text-align: left;
+}
+
+.optionRow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.optionButton {
+    background: #e7eef3;
+    border: 2px solid #c7d8e2;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 18px;
+    text-align: left;
+    color: #1b3c4f;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.optionButton:hover {
+    background: #d8e8f0;
+}
+
+.selectedOption {
+    border-color: #416d8e;
+    background: #d3e2ed;
+}
+
+.correctOption {
+    border-color: #3fa34d;
+    background: #dff3e0;
+    color: #205b2b;
+}
+
+.incorrectOption {
+    border-color: #c0392b;
+    background: #f7d6d3;
+    color: #721c1c;
+}
+
+/* Submit Button */
+.submitButton {
+    display: inline-block;
+    background-color: #416d8e;
+    color: white;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.2s;
+}
+
+.submitButton:hover {
+    background-color: #2f546e;
+}
+
+/* Short Response Input */
+.shortResponseContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.shortResponseInput {
+    width: 100%;
+    min-height: 100px;
+    border-radius: 10px;
+    border: 2px solid #ccc;
+    padding: 12px;
+    font-size: 18px;
+    resize: vertical;
+    font-family: inherit;
+    background: #fafafa;
+}
+
+.shortResponseInput:focus {
+    outline: none;
+    border-color: #416d8e;
+    background: #fff;
+}

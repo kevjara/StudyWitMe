@@ -1,0 +1,735 @@
+.flashcardGenerator {
+    max-width: 860px;
+    margin: 50px auto;
+    padding: 60px 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+    position: relative;
+    backdrop-filter: blur(8px);
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+.flashcardGenerator h2 {
+    color: #1b3c4f;
+    text-align: center;
+    margin-bottom: 35px;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.generatorForm {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.generatorForm label {
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+    color: #1b3c4f;
+    font-size: 1.15rem;
+}
+
+textarea {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    min-height: 100px;
+    font-size: 1rem;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #fdfdfd;
+}
+
+textarea:focus {
+    border-color: #416d8e;
+    outline: none;
+    box-shadow: 0 0 6px rgba(65, 109, 142, 0.4);
+}
+
+.charCounter {
+    text-align: right;
+    font-size: 0.95rem;
+    color: #555;
+    margin-top: 6px;
+    opacity: 0.8;
+}
+
+input[type="file"] {
+    margin-top: 8px;
+}
+
+.fileUploadWrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.uploadButton {
+    background-color: #416d8e;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background 0.25s ease, transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+.uploadButton:hover {
+    background-color: #2f546e;
+    transform: translateY(-2px);
+}
+
+.fileName {
+    font-size: 1rem;
+    color: #333;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hiddenFileInput {
+    display: none;
+}
+
+.fileUploadLabel {
+    font-weight: 500;
+    display: block;
+    margin-top: 10px;
+}
+
+.fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.removeFileBtn {
+    background: transparent;
+    border: none;
+    color: #c0392b;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, color 0.2s ease;
+}
+
+.removeFileBtn:hover {
+    color: #e74c3c;
+    transform: scale(1.15);
+}
+
+.pageRangeContainer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.pageLabel {
+    font-size: 1rem;
+    color: #1b3c4f;
+}
+
+.pageInput {
+    width: 80px;
+    padding: 6px 8px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: border-color 0.25s ease;
+}
+
+.pageInput:focus {
+    border-color: #416d8e;
+    outline: none;
+}
+
+.generateBtn {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+.generateBtn:disabled {
+    background-color: #999;
+    cursor: not-allowed;
+}
+
+.generateBtn:hover:not(:disabled) {
+    background-color: #2f546e;
+}
+
+.backBtn {
+    position: absolute;
+    top: 20px;
+    left: 25px;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #1b3c4f;
+    cursor: pointer;
+}
+
+.backBtn:hover {
+    color: #416d8e;
+}
+
+/* Status message */
+.status {
+    text-align: center;
+    font-style: italic;
+    color: #1b3c4f;
+    margin-top: 10px;
+}
+
+.loadingStatus {
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* Flashcard viewer section */
+.flashcardViewer {
+    margin-top: 30px;
+    padding: 25px 30px;
+    background: #fdfdfd;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+    position: relative;
+}
+
+.flashcardViewer h3 {
+    color: #1b3c4f;
+    margin-bottom: 18px;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.flashcardViewer p {
+    margin: 6px 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.flashcardStatusBar {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+    height: 24px;
+}
+
+.flashcardCounter {
+    position: absolute;
+    left: 10px;
+    font-weight: bold;
+}
+
+.savedStatus {
+    position: absolute;
+    left: 140px; /* enough spacing so they never overlap */
+    color: #2ecc71; /* green checkmark color */
+    font-weight: 500;
+}
+
+.deckSize {
+    position: absolute;
+    font-weight: 500;
+    color: #666;
+}
+
+/* ensure layout stability (no text shift) */
+.flashcardStatusBar span {
+    white-space: nowrap;
+}
+
+/* Cancel button */
+.cancelBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+
+/* User answer box */
+.flashcardViewer textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    margin-top: 10px;
+    resize: vertical; /* allow user to resize vertically */
+    box-sizing: border-box; /* so padding doesn’t break width */
+}
+
+.typeBtn {
+    justify-content: right;
+}
+
+/* Flashcard navigation + actions */
+.flashcardActions {
+    position: relative;
+    margin-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.useAsAnswerBtn {
+    border: 1px solid #000;
+    border-radius: 6px;
+    padding: 8px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+    margin-bottom: 6px;
+}
+
+.useAsAnswerBtn:hover {
+    background-color:#999;
+}
+
+/* Saved/Updated indicator (centered between action buttons) */
+.flashcardActions .savedIndicator {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    flex: 1;
+    text-align: center;
+    color: #28a745;
+    font-weight: bold;
+    min-height: 1em; /* reserve space so layout doesn't shift */
+    line-height: 1.5em;
+    animation: fadeInOut 1.5s ease-in-out;
+}
+
+/* fade animation for smooth feedback */
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.flashcardActions button {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+
+.flashcardActions button:hover {
+    background-color: #2f546e;
+}
+
+.leftActions,
+.rightActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Done button row */
+.doneRow {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.doneBtn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.doneBtn:hover {
+    background-color: #218838;
+}
+
+
+/* Done message */
+.doneMessage {
+    margin-top: 25px;
+    padding: 20px;
+    background: #e0f7e9;
+    border: 1px solid #b2dfbc;
+    border-radius: 10px;
+    text-align: center;
+    color: #1b3c4f;
+}
+
+/* ===== Modal Overlay and Window Styles ===== */
+.finalizedModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.finalizedModal {
+    background: #ffffff;
+    padding: 35px 40px;
+    border-radius: 14px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    max-width: 460px;
+    width: 100%;
+    color: #1b3c4f;
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: fadeInOnly 0.25s ease forwards;
+    overflow-y: auto; /* just in case the modal content grows too tall */
+    max-height: 70vh /* ensures it fits on smaller screens */
+}
+
+/* Small fade/scale animation */
+@keyframes fadeInOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.finalizedModal h3 {
+    margin-top: 0;
+    text-align: center;
+    color: #416d8e;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.finalizedModal p {
+    text-align: center;
+    font-size: 1rem;
+    margin-bottom: 20px;
+}
+
+.finalizedModal label {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.finalizedModal input,
+.finalizedModal textarea {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.finalizedModal textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.finalizedModalActions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.finalizedModalActions button {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.finalizedModalActions button:hover {
+    background-color: #2f546e;
+}
+
+.finalizedModalActions button:last-child {
+    background-color: #e74c3c;
+}
+
+.finalizedModalActions button:last-child:hover {
+    background-color: #c0392b;
+}
+
+.loadingScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    text-align: center;
+}
+
+.loadingDots {
+    display: flex;
+    gap: 8px;
+}
+
+.loadingDots span {
+    width: 12px;
+    height: 12px;
+    background-color: #416d8e;
+    border-radius: 50%;
+    animation: pulse 1s infinite ease-in-out;
+}
+
+.loadingDots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.loadingDots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.2); }
+}
+
+.loadingText {
+    margin-top: 12px;
+    font-weight: 500;
+    color: #1b3c4f;
+}
+
+/* Transitional status screen */
+.statusScreen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    text-align: center;
+}
+
+.statusMessage {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1b3c4f;
+    animation: fadeInOut 2.5s ease-in-out;
+}
+
+/* =======================
+    Big picker modal (From second snippet)
+   ======================= */
+.pickerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+}
+.pickerDialog {
+    width: min(1100px, 94vw);
+    height: min(82vh, 900px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(2, 8, 23, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+.pickerBody {
+    padding: 16px;
+    overflow: auto;
+}
+.pickerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+}
+.pickerCell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.pickerThumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+.pickerCell button {
+    margin: 8px;
+}
+
+
+/* If using CSS Modules, wrap each rule with :global(...) */
+.picker-grid-wrapper .image-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    gap: 16px !important;
+}
+
+.picker-grid-wrapper .image-card {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.picker-grid-wrapper .image-card img {
+    width: 100% !important;
+    height: 140px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
+}
+
+.picker-grid-wrapper .controls { /* search bar row */
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+.picker-grid-wrapper .pager {
+    margin-top: 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+}
+
+.cardImageBtn {
+    margin: 6px 0 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.cardImageBtn:hover {
+    background: #e6e6e6;
+    transform: translateY(-1px);
+}
+
+.deckImageBtn {
+    margin-bottom: 8px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.deckImageBtn:hover {
+    background: #e6e6e6;
+    transform: translateY(-1px);
+}
+
+.imagePickerRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.imagePreview {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fafafa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.imagePlaceholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    border: 1px dashed #ccc;
+    background: #f9f9f9;
+}
+
+.imagePreviewWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.removeImageBtn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.removeImageBtn:hover {
+    background: darkred;
+}
