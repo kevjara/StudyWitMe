@@ -213,13 +213,10 @@ export default function Flashcards() {
             <p>Why not create a new deck?</p>
             <div
                 className={styles.placeholderCard}
-                onClick={() => navigate("/flashcards/create")}
+                onClick={() => navigate("/create")}
             >
                 <span className={styles.plusSign}>+</span>
             </div>
-            <button className={styles.backButton} onClick={() => navigate("/main")}>
-                ← Back to Main Menu
-            </button>
             </div>
         </div>
         );
