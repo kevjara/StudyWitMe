@@ -8,6 +8,8 @@ import Flashcards from "./components/Flashcards";
 import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import ManageDeck from "./components/ManageDeck";
+import SearchResults from "./components/SearchResults";
+
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
+            <Route path="/search" element={<SearchResults />} />
           </Routes>
     </>
   );

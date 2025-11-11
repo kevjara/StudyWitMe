@@ -8,13 +8,25 @@ import settingsIcon from "../assets/settings.svg";
 import TrackSelector from "./TrackSelector";
 import styles from "./MainMenu.module.css";
 
-
 function MainMenu() {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const { hasStartedOnce, playMusic, fadeOutAndStop } = useMusic();
     const [showSignOutModal, setShowSignOutModal] = useState(false);
     const [hasHoveredSettings, setHasHoveredSettings] = useState(false);
+
+    //search term for nav bar
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // when user hits Enter in the search bar
+    const handleSearchKeyDown = (e) => {
+        if (e.key === "Enter" && searchTerm.trim()) {
+            const q = encodeURIComponent(searchTerm.trim());
+            navigate(`/search?q=${q}`);
+            // optional: clear it
+            // setSearchTerm("");
+        }
+    };
 
     useEffect(() => {
         if (!hasStartedOnce) {
@@ -43,7 +55,6 @@ function MainMenu() {
         }
     };
 
-
     return (
         <div className={styles.mainMenu}>
             <header className={styles.menuHeader}>
@@ -52,20 +63,27 @@ function MainMenu() {
                     <button onClick={() => navigate("/flashcards")}>Flashcards</button>
                     <button onClick={() => navigate("/create")}>Create</button>
                     <button onClick={() => navigate("/play")}>Play</button>
-
                     {/* Conditionally render auth button */}
                     {user ? (
                         <button onClick={handleSignOut}>Sign Out</button>
                     ) : (
                         <button onClick={() => navigate("/login")}>Sign In</button>
                     )}
+                    <input
+                        type="text"
+                        placeholder="Search public decks..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        className={styles.navSearchInput}
+                    />
 
                     {/* ⚙️ Settings Icon */}
                     <img
                         src={settingsIcon}
                         alt="Settings"
                         className={`${styles.settingsIcon} ${
-                        !hasHoveredSettings ? styles.shakeOnce : ""
+                            !hasHoveredSettings ? styles.shakeOnce : ""
                         }`}
                         onMouseEnter={() => setHasHoveredSettings(true)}
                         onClick={() => navigate("/settings")}

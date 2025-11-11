@@ -1,3 +1,4 @@
+import "./polyfill.mjs";
 import express from "express";
 import multer from "multer";
 import pdfParse from "pdf-parse";
