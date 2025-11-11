@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Routes, Route } from "react-router-dom";
+import { useNavigate, Routes, Route, useLocation } from "react-router-dom";;
 import { useAuth } from "./context/AuthContext";
 import { useMusic } from "./context/MusicProvider";
 import styles from "./components/Header.module.css";
+import "@ncdai/react-wheel-picker/style.css";
 
 import TitleScreen from "./components/TitleScreen";
 import MainMenu from "./components/MainMenu";
@@ -16,9 +16,11 @@ import Settings from "./components/Settings";
 import FlashcardsStudy from "./components/FlashcardsStudy";
 import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
+import Header from "./components/Header";
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSignOutOverlay, setShowSignOutOverlay] = useState(false);
   const { logout } = useAuth();
   const { fadeOutAndStop } = useMusic();
@@ -35,33 +37,39 @@ function App() {
     }
   };
 
+  //Only show Header if not on these routes
+  const hideHeader = ["/", "/login"].includes(location.pathname);
+
   return (
     <>
-        <Background/>
-          {showSignOutOverlay && (
-            <div className={styles.signoutOverlay}>
-              <div className={styles.signoutModal}>
-                <h2>Signing out...</h2>
-                <p>Please wait...</p>
-              </div>
-            </div>
-          )}
-          <Routes>
-            {/* Routes WITHOUT layout */}
-            <Route path="/" element={<TitleScreen />} />
-            <Route path="/login" element={<Login />} />
+      <Background />
+      {!hideHeader && <Header handleSignOut={handleGlobalSignOut} />}
 
-            {/* Routes WITH layout */}
-            <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
-              <Route path="/main" element={<MainMenu />} />
-              <Route path="/create" element={<FlashcardGenerator />} />
-              <Route path="/flashcards" element={<Flashcards />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/flashcards_study" element={<FlashcardsStudy />} />
-              <Route path="/manage/:deckId" element={<ManageDeck />} />
-            </Route>
-          </Routes>
+      {showSignOutOverlay && (
+        <div className={styles.signoutOverlay}>
+          <div className={styles.signoutModal}>
+            <h2>Signing out...</h2>
+            <p>Please wait...</p>
+          </div>
+        </div>
+      )}
+
+      <Routes>
+        {/* Routes WITHOUT header */}
+        <Route path="/" element={<TitleScreen />} />
+        <Route path="/login" element={<Login />} />
+
+        {/* Routes WITH header */}
+        <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
+          <Route path="/main" element={<MainMenu />} />
+          <Route path="/create" element={<FlashcardGenerator />} />
+          <Route path="/flashcards" element={<Flashcards />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/flashcards_study" element={<FlashcardsStudy />} />
+          <Route path="/manage/:deckId" element={<ManageDeck />} />
+        </Route>
+      </Routes>
     </>
   );
 }

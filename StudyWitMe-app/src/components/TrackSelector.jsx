@@ -1,110 +1,91 @@
+import { useState, useEffect, useRef } from "react";
+import {
+    WheelPicker,
+    WheelPickerWrapper,
+} from "@ncdai/react-wheel-picker";
 import { useMusic } from "../context/MusicProvider";
-import { useState, useEffect, useCallback, useRef  } from "react";
 import styles from "./TrackSelector.module.css";
 import disc from "../assets/disc.svg";
 
 export default function TrackSelector() {
-    const {
-        songs,
-        currentSongIndex,
-        changeSong,
-        isPlaying,
-        playMusic,
-    } = useMusic();
+        const { songs, currentSongIndex, changeSong, isPlaying, playMusic } = useMusic();
+    const lastSongIndexRef = useRef(currentSongIndex);
 
-    // local selector index — separate from the actual currentSongIndex used for playback
-    const [index, setIndex] = useState(currentSongIndex);
-    const wheelRef = useRef(null);
+    // Build picker options
+    const options = songs.map((song) => ({
+        label: (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <img
+            src={disc}
+            alt=""
+            style={{
+                width: "20px",
+                height: "20px",
+                filter: "drop-shadow(0 0 1px rgba(0,0,0,0.2))",
+            }}
+            />
+            <span>{song.title}</span>
+        </div>
+        ),
+        value: song.file,
+    }));
 
-    // keep selector synced if external code changes the current playing song
+    const [value, setValue] = useState(options[currentSongIndex]?.value);
+
+    // Sync with external current song index (only when it actually changes)
     useEffect(() => {
-        setIndex(currentSongIndex);
-    }, [currentSongIndex]);
+        if (currentSongIndex !== lastSongIndexRef.current) {
+        setValue(options[currentSongIndex]?.value);
+        lastSongIndexRef.current = currentSongIndex;
+        }
+    }, [currentSongIndex, options]);
 
-    // scroll up visual (does not change actual playing track)
-    const scrollUp = useCallback(() => {
-        // always allow cycling, even when songs.length === 1
-        const newIndex = (index - 1 + songs.length) % songs.length;
-        setIndex(newIndex);
-    }, [index, songs.length]);
+    // Scroll = visual only (no autoplay)
+    const handleValueChange = (newValue) => {
+        setValue(newValue);
+    };
 
-    // scroll down visual (does not change actual playing track)
-    const scrollDown = useCallback(() => {
-        const newIndex = (index + 1) % songs.length;
-        setIndex(newIndex);
-    }, [index, songs.length]);
+    // Determine which track is currently highlighted
+    const selectedIndex = options.findIndex((opt) => opt.value === value);
 
-    const handleWheel = useCallback(
-        (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (e.deltaY < 0) scrollUp();
-            else if (e.deltaY > 0) scrollDown();
-        },
-        [scrollUp, scrollDown]
-    );
-
-    // ✅ Attach non-passive listener to block page scroll
-    useEffect(() => {
-        const el = wheelRef.current;
-        if (!el) return;
-        el.addEventListener("wheel", handleWheel, { passive: false });
-        return () => el.removeEventListener("wheel", handleWheel);
-    }, [handleWheel]);
-
-
-    const current = songs[index];
-    const prev = songs[(index - 1 + songs.length) % songs.length];
-    const next = songs[(index + 1) % songs.length];
-
-    // Play button behavior:
-    // - if selector points at currently playing song AND it is playing => show Currently Playing
-    // - otherwise => change to selected track (if needed) and start playback
+    // Play or switch logic
     const togglePlay = () => {
-        if (currentSongIndex === index) {
-            if (isPlaying) {
-            } else {
-                playMusic();
-            }
+        if (currentSongIndex === selectedIndex) {
+        if (!isPlaying) playMusic();
         } else {
-            // Change song and autoplay immediately (atomic)
-            changeSong(index, true);
+        changeSong(selectedIndex, true); // true = autoplay new track
         }
     };
 
-
-    // Button label: show "Currently Playing" when selector points to currently playing track and it is playing
-    const playLabel = currentSongIndex === index && isPlaying ? "Currently Playing" : "Switch Track";
+    const playLabel =
+        currentSongIndex === selectedIndex && isPlaying
+        ? "Currently Playing"
+        : "Switch Track";
 
     return (
         <div className={styles.trackSelectorContainer}>
-            <button className={styles.playButton} onClick={togglePlay}>
-                {playLabel}
-            </button>
+        <button className={styles.playButton} onClick={togglePlay}>
+            {playLabel}
+        </button>
 
-            <div
-                ref={wheelRef}
-                className={styles.trackWheel}
-                tabIndex={0}
-                role="listbox"
-                aria-label="Track selector"
-            >
-                <div className={`${styles.trackItem} ${styles.prev}`} aria-hidden="true">
-                <img src={disc} alt="" />
-                <span>{prev?.title}</span>
-                </div>
-
-                <div className={`${styles.trackItem} ${styles.current}`} aria-current={true}>
-                <img src={disc} alt="" />
-                <span>{current?.title}</span>
-                </div>
-
-                <div className={`${styles.trackItem} ${styles.next}`} aria-hidden="true">
-                <img src={disc} alt="" />
-                <span>{next?.title}</span>
-                </div>
-            </div>
+        <div className={styles.trackWheel}>
+            <WheelPickerWrapper>
+            <WheelPicker
+                options={options}
+                value={value}
+                onValueChange={handleValueChange}
+                infinite={true}
+                visibleCount={8}
+                optionItemHeight={50}
+                scrollSensitivity={10}
+                classNames={{
+                wrapper: styles.trackWheel,
+                optionItem: styles.trackItem,
+                highlightWrapper: styles.current,
+                }}
+            />
+            </WheelPickerWrapper>
+        </div>
         </div>
     );
 }

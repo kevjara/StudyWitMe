@@ -51,9 +51,7 @@ function Header({ handleSignOut }) {
                 />
             </nav>
 
-            <div className={styles.music}>
-                <TrackSelector />
-            </div>
+            <TrackSelector />
 
             <img src={logo} alt="Logo" className={styles.logo} />
         </header>
