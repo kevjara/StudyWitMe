@@ -67,7 +67,6 @@
     width: 100%;
     background: #1b3c4f;
     z-index: 150;
-    padding: 10px 20px;
     justify-content: center; /* Align back button to the left */
     display: flex;
     flex-wrap: wrap;
@@ -316,11 +315,25 @@
 }
 
 /* Buttons anchored at bottom */
-.deckButtons {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-    margin-top: 8px;
+.deckButtons button {
+    background-color: #416d8e;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+.deckButtons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.deckButtons button:hover:not(:disabled) {
+    background-color: #2f546e;
 }
 
 .deckButtonSmall {
@@ -462,6 +475,55 @@
     grid-template-columns: 1fr; /* 1 card per row */
     gap: 24px;
 }
+
+/* Wrapper for flashcards + add card button */
+.flashcardViewerWrapper {
+    display: flex;
+    gap: 24px;                /* space between flashcards and button */
+    align-items: flex-start;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Left column: flashcards and navigation */
+.flashcardColumn {
+    flex: 1;                   /* take remaining space */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Right column: Add Card button */
+.addCardColumn {
+    display: flex;
+    justify-content: center;   
+    align-items: center;
+    height: 550px;     
+    min-width: 140px;
+}
+
+.addCardButton {
+    width: 150px;
+    height: 120px;
+    border-radius: 12px;
+    background-color: #416d8e;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.addCardButton:hover {
+    background-color: #2f546e;
+    transform: translateY(-2px);
+}
+
 
 /* Each flashcard styling to match coverCard */
 .flashcard {
@@ -660,22 +722,26 @@
     gap: 16px;
 }
 
+/* Navigation buttons */
 .navButtons {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 25px;
 }
 
-.navButtons button {
-    padding: 6px 12px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+.navButton {
+    padding: 12px 18px;
+    border-radius: 10px;
+    background-color: #416d8e;
+    color: white;
     cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.2s;
+    margin-bottom:40px;
 }
 
-.navButtons button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.navButton:hover {
+    background-color: #2f546e;
+    transform: translateY(-2px);;
 }
