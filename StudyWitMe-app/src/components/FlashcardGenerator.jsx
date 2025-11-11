@@ -6,6 +6,8 @@ import { db } from "../services/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import styles from "./FlashcardGenerator.module.css";
 import { categories } from "./categories";
+import ImagePicker from "./ImagePicker";
+import ModalPortal from "./ModalPortal";
 
 function FlashcardGenerator() {
     const navigate = useNavigate();
@@ -15,13 +17,14 @@ function FlashcardGenerator() {
     const [file, setFile] = useState(null);
     const [aiPrompt, setAiPrompt] = useState("");
     const [status, setStatus] = useState("");
+    const statusTimeoutRef = useRef(null);
     const [flashcardPairs, setFlashcardPairs] = useState([]); // [question, relevantText]
     const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
     const [savedFlashcards, setSavedFlashcards] = useState([]);
     const [showDeckPrompt, setShowDeckPrompt] = useState(false);
     const [deckTitle, setDeckTitle] = useState("");
     const [deckDescription, setDeckDescription] = useState("");
-    const [flashcardType, setFlashcardType] = useState("Short Response"); // default
+    const [flashcardTypes, setFlashcardTypes] = useState([]);
     const [savedIndices, setSavedIndices] = useState(new Set());
     const [userAnswers, setUserAnswers] = useState([]); // per-card answers
     const [flashcardsGenerated, setFlashcardsGenerated] = useState(false);
@@ -31,90 +34,30 @@ function FlashcardGenerator() {
     const [endPage, setEndPage] = useState('1'); //endPage button
     const [editedAnswer, setEditedAnswer] = useState("");
     const [isButtonLocked, setIsButtonLocked] = useState(false);
+    const [tempImages, setTempImages] = useState({});
     //Used in Finalize Deck
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedSubcategory, setSelectedSubcategory] = useState("");
+    const [isFinishLocked, setIsFinishLocked] = useState(false);
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+    //For Pixabay
+    const [pickerForCard, setPickerForCard] = useState(null);
+    const [pickerForDeck, setPickerForDeck] = useState(false);
+    const [deckImage, setDeckImage] = useState("");
+
+    useEffect(() => {
+    const open = Boolean(pickerForCard || pickerForDeck);
+        document.body.style.overflow = open ? "hidden" : "";
+        return () => (document.body.style.overflow = "");
+    }, [pickerForCard, pickerForDeck]);
+
     //manage view states ("form", "loading", "viewer")
     const [view, setView] = useState("form");
 
-    // -------------------- Study Mode Section --------------------
-    const [isStudying, setIsStudying] = useState(false);
-    const [processedFlashcards, setProcessedFlashcards] = useState([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [showResult, setShowResult] = useState(false);
-    const [shortResponse, setShortResponse] = useState("");
-    const [correctOption] = useState("A"); // Always A per backend rules
-
-    const resetStudyState = () => {
-    setSelectedOption(null);
-    setShowResult(false);
-    setShortResponse("");
-    };
-
-    // -------------------- Study Mode Section --------------------
-    // Dummy flashcards for study testing
-    const dummyFlashcards = [
-    {
-        question: "Explain the concept of entropy in thermodynamics and how it relates to the Second Law.",
-        relevantText: "Entropy measures the disorder of a system; according to the Second Law of Thermodynamics, the total entropy of an isolated system always increases over time.",
-        isMultipleChoice: false,
-    },
-    {
-        question: "Which of the following best describes the primary function of the Golgi apparatus?",
-        relevantText: "Modifies, sorts, and packages proteins and lipids for secretion or delivery to other organelles.",
-        isMultipleChoice: true,
-    },
-    {
-        question: "What is the significance of the P-value in hypothesis testing?",
-        relevantText: "The P-value indicates the probability of obtaining results at least as extreme as those observed, assuming the null hypothesis is true.",
-        isMultipleChoice: false,
-    },
-    {
-        question: "Which philosopher is most associated with the concept of the 'categorical imperative'?",
-        relevantText: "Immanuel Kant",
-        isMultipleChoice: true,
-    },
-    {
-        question: "Define polymorphism in the context of object-oriented programming.",
-        relevantText: "Polymorphism allows objects of different classes to be treated as objects of a common superclass, typically through method overriding or interface implementation.",
-        isMultipleChoice: false,
-    },
-    {
-        question: "Which of the following molecules acts as the main electron carrier in cellular respiration?",
-        relevantText: "NADH",
-        isMultipleChoice: true,
-    },
-    {
-        question: "Describe the relationship between supply elasticity and total revenue when demand changes.",
-        relevantText: "When supply is elastic, producers can respond quickly to price changes, potentially stabilizing total revenue; when inelastic, total revenue fluctuates more with demand shifts.",
-        isMultipleChoice: false,
-    },
-    {
-        question: "Which statistical test is most appropriate for comparing means between two related samples?",
-        relevantText: "Paired t-test",
-        isMultipleChoice: true,
-    },
-    {
-        question: "What is the main distinction between deontological and consequentialist ethics?",
-        relevantText: "Deontological ethics focuses on the morality of actions themselves, while consequentialism judges actions based on their outcomes.",
-        isMultipleChoice: false,
-    },
-    {
-        question: "Which of the following sorting algorithms has the best average-case time complexity?",
-        relevantText: "Merge Sort",
-        isMultipleChoice: true,
-    },
-    ];
-
-    // -------------------- Study Mode Section --------------------
-
     const MAX_CHARACTERS = 3_500_000;
-    const bottomRef = useRef(null);
 
     // When switching cards, load the saved answer (or blank if none)
     useEffect(() => {
@@ -122,11 +65,49 @@ function FlashcardGenerator() {
         setEditedAnswer(saved);
     }, [currentFlashcardIndex, userAnswers]);
 
+    // Restore image preview when switching cards
     useEffect(() => {
-    if (bottomRef.current) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        const savedCard = savedFlashcards.find(f => f.index === currentFlashcardIndex);
+        if (savedCard && savedCard.image) {
+            // ensure image preview reappears
+            setSavedFlashcards(prev => {
+                const updated = [...prev];
+                const idx = updated.findIndex(c => c.index === currentFlashcardIndex);
+                if (idx === -1) updated.push(savedCard);
+                return updated;
+            });
+        }
+    }, [currentFlashcardIndex, savedFlashcards]);
+
+    // When switching cards, load the saved flashcard type (or default if none)
+    useEffect(() => {
+    const savedCard = savedFlashcards.find(
+        (card) => card.index === currentFlashcardIndex
+    );
+    if (savedCard) {
+        setFlashcardTypes((prev) => {
+        const copy = [...prev];
+        copy[currentFlashcardIndex] = savedCard.type || "Multiple Choice";
+        return copy;
+        });
     }
-    }, [flashcardPairs, currentFlashcardIndex, showCancelConfirm]);
+    }, [currentFlashcardIndex, savedFlashcards]);
+
+    //Handle Status Messages
+    function showStatus(message, duration = 3000) {
+        // Clear any previous timer
+        if (statusTimeoutRef.current) {
+            clearTimeout(statusTimeoutRef.current);
+        }
+
+        setStatus(message);
+
+        statusTimeoutRef.current = setTimeout(() => {
+            setStatus("");
+            statusTimeoutRef.current = null;
+        }, duration);
+    }
+
 
     //Handle File Upload
     const handleFileChange = (e) => {
@@ -139,23 +120,14 @@ function FlashcardGenerator() {
         }
     };
 
-   {/* -------------------- Study Mode Section -------------------- */}
-    const handleStartStudying = async () => {
-        try {
-            const response = await fetch("/study", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ flashcards: dummyFlashcards }),
-            });
-
-            const data = await response.json();
-            console.log("Study API response:", data.output || data.error);
-        } catch (err) {
-            console.error("Error calling /study:", err);
-        }
+    // Keep per-card flashcard type
+    const handleTypeChange = (value) => {
+    setFlashcardTypes((prev) => {
+        const copy = [...prev];
+        copy[currentFlashcardIndex] = value;
+        return copy;
+    });
     };
-    {/* -------------------- Study Mode Section -------------------- */}
-
 
     // Generate flashcards (called on form submit)
     const handleSubmit = async (e) => {
@@ -168,6 +140,10 @@ function FlashcardGenerator() {
 
         try {
             let response;
+            if (file && textInput.trim()) {
+                showStatus("Please use only ONE input: either upload a PDF or enter text directly.");
+                return;
+            }
 
             if (file) {
                 // --- PDF upload with FormData ---
@@ -179,14 +155,13 @@ function FlashcardGenerator() {
                 const end = parseInt(endPage, 10);      // endPage is state
 
                 if (isNaN(start) || isNaN(end) || start > end) {
-                    setStatus("Invalid page range.");
+                    showStatus("Invalid page range.");
                     return;
                 }
 
                 formData.append("startPage", start);
                 formData.append("endPage", end)
                 formData.append("instructions", aiPrompt);
-                setStatus("");
                 // Show loading animation
                 setView("loading")
 
@@ -198,11 +173,11 @@ function FlashcardGenerator() {
                 // --- Direct text input ---
                 const textToSend = textInput.trim();
                 if (!file && !textToSend) {
-                    setStatus("Please enter some text or upload a file.");
+                    showStatus("Please enter some text or upload a file.");
                     return;
                 }
                 if (textToSend.length > MAX_CHARACTERS) {
-                    setStatus(`Text too long (${textToSend.length} chars). Please shorten it.`);
+                    showStatus(`Text too long (${textToSend.length} chars). Please shorten it.`);
                     return;
                 }
 
@@ -224,7 +199,7 @@ function FlashcardGenerator() {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 const message = errorData.error || "Unknown error from server.";
-                setStatus(`❌ ${message}`);
+                showStatus(`❌ ${message}`);
                 // stay in form view if error occurs
                 setView("form");
                 return;
@@ -233,7 +208,7 @@ function FlashcardGenerator() {
             const data = await response.json();
 
             if (!data.output) {
-                setStatus("No flashcards returned.");
+                showStatus("No flashcards returned.");
                 setView("form");
                 return;
             }
@@ -244,7 +219,7 @@ function FlashcardGenerator() {
             if (Array.isArray(output)) {
                 const pairs = output.map(f => [f.question, f.relevantText]);
                 setFlashcardPairs(pairs);
-                setStatus(`✅ Generated ${pairs.length} flashcards`);
+                showStatus(`✅ Generated ${pairs.length} flashcards`);
             } 
             
             // --- Case 2: backend returned JSON text ---
@@ -261,10 +236,10 @@ function FlashcardGenerator() {
                     const parsed = JSON.parse(cleanOutput);
                     const pairs = parsed.map(f => [f.question, f.relevantText]);
                     setFlashcardPairs(pairs);
-                    setStatus(`✅ Generated ${pairs.length} flashcards`);
+                    showStatus(`✅ Generated ${pairs.length} flashcards`);
                 } catch (err) {
                     console.error("Failed to parse backend output:", cleanOutput, err);
-                    setStatus("❌ Error: Could not parse backend output. Check console.");
+                    showStatus("❌ Error: Could not parse backend output. Check console.");
                     setView("form");
                     return;
                 }
@@ -280,11 +255,11 @@ function FlashcardGenerator() {
             setTimeout(() => {
             setStatus("");        // clear right before entering viewer
             setView("viewer");
-            }, 1500); 
+            }, 2000); 
 
         } catch (err) {
             console.error("Unexpected error:", err);
-            setStatus(`❌ Unexpected error: ${err.message}`);
+            showStatus(`❌ Unexpected error: ${err.message}`);
             setView("form");
         }
     };
@@ -308,63 +283,56 @@ function FlashcardGenerator() {
 
     const handleSaveAnswer = () => {
         handleAnswerChange(editedAnswer);
-        setStatus("Saved ✓");
-        setTimeout(() => setStatus(""), 1500); // clears after 1.5s
+        showStatus("Saved ✓");
     };
 
     const handleUpdateAnswer = () => {
+        setIsButtonLocked(true);
         handleAnswerChange(editedAnswer);
-        setStatus("Updated ✓");
-        setTimeout(() => setStatus(""), 1500); // clears after 1.5s
+        showStatus("Updated ✓");
+        setIsButtonLocked(false);
     };
 
     const handleDoneConfirmYes = async () => {
-    setStatus("Saving deck...");
-    try {
-        //First we save the deck 
-        const deckData = {
-            ownerId: currentUser.uid,
-            title: deckTitle.trim() || "Untitled Deck",
-            description: deckDescription,
-            createdAt: serverTimestamp(),
-            isPublic: false,
-            category: selectedCategory,
-            collaborators: [],
-            //we can add image stuff here when decided
-            imagePath: "",
+        setView("status");
+        showStatus("Saving deck...");
+        try {
+            //First we save the deck 
+            const deckData = {
+                ownerId: currentUser.uid,
+                title: deckTitle.trim() || "Untitled Deck",
+                description: deckDescription,
+                createdAt: serverTimestamp(),
+                isPublic: false,
+                category: selectedCategory,
+                collaborators: [],
+                //we can add image stuff here when decided
+                imagePath: deckImage,
 
-        };
-        const deckDocRef = await addDoc(collection(db, "deck"), deckData);
-        const newDeckId = deckDocRef.id;
-        //Then we save the flashcards
-        if (savedFlashcards.length > 0) {
-            const flashcardPromises = savedFlashcards.map((card) => {
-                const flashcardData = {
-                    deckId: newDeckId,
-                    ownerId: currentUser.uid,
-                    front: card.front,
-                    back: card.back,
-                    createdAt: serverTimestamp(),
-                    isPublic: false,
-                    category: selectedCategory,
-                    isMultipleChoice: !!card.isMultipleChoice,
-                    //I will pul the stuff here for the image on the cards
-                    imagePath: "",
-                };
-                return addDoc(collection(db, "flashcard"), flashcardData);
-            });
-            await Promise.all(flashcardPromises); // Execute all saves concurrently
+            };
+            const deckDocRef = await addDoc(collection(db, "deck"), deckData);
+            const newDeckId = deckDocRef.id;
+            //Then we save the flashcards
+            if (savedFlashcards.length > 0) {
+                const flashcardPromises = savedFlashcards.map((card) => {
+                    const flashcardData = {
+                        deckId: newDeckId,
+                        ownerId: currentUser.uid,
+                        front: card.front,
+                        back: card.back,
+                        createdAt: serverTimestamp(),
+                        isPublic: false,
+                        category: selectedCategory,
+                        imagePath: card.image || "",
+                        type: card.type || "Multiple Choice",
+                    };
+                    return addDoc(collection(db, "flashcard"), flashcardData);
+                });
+                await Promise.all(flashcardPromises); // Execute all saves concurrently
         }
         console.log("Simulated deck save. Deck contents:", savedFlashcards);
         await new Promise((res) => setTimeout(res, 400));
-        setShowDeckPrompt(false);
-        setStatus("Deck saved successfully!");
-        setView("status");
-        setTimeout(() => {
-            setStatus("");       // clear after showing
-            setView("form");     // go back to start
-        }, 3000);
-
+        showStatus("Deck saved successfully!");
         // Delay resetting UI so user sees the success message briefly
         setTimeout(() => {
             // Reset/refresh generator so user can create more flashcards
@@ -388,11 +356,16 @@ function FlashcardGenerator() {
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
+            setDeckImage("");
+            setPickerForDeck(false);
+            setPickerForCard(null);
+            setTempImages({});
             setView("form");
-        }, 800);
+            setIsFinishLocked(false); // ✅ unlock button after save
+        }, 2500);
         } catch (err) {
             console.error("Error saving deck:", err);
-            setStatus("Error saving deck. Check console.");
+            showStatus("Error saving deck. Check console.");
         }
     };
 
@@ -413,22 +386,29 @@ function FlashcardGenerator() {
         setSavedIndices(new Set());
         setCurrentFlashcardIndex(0);
         setFlashcardsGenerated(false);
+        setSelectedCategory("");
+        setSelectedSubcategory("");
+        setDeckTitle("");
+        setDeckDescription("");
         setTextInput("");
         setFile(null);
         setAiPrompt("");
         setStartPage('1');
         setEndPage('1');
         setView("status")
-        setStatus("⚠️Deck canceled and discarded.");
+        setDeckImage("");
+        setPickerForDeck(false);
+        setPickerForCard(null);
+        setTempImages({});
+        showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
-            setStatus("");       // clear after showing
             setView("form");     // go back to start
-        }, 3000);
+        }, 2500);
     };
 
     const handleCancelConfirmNo = () => {
         setShowCancelConfirm(false);
-        setStatus("Continue editing your flashcards.");
+        showStatus("Continue editing your flashcards.")
     };
 
     // Render current flashcard
@@ -441,28 +421,12 @@ function FlashcardGenerator() {
         return (
         <div className={styles.flashcardGenerator}>
             <h2>You must be signed in to use the Flashcard Generator</h2>
-            {/* Back Button (fixed route to Main Menu) */}
-            <button
-                type="button"
-                className={styles.backBtn}
-                onClick={() => navigate("/main")}
-                >
-                ← Back to Main Menu
-            </button>
-            <button onClick={() => navigate("/login")}>Go to Login</button>
         </div>
         );
     }
 
     return (
         <div className={styles.flashcardGenerator}>
-            {/* Back Button */}
-            {view === "form" || view === "viewer" ? (
-                <button className={styles.backBtn} onClick={() => navigate("/main")}>
-                    ← Back to Main Menu
-                </button>
-            ) : null}
-
             <h2>Flashcard Generator</h2>
 
             {/* --- STATUS VIEW (after cancel or finalize) --- */}
@@ -541,7 +505,7 @@ function FlashcardGenerator() {
                             min="1"
                             />
 
-                            <label htmlFor="endPage" className={styles.pageLabelEndPageLabel}>End Page</label>
+                            <label htmlFor="endPage" className={styles.pageLabel}>End Page</label>
                             <input
                             type="number"
                             id="endPage"
@@ -598,15 +562,123 @@ function FlashcardGenerator() {
                     {/* Flashcard viewer */}
                     {!showDeckPrompt && currentFlashcard && (
                     <div className={styles.flashcardViewer}>
-                        {/* Cancel button (top-right) */}
-                        <button className={styles.cancelBtn} type="button" onClick={handleCancelClick}>
-                        Cancel
-                        </button>
+                        {/* Status + Cancel wrapper */}
+                        <div className={styles.viewerTopBar}>
+                        <div className={styles.flashcardStatusBar}>
+                            <span className={styles.flashcardCounter}>
+                            Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}
+                            </span>
 
+                            {savedIndices.has(currentFlashcardIndex) && (
+                            <span className={styles.savedStatus}>Saved in Deck ✓</span>
+                            )}
+
+                            <span className={styles.deckSize}>
+                            Deck Size: {savedFlashcards.length} Flashcards Saved
+                            </span>
+                        </div>
+
+                        <button className={styles.cancelBtn} type="button" onClick={handleCancelClick}>
+                            Cancel
+                        </button>
+                        </div>
                         <div className={styles.viewerInner}>
                         <div className={styles.viewerContent}>
-                            <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
                             <p><strong>Q:</strong> {currentFlashcard[0]}</p>
+                            {pickerForCard === currentFlashcardIndex && (
+                                <ImagePicker
+                                    open={true}
+                                    onClose={() => setPickerForCard(null)}
+                                    onSelect={(img) => {
+                                    const newImage = img.webformatURL;
+                                    setTempImages(prev => ({ ...prev, [currentFlashcardIndex]: newImage }));
+                                    setPickerForCard(null);
+                                    showStatus("Image selected — remember to save this card!");
+                                    }}
+                                    mode="inline"
+                                />
+                            )}
+
+                            <div className={styles.imagePickerRow}>
+                            <button
+                                type="button"
+                                onClick={() => setPickerForCard(currentFlashcardIndex)}
+                                className={styles.cardImageBtn}
+                            >
+                                {(() => {
+                                    const savedCard = savedFlashcards.find(f => f.index === currentFlashcardIndex);
+                                    const previewSrc = tempImages[currentFlashcardIndex] || savedCard?.image || "";
+
+                                    return previewSrc ? (
+                                        <div className={styles.imagePreviewWrapper}>
+                                        <img
+                                            src={previewSrc}
+                                            alt="Card Preview"
+                                            className={styles.imagePreview}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.removeImageBtn}
+                                            onClick={() => {
+                                            // remove temp image and if saved exists, clear saved image
+                                            setTempImages(prev => {
+                                                const copy = { ...prev };
+                                                delete copy[currentFlashcardIndex];
+                                                return copy;
+                                            });
+                                            setSavedFlashcards(prev => {
+                                                const updated = [...prev];
+                                                const idx = updated.findIndex(c => c.index === currentFlashcardIndex);
+                                                if (idx !== -1) {
+                                                updated[idx] = { ...updated[idx], image: "" };
+                                                }
+                                                return updated;
+                                            });
+                                            showStatus("Image removed from this card.");
+                                            }}
+                                        >
+                                            ✖
+                                        </button>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.imagePlaceholder}></div>
+                                    );
+                                    })()}
+                            </button>
+
+                            {(() => {
+                                const card = savedFlashcards.find(f => f.index === currentFlashcardIndex);
+                                if (!card || !card.image) return null;
+
+                                return (
+                                    <div className={styles.imagePreviewWrapper}>
+                                        <img
+                                            src={card.image}
+                                            alt="Card Preview"
+                                            className={styles.imagePreview}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.removeImageBtn}
+                                            onClick={() => {
+                                                setSavedFlashcards(prev => {
+                                                    const updated = [...prev];
+                                                    const idx = updated.findIndex(c => c.index === currentFlashcardIndex);
+                                                    if (idx !== -1) {
+                                                        updated[idx] = { ...updated[idx], image: "" };
+                                                    }
+                                                    return updated;
+                                                });
+                                                showStatus("Image removed from this card.");
+                                            }}
+                                        >
+                                            ✖
+                                        </button>
+                                    </div>
+                                );
+                            })()}
+                            </div>
+
                             <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
                             {/* Use as Answer */}
@@ -620,10 +692,10 @@ function FlashcardGenerator() {
 
                                 {/* Type selector */}
                                 <select
-                                    value={flashcardType}
+                                    value={flashcardTypes[currentFlashcardIndex] || "Multiple Choice"}
                                     className={styles.typeBtn}
-                                    onChange={(e) => setFlashcardType(e.target.value)}
-                                >
+                                    onChange={(e) => handleTypeChange(e.target.value)}
+                                    >
                                     <option value="Short Response">Short Response</option>
                                     <option value="Multiple Choice">Multiple Choice</option>
                                 </select>
@@ -651,66 +723,42 @@ function FlashcardGenerator() {
                                     type="button"
                                     disabled={isButtonLocked}
                                     onClick={() => {
-                                        if (isButtonLocked) return; // ignore rapid clicks
+                                        if (isButtonLocked) return;
 
                                         const [question, relevant] = currentFlashcard;
                                         const answer = editedAnswer.trim();
 
-                                        // Determine if this card has already been saved before
-                                        const isUpdating = savedIndices.has(currentFlashcardIndex);
+                                        const existingCard = savedFlashcards.find(f => f.index === currentFlashcardIndex);
+                                        const cardImage = existingCard?.image || ""; // keep previous image if not changed
 
-                                        // Update userAnswers
-                                        setUserAnswers((prev) => {
-                                        const copy = [...prev];
-                                        copy[currentFlashcardIndex] = answer;
-                                        return copy;
-                                        });
-
-                                        // Update flashcardPairs to include isMultipleChoice flag while preserving existing shape
-                                        setFlashcardPairs((prev) => {
-                                            const updated = [...prev];
-                                            const existing = updated[currentFlashcardIndex];
-                                            if (existing && typeof existing === "object") {
-                                                if (Array.isArray(existing)) {
-                                                    existing.isMultipleChoice = flashcardType === "Multiple Choice";
-                                                    updated[currentFlashcardIndex] = existing;
-                                                } else {
-                                                    updated[currentFlashcardIndex] = { ...existing, isMultipleChoice: flashcardType === "Multiple Choice" };
-                                                }
-                                            } else {
-                                                updated[currentFlashcardIndex] = [question, relevant];
-                                                updated[currentFlashcardIndex].isMultipleChoice = flashcardType === "Multiple Choice";
-                                            }
-                                            return updated;
-                                        });
-
-                                        // Update savedFlashcards list
-                                        setSavedFlashcards((prev) => {
-                                        const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
-                                        const cardData = {
+                                        const updatedCard = {
                                             index: currentFlashcardIndex,
                                             front: question,
                                             back: answer,
-                                            isMultipleChoice: flashcardType === "Multiple Choice",
+                                            image: cardImage,
+                                            type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice",
                                         };
 
-                                        if (existingIdx !== -1) {
-                                            const copy = [...prev];
-                                            copy[existingIdx] = cardData;
-                                            return copy;
-                                        } else {
-                                            return [...prev, cardData];
-                                        }
+                                        // Update savedFlashcards array
+                                        setSavedFlashcards(prev => {
+                                            const existingIdx = prev.findIndex(f => f.index === currentFlashcardIndex);
+                                            if (existingIdx !== -1) {
+                                                const copy = [...prev];
+                                                copy[existingIdx] = updatedCard;
+                                                return copy;
+                                            } else {
+                                                return [...prev, updatedCard];
+                                            }
                                         });
 
-                                        // Mark as saved
-                                        setSavedIndices((prev) => new Set(prev).add(currentFlashcardIndex));
+                                        // Mark index as saved
+                                        setSavedIndices(prev => new Set(prev).add(currentFlashcardIndex));
 
-                                        // Call respective status handler
-                                        if (isUpdating) {
-                                        handleUpdateAnswer();
+                                        // Status handling
+                                        if (savedIndices.has(currentFlashcardIndex)) {
+                                            handleUpdateAnswer();
                                         } else {
-                                        handleSaveAnswer();
+                                            handleSaveAnswer();
                                         }
                                     }}
                                 >
@@ -729,6 +777,7 @@ function FlashcardGenerator() {
                                         newSet.delete(currentFlashcardIndex);
                                         return newSet;
                                         });
+                                        showStatus("Removed flashcard from deck.")
                                     }}
                                     >
                                     Remove
@@ -755,8 +804,8 @@ function FlashcardGenerator() {
 
             {/* Deck title + description prompt */}
             {showDeckPrompt && (
-            <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-                <div className={styles.modal}>
+            <div className={styles.finalizedOverlay} role="dialog" aria-modal="true">
+                <div className={styles.finalizedModal}>
                 <h3>Finalize Deck</h3>
 
                 <label>
@@ -776,7 +825,7 @@ function FlashcardGenerator() {
                     value={selectedCategory}
                     onChange={(e) => {
                         setSelectedCategory(e.target.value);
-                        setSelectedSubcategory(""); // reset subcategory on main category change
+                        setSelectedSubcategory("");
                     }}
                     required
                     >
@@ -816,8 +865,70 @@ function FlashcardGenerator() {
                     />
                 </label>
 
-                <div className={styles.modalActions}>
+                {/* Deck Image Picker Section */}
+                <div style={{ marginTop: 12 }}>
+                    <div className={styles.imagePickerRow}>
                     <button
+                        type="button"
+                        onClick={() => setPickerForDeck(true)}
+                        className={styles.deckImageBtn}
+                    >
+                        {deckImage ? "Change Image" : "Choose Deck Cover Image"}
+                    </button>
+
+                    {deckImage ? (
+                        <div className={styles.imagePreviewWrapper}>
+                            <img
+                                src={deckImage}
+                                alt="Deck Preview"
+                                className={styles.imagePreview}
+                            />
+                            <button
+                                type="button"
+                                className={styles.removeImageBtn}
+                                onClick={() => {
+                                    setDeckImage("");
+                                    showStatus("Deck image removed.");
+                                }}
+                            >
+                                ✖
+                            </button>
+                        </div>
+                    ) : (
+                        <div className={styles.imagePlaceholder}></div>
+                    )}
+                    </div>
+
+                    {/* Deck Image Picker Modal (restyled like ManageDeck) */}
+                    {pickerForDeck && (
+                    <ModalPortal>
+                        <div className={styles.pickerOverlay}>
+                        <div className={styles.pickerDialog}>
+                            <div className={styles.pickerHeader}>
+                            <span>Choose Deck Image</span>
+                            <button onClick={() => setPickerForDeck(false)}>Close</button>
+                            </div>
+                            <div className={styles.pickerBody}>
+                            <ImagePicker
+                                open
+                                onClose={() => setPickerForDeck(false)}
+                                onSelect={(img) => {
+                                setPickerForDeck(false);
+                                setDeckImage(img.webformatURL);
+                                showStatus("Deck image selected ✓");
+                                }}
+                                mode="inline"
+                            />
+                            </div>
+                        </div>
+                        </div>
+                    </ModalPortal>
+                    )}
+                </div>
+
+                <div className={styles.finalizedModalActions}>
+                    <button
+                    disabled={isFinishLocked}
                     onClick={() => {
                         if (!deckTitle.trim()) {
                         alert("Please enter a deck title first.");
@@ -827,6 +938,8 @@ function FlashcardGenerator() {
                         alert("Please select a category.");
                         return;
                         }
+                        setIsFinishLocked(true);
+                        setShowDeckPrompt(false);
                         handleDoneConfirmYes();
                     }}
                     >
@@ -840,226 +953,18 @@ function FlashcardGenerator() {
 
             {/* Cancel confirmation modal */}
             {showCancelConfirm && (
-                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-                <div className={styles.modal}>
+                <div className={styles.finalizedModalOverlay} role="dialog" aria-modal="true">
+                <div className={styles.finalizedModal}>
                     <p>Are you sure? All flashcards will be lost.</p>
-                    <div className={styles.modalActions}>
+                    <div className={styles.finalizedModalActions}>
                     <button onClick={handleCancelConfirmYes}>Yes</button>
                     <button onClick={handleCancelConfirmNo}>Never mind</button>
                     </div>
                 </div>
                 </div>
             )}
-            <div ref={bottomRef}></div>
-
-
-
-         {/* -------------------- Study Mode Section -------------------- */}
-            <div className={styles.studySection}>
-            <button
-                onClick={async () => {
-                if (!isStudying) {
-                    try {
-                    setStatus("Fetching study flashcards...");
-
-                    const response = await fetch("/study", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ flashcards: dummyFlashcards }),
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        const message = errorData.error || "Unknown error from server.";
-                        console.error("Study API error:", message);
-                        setStatus(`${message}`);
-                        return;
-                    }
-
-                    const data = await response.json();
-
-                    if (!data.output || !Array.isArray(data.output)) {
-                        setStatus("No valid study flashcards returned.");
-                        console.error("No output:", data);
-                        return;
-                    }
-
-                   // Build new array [question, randomizedOptions, isMultipleChoice, correctLabel]
-                    const processed = dummyFlashcards.map((fc, idx) => {
-                        const raw = data.output[idx] || "";
-                        if (!fc.isMultipleChoice) return [fc.question, raw, false, null];
-
-                        // Extract all options in order (A always correct per backend)
-                        const parts = raw.split("|||").filter((s) => s.trim() && !["A", "B", "C", "D"].includes(s.trim()));
-                        const options = parts.map((text, i) => ({
-                            label: ["A", "B", "C", "D"][i],
-                            text: text.trim(),
-                            isCorrect: i === 0, // A = correct answer
-                        }));
-
-                        // Randomize order
-                        for (let i = options.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [options[i], options[j]] = [options[j], options[i]];
-                        }
-
-                        // Assign new labels A–D after shuffle
-                        const randomized = options.map((opt, i) => ({
-                            label: ["A", "B", "C", "D"][i],
-                            text: opt.text,
-                            isCorrect: opt.isCorrect,
-                        }));
-
-                        // Find which label is now correct
-                        const correctLabel = randomized.find((o) => o.isCorrect)?.label || "A";
-
-                        return [fc.question, randomized, true, correctLabel];
-                    });
-
-                    console.log("Processed flashcards:", processed);
-                    setProcessedFlashcards(processed); // store it
-                    setCurrentIndex(0);
-                    setStatus(`Study flashcards received: ${processed.length}`);
-                    } catch (err) {
-                    console.error("Error calling /study:", err);
-                    setStatus(`Unexpected error: ${err.message}`);
-                    }
-                }
-
-                setIsStudying(!isStudying);
-                }}
-                className={styles.studyButton}
-            >
-                {isStudying ? "Hide Study Box" : "Start Studying (Dummy Data)"}
-            </button>
-
-            {isStudying && processedFlashcards.length > 0 && (
-                <div className={styles.studyBox}>
-                {(() => {
-                    const [question, response, isMC, correctLabel] = processedFlashcards[currentIndex] || [];
-                    const options = isMC ? response : [];
-
-
-                    return (
-                    <div>
-                        {/* Flashcard question */}
-                        <h3>{question}</h3>
-
-                        {/* Multiple Choice Mode */}
-                        {isMC ? (
-                        <div>
-                            <div className={styles.optionRow}>
-                            {options.map(({ label, text }) => (
-                                <button
-                                    key={label}
-                                    className={`${styles.optionButton} ${
-                                    selectedOption === label ? styles.selectedOption : ""
-                                    } ${
-                                    showResult && label === correctLabel && styles.correctOption
-                                    } ${
-                                    showResult &&
-                                    selectedOption === label &&
-                                    selectedOption !== correctLabel &&
-                                    styles.incorrectOption
-                                    }`}
-                                    onClick={() => !showResult && setSelectedOption(label)}
-                                >
-                                    <strong>{label})</strong> {text}
-                                </button>
-                                ))}
-                            </div>
-
-                            <button
-                            className={styles.submitButton}
-                            onClick={() => {
-                                if (!selectedOption) return;
-                                setShowResult(true);
-                            }}
-                            >
-                            Submit
-                            </button>
-                        </div>
-                        ) : (
-                        /* Short Response Mode */
-                        <div className={styles.shortResponseContainer}>
-                            <textarea
-                            className={styles.shortResponseInput}
-                            placeholder="Type your answer..."
-                            value={shortResponse}
-                            onChange={(e) => setShortResponse(e.target.value)}
-                            />
-                           <button
-                                className={styles.submitButton}
-                                onClick={async () => {
-                                    if (!shortResponse.trim()) return;
-
-                                    setStatus("Checking your answer...");
-
-                                    try {
-                                    const res = await fetch("/compare", {
-                                        method: "POST",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({
-                                        userAnswer: shortResponse,
-                                        correctAnswer: response,
-                                        }),
-                                    });
-                                    const data = await res.json();
-
-                                    if (data.correct) {
-                                        setStatus("Correct!");
-                                    } else {
-                                        setStatus(`Incorrect — the correct answer was: ${response}`);
-                                    }
-                                    } catch (err) {
-                                    console.error("Error comparing answers:", err);
-                                    setStatus("Error checking your answer.");
-                                    }
-                                }}
-                                >
-                                Submit
-                                </button>
-                        </div>
-                        )}
-
-                        {/* Navigation */}
-                        <div className={styles.navButtons}>
-                        <button
-                            className={styles.navButton}
-                            onClick={() => {
-                            if (currentIndex > 0) {
-                                setCurrentIndex(currentIndex - 1);
-                                resetStudyState();
-                            }
-                            }}
-                        >
-                            &lt;-
-                        </button>
-                        <button
-                            className={styles.navButton}
-                            onClick={() => {
-                            if (currentIndex < processedFlashcards.length - 1) {
-                                setCurrentIndex(currentIndex + 1);
-                                resetStudyState();
-                            }
-                            }}
-                        >
-                            -&gt;
-                        </button>
-                        </div>
-                    </div>
-                    );
-                })()}
-                </div>
-            )}
-            </div>
-            {/* ------------------------------------------------------------- */}
-
         </div>
     );
 }
-
-
-
 
 export default FlashcardGenerator;

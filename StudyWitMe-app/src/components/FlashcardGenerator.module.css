@@ -1,49 +1,62 @@
 .flashcardGenerator {
-    max-width: 800px;
-    margin: 40px auto;
-    padding: 60px 30px 30px;
-    background: #d3d2d8;
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    max-width: 860px;
+    margin: 50px auto;
+    padding: 60px 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
     position: relative;
+    backdrop-filter: blur(8px);
+    font-family: "Inter", "Segoe UI", sans-serif;
 }
 
 .flashcardGenerator h2 {
     color: #1b3c4f;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 35px;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .generatorForm {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 22px;
 }
 
 .generatorForm label {
     display: flex;
     flex-direction: column;
-    font-weight: bold;
+    font-weight: 600;
     color: #1b3c4f;
+    font-size: 1.15rem;
 }
 
 textarea {
-    margin-top: 8px;
-    padding: 10px;
-    border-radius: 6px;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
     border: 1px solid #ccc;
     min-height: 100px;
     font-size: 1rem;
     resize: vertical;
     width: 100%;
     box-sizing: border-box;
+    background-color: #fdfdfd;
+}
+
+textarea:focus {
+    border-color: #416d8e;
+    outline: none;
+    box-shadow: 0 0 6px rgba(65, 109, 142, 0.4);
 }
 
 .charCounter {
     text-align: right;
-    font-size: 0.9rem;
-    color: #444;
-    margin-top: 4px;
+    font-size: 0.95rem;
+    color: #555;
+    margin-top: 6px;
     opacity: 0.8;
 }
 
@@ -54,26 +67,30 @@ input[type="file"] {
 .fileUploadWrapper {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 5px;
+    gap: 12px;
+    margin-top: 8px;
 }
 
 .uploadButton {
     background-color: #416d8e;
-    color: white;
+    color: #fff;
     border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
+    border-radius: 10px;
+    padding: 10px 16px;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background 0.25s ease, transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
 }
 
 .uploadButton:hover {
     background-color: #2f546e;
+    transform: translateY(-2px);
 }
 
 .fileName {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #333;
     max-width: 300px;
     white-space: nowrap;
@@ -101,50 +118,53 @@ input[type="file"] {
     background: transparent;
     border: none;
     color: #c0392b;
-    font-size: 1.1rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: transform 0.15s ease, color 0.2s ease;
 }
 
 .removeFileBtn:hover {
     color: #e74c3c;
-    transform: scale(1.1);
+    transform: scale(1.15);
 }
 
 .pageRangeContainer {
     display: flex;
     align-items: center;
-    justify-content: left;
     gap: 10px;
     margin-top: 12px;
 }
 
 .pageLabel {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #1b3c4f;
 }
 
 .pageInput {
-    width: 70px;
-    padding: 4px 6px;
-    font-size: 0.9rem;
+    width: 80px;
+    padding: 6px 8px;
+    font-size: 1rem;
     border: 1px solid #ccc;
-    border-radius: 6px;
+    border-radius: 8px;
+    transition: border-color 0.25s ease;
 }
 
-.endPageLabel {
-    margin-left: 10px;
+.pageInput:focus {
+    border-color: #416d8e;
+    outline: none;
 }
 
 .generateBtn {
     background-color: #416d8e;
     color: white;
     border: none;
-    padding: 12px;
-    border-radius: 6px;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 10px;
     font-size: 1rem;
     cursor: pointer;
     transition: background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
 }
 
 .generateBtn:disabled {
@@ -158,8 +178,8 @@ input[type="file"] {
 
 .backBtn {
     position: absolute;
-    top: 15px;
-    left: 15px;
+    top: 20px;
+    left: 25px;
     background: none;
     border: none;
     font-size: 1rem;
@@ -182,29 +202,66 @@ input[type="file"] {
 .loadingStatus {
     margin-top: 8px;
     font-weight: bold;
-    font-size: 0.95rem;
+    font-size: 1rem;
     text-align: center;
 }
 
 /* Flashcard viewer section */
 .flashcardViewer {
-    margin-top: 25px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 10px;
+    margin-top: 30px;
+    padding: 25px 30px;
+    background: #fdfdfd;
+    border-radius: 12px;
     border: 1px solid #ccc;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
     position: relative;
 }
 
 .flashcardViewer h3 {
     color: #1b3c4f;
-    margin-bottom: 15px;
+    margin-bottom: 18px;
+    font-size: 1.4rem;
+    font-weight: 600;
 }
 
 .flashcardViewer p {
     margin: 6px 0;
     font-size: 1rem;
     color: #333;
+}
+
+.flashcardStatusBar {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+    height: 24px;
+}
+
+.flashcardCounter {
+    position: absolute;
+    left: 10px;
+    font-weight: bold;
+}
+
+.savedStatus {
+    position: absolute;
+    left: 140px; /* enough spacing so they never overlap */
+    color: #2ecc71; /* green checkmark color */
+    font-weight: 500;
+}
+
+.deckSize {
+    position: absolute;
+    font-weight: 500;
+    color: #666;
+}
+
+/* ensure layout stability (no text shift) */
+.flashcardStatusBar span {
+    white-space: nowrap;
 }
 
 /* Cancel button */
@@ -241,19 +298,37 @@ input[type="file"] {
 
 /* Flashcard navigation + actions */
 .flashcardActions {
-    margin-top: 15px;
+    position: relative;
+    margin-top: 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+}
+
+.useAsAnswerBtn {
+    border: 1px solid #000;
+    border-radius: 6px;
+    padding: 8px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s ease;
+    margin-bottom: 6px;
+}
+
+.useAsAnswerBtn:hover {
+    background-color:#999;
 }
 
 /* Saved/Updated indicator (centered between action buttons) */
 .flashcardActions .savedIndicator {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     flex: 1;
     text-align: center;
-    color: #28a745 !important; /* force bright green */
+    color: #28a745;
     font-weight: bold;
     min-height: 1em; /* reserve space so layout doesn't shift */
     line-height: 1.5em;
@@ -275,12 +350,21 @@ input[type="file"] {
     padding: 8px 14px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
     transition: background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
 }
+
 
 .flashcardActions button:hover {
     background-color: #2f546e;
+}
+
+.leftActions,
+.rightActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* Done button row */
@@ -316,53 +400,63 @@ input[type="file"] {
 }
 
 /* ===== Modal Overlay and Window Styles ===== */
-.modalOverlay {
+.finalizedModalOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.5); /* dark transparent backdrop */
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999; /* ensure it overlays everything */
+    z-index: 999;
 }
 
-.modal {
+.finalizedModal {
     background: #ffffff;
-    padding: 25px 30px;
-    border-radius: 10px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-    max-width: 420px;
-    width: 90%;
+    padding: 35px 40px;
+    border-radius: 14px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    max-width: 460px;
+    width: 100%;
     color: #1b3c4f;
-    position: relative;
-    animation: fadeInScale 0.25s ease;
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: fadeInOnly 0.25s ease forwards;
+    overflow-y: auto; /* just in case the modal content grows too tall */
+    max-height: 70vh /* ensures it fits on smaller screens */
 }
 
-.modal h3 {
+/* Small fade/scale animation */
+@keyframes fadeInOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.finalizedModal h3 {
     margin-top: 0;
     text-align: center;
-    color: #1b3c4f;
-    margin-bottom: 15px;
+    color: #416d8e;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 20px;
 }
 
-.modal p {
+.finalizedModal p {
     text-align: center;
     font-size: 1rem;
     margin-bottom: 20px;
 }
 
-.modal label {
+.finalizedModal label {
     display: flex;
     flex-direction: column;
     margin-bottom: 15px;
     font-weight: bold;
 }
 
-.modal input,
-.modal textarea {
+.finalizedModal input,
+.finalizedModal textarea {
     margin-top: 8px;
     padding: 10px;
     border: 1px solid #ccc;
@@ -372,19 +466,19 @@ input[type="file"] {
     box-sizing: border-box;
 }
 
-.modal textarea {
+.finalizedModal textarea {
     min-height: 80px;
     resize: vertical;
 }
 
-.modalActions {
+.finalizedModalActions {
     display: flex;
     justify-content: center;
     gap: 12px;
     margin-top: 10px;
 }
 
-.modalActions button {
+.finalizedModalActions button {
     background-color: #416d8e;
     color: white;
     border: none;
@@ -395,28 +489,16 @@ input[type="file"] {
     transition: background 0.2s ease;
 }
 
-.modalActions button:hover {
+.finalizedModalActions button:hover {
     background-color: #2f546e;
 }
 
-.modalActions button:last-child {
+.finalizedModalActions button:last-child {
     background-color: #e74c3c;
 }
 
-.modalActions button:last-child:hover {
+.finalizedModalActions button:last-child:hover {
     background-color: #c0392b;
-}
-
-/* Small fade/scale animation */
-@keyframes fadeInScale {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 .loadingScreen {
@@ -425,17 +507,18 @@ input[type="file"] {
     align-items: center;
     justify-content: center;
     height: 300px;
+    text-align: center;
 }
 
 .loadingDots {
     display: flex;
-    gap: 6px;
+    gap: 8px;
 }
 
 .loadingDots span {
     width: 12px;
     height: 12px;
-    background-color: #555;
+    background-color: #416d8e;
     border-radius: 50%;
     animation: pulse 1s infinite ease-in-out;
 }
@@ -453,9 +536,9 @@ input[type="file"] {
 }
 
 .loadingText {
-    margin-top: 10px;
+    margin-top: 12px;
     font-weight: 500;
-    color: #555;
+    color: #1b3c4f;
 }
 
 /* Transitional status screen */
@@ -469,106 +552,184 @@ input[type="file"] {
 }
 
 .statusMessage {
-    font-size: 1.1rem;
-    font-weight: bold;
+    font-size: 1.15rem;
+    font-weight: 600;
     color: #1b3c4f;
     animation: fadeInOut 2.5s ease-in-out;
 }
 
-.studySection {
-  margin-top: 40px;
-  text-align: center;
+/* =======================
+    Big picker modal (From second snippet)
+   ======================= */
+.pickerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+}
+.pickerDialog {
+    width: min(1100px, 94vw);
+    height: min(82vh, 900px);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(2, 8, 23, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.pickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+.pickerBody {
+    padding: 16px;
+    overflow: auto;
+}
+.pickerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+}
+.pickerCell {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.pickerThumb {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+.pickerCell button {
+    margin: 8px;
 }
 
-.studyButton {
-  background-color: #4a4a4a;
-  color: white;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 16px;
+
+/* If using CSS Modules, wrap each rule with :global(...) */
+.picker-grid-wrapper .image-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    gap: 16px !important;
 }
 
-.studyButton:hover {
-  background-color: #5c5c5c;
+.picker-grid-wrapper .image-card {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
 }
 
-.studyBox {
-  margin-top: 20px;
-  background-color: #d3d3d3;
-  border-radius: 12px;
-  height: 300px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
-  color: #333;
+.picker-grid-wrapper .image-card img {
+    width: 100% !important;
+    height: 140px !important;
+    object-fit: cover !important;
+    border-radius: 6px !important;
 }
 
-.optionRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 10px 0;
+.picker-grid-wrapper .controls { /* search bar row */
+    display: flex !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
 }
 
-.optionButton {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #333;
-  color: white;
-  cursor: pointer;
+.picker-grid-wrapper .pager {
+    margin-top: 12px !important;
+    display: flex !important;
+    justify-content: space-between !important;
 }
 
-.selectedOption {
-  border: 2px solid #007bff;
+.cardImageBtn {
+    margin: 6px 0 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.correctOption {
-  background-color: #28a745 !important;
+.cardImageBtn:hover {
+    background: #e6e6e6;
+    transform: translateY(-1px);
 }
 
-.incorrectOption {
-  background-color: #dc3545 !important;
+.deckImageBtn {
+    margin-bottom: 8px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.shortResponseContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.deckImageBtn:hover {
+    background: #e6e6e6;
+    transform: translateY(-1px);
 }
 
-.shortResponseInput {
-  width: 100%;
-  min-height: 60px;
-  border-radius: 8px;
-  padding: 10px;
-  border: 1px solid #ccc;
+.imagePickerRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.submitButton {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background-color: white;
-  color: black;
-  cursor: pointer;
+.imagePreview {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fafafa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.navButtons {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
+.imagePlaceholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    border: 1px dashed #ccc;
+    background: #f9f9f9;
 }
 
-.navButton {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background-color: #555;
-  color: white;
-  cursor: pointer;
+.imagePreviewWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.removeImageBtn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.removeImageBtn:hover {
+    background: darkred;
 }

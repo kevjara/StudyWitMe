@@ -1,0 +1,180 @@
+.settingsContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    color: #1b3c4f;
+}
+
+/* === CARD === */
+.settingsCard {
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(14px);
+    border-radius: 20px;
+    padding: 50px 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    width: 360px;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+}
+
+/* === BACK BUTTON === */
+.backButton {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    color: #1b3c4f;
+    cursor: pointer;
+}
+
+.backButton:hover {
+    color: #416d8e;
+}
+
+/* === TITLE === */
+.title {
+    font-size: 2.2rem;
+    color: #1b3c4f;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.25);
+    margin-bottom: 35px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* === BUTTON GROUP === */
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+}
+
+.optionButton {
+    background-color: #416d8e;
+    border: none;
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+.optionButton:hover {
+    background-color: #00bfff;
+    transform: scale(1.05);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* === MUSIC SECTION === */
+.musicOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 28px;
+}
+
+.label {
+    font-size: 1.25rem;
+    color: #1b3c4f;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+/* === TOGGLE BUTTONS === */
+.inlineButtons {
+    display: flex;
+    gap: 12px;
+}
+
+.toggleButton {
+    background-color: #416d8e;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 22px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-size: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.555);
+}
+
+.toggleButton:hover {
+    background-color: #fff;
+    color: #416d8e
+}
+
+.toggleButton.active {
+    background-color: #fff;
+    transform: scale(1.05);
+    color: #416d8e
+}
+
+/* === VOLUME CONTROL === */
+.volumeControl {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin-top: 14px;
+}
+
+.volumeButton {
+    background-color: #416d8e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+}
+
+.volumeButton:hover {
+    background-color: #00bfff;
+    transform: scale(1.1);
+}
+
+/* === PROGRESS BAR === */
+.progressBar {
+    flex: 1;
+    height: 14px;
+    background-color: #1b1e24;
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #1ed760, #23d738);
+    width: 0%;
+    transition: width 0.3s ease-in-out;
+    border-radius: 7px 0 0 7px;
+}
+
+.volumeText {
+    color: #1b3c4f;
+    font-size: 0.95rem;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+/* === ANIMATION === */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

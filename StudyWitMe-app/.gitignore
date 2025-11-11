@@ -25,3 +25,6 @@ dist-ssr
 *.sln
 *.sw?
 logo_files/
+src/assets/flashcard_themes/
+*FlashcardsQuiz.jsx
+*FlashcardsQuiz.module.css
