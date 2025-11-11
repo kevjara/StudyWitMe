@@ -14,18 +14,10 @@ export default function TrackSelector() {
     // Build picker options
     const options = songs.map((song) => ({
         label: (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <img
-            src={disc}
-            alt=""
-            style={{
-                width: "20px",
-                height: "20px",
-                filter: "drop-shadow(0 0 1px rgba(0,0,0,0.2))",
-            }}
-            />
+            <div className={styles.trackLabel}>
+            <span className={styles.discIcon}></span>
             <span>{song.title}</span>
-        </div>
+            </div>
         ),
         value: song.file,
     }));
@@ -76,7 +68,7 @@ export default function TrackSelector() {
                 onValueChange={handleValueChange}
                 infinite={true}
                 visibleCount={8}
-                optionItemHeight={50}
+                optionItemHeight={40}
                 scrollSensitivity={10}
                 classNames={{
                 wrapper: styles.trackWheel,

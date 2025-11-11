@@ -1,9 +1,9 @@
 .trackSelectorContainer {
-    position: relative !important;
-    min-width: 260px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
+    position: relative;
+    min-width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .playButton {
@@ -20,55 +20,61 @@
     cursor: pointer;
 }
 
-[data-rwp-option][data-rwp-index='-1'],
-[data-rwp-option][data-rwp-index='1'] {
-    opacity: 0.8;
-    transform: scale(0.95);
-    text-align: left;      /* ensure labels start aligned */
-}
-
-[data-rwp-option][data-rwp-index='-2'],
-[data-rwp-option][data-rwp-index='2'] {
-    opacity: 0.6;
-    transform: scale(0.9);
-   text-align: left;      /* ensure labels start aligned */
-}
-
-
 /* Outer wheel */
 .trackWheel {
-    width: 170px !important;
-    height: 120px !important;
-    border-radius: 0rem !important;
-    background-color: transparent !important;
-    overflow: hidden !important;
-    user-select: none !important;
-    cursor: grab !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index:9999;
+  width: 200px;
+  height: 120px;
+  border-radius: 0rem;
+  background-color: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* WheelPickerDemo.module.css */
+.trackLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 50px;
+  width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.discIcon {
+  width: 20px;
+  height: 20px;
+  background-image: url("../assets/disc.svg");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
 }
 
 /* Each option (including current) */
 .trackItem {
-    color: #416d8e !important; 
-    font-size: 1rem !important;
-    font-weight: 500;
-    transition: opacity 0.3s, transform 0.3s, color 0.3s;
-        text-align: left;      /* ensure labels start aligned */
-    opacity: 0.6;
-    transform: scale(0.9);
-    text-align: center;
-    max-width: 120px;
+  color: #416d8e; 
+  font-size: 1rem;
+  font-weight: 500;
+  transition: opacity 0.3s, transform 0.3s, color 0.3s;
+  opacity: 0.6;
+  transform: scale(0.9);
+  text-align: center;
+  max-width: 170px;
 }
 
 /* Highlight band (center slot) */
 .current {
-    background-color:none;
-    color: #416d8e; 
-    opacity: 1;
-    font-weight: 700;
-    max-width: 120px;
-    text-align: left;      /* ensure labels start aligned */
+  background-color:none;
+  font-size: 1rem;
+  color: #416d8e; 
+  opacity: 1;
+  font-weight: 500;
+  max-width: 170px;
+  text-align: center;      /* ensure labels start aligned */
 }

@@ -9,7 +9,10 @@ export function MusicProvider({ children }) {
     const songs = [
         { title: "Bossa Nova", file: "Music/bossa-nova-14396.mp3" }, 
         { title: "Jazz Lounge", file: "Music/jazz-lounge-relaxing-background-music-412597.mp3"},
-        { title: "Whispers", file: "Music/whispers-in-the-smoke-2-424935.mp3"}
+        { title: "Whispers", file: "Music/whispers-in-the-smoke-2-424935.mp3"},
+        { title: "Closer", file: "Music/closer-236250.mp3"},
+        { title: "Warm Lifestyle", file: "Music/soft-nostalgic-warm-lifestyle-elegance-lofi-music-190599.mp3"},
+        { title: "Lying in the Grass", file: "Music/lying-in-the-grass-virtuexii-220283.mp3"},
     ];
 
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
