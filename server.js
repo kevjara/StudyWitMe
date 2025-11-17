@@ -5,6 +5,7 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import cors from "cors";
 dotenv.config();
 
 const app = express();
@@ -13,6 +14,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
 app.use(express.static("public"));
+app.use(cors({
+  origin: "http://localhost:5173", // allow your frontend
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -219,6 +226,80 @@ User answer: "${userAnswer}"
     res.status(500).json({ error: "Comparison failed." });
   }
 });
+
+// /quiz route — creates a comprehensive quiz from a flashcard deck
+app.post("/quiz", async (req, res) => {
+  try {
+    const flashcards = req.body.flashcards || [];
+
+    if (!Array.isArray(flashcards) || flashcards.length === 0) {
+      return res.status(400).json({ error: "No flashcards provided." });
+    }
+
+    const prompt = `
+You are an advanced quiz generator.
+You will receive a deck of flashcards, each with:
+- "question": a study question
+- "relevantText": the factual or conceptual answer
+
+Your goal:
+Create a comprehensive quiz that tests overall mastery of the entire flashcard deck.
+
+Rules for the quiz:
+1. The quiz should combine and integrate the knowledge across flashcards.
+2. Include both short response and multiple choice questions — whichever best assesses understanding.
+3. For multiple choice questions, create **exactly four options (A–D)** with only one correct answer.
+4. For short response questions, provide only the expected text answer.
+5. You must output ONLY valid JSON — an array of objects. Each object must follow this structure:
+   {
+     "question": "string",
+     "relevantText": "string",
+     "isMultipleChoice": true or false
+   }
+6. Do NOT include explanations, markdown, or any text outside JSON.
+7. Avoid trivial recall — focus on conceptual understanding, comparisons, and applied reasoning.
+
+FLASHCARDS INPUT:
+${JSON.stringify(flashcards, null, 2)}
+`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const rawOutput = result.response.text().trim();
+
+    console.log("🧠 /quiz raw output:", rawOutput);
+
+    let cleanedOutput = rawOutput
+      .replace(/```json\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/^[^{\[]*/, "")
+      .replace(/[^}\]]*$/, "")
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .trim();
+
+    try {
+      const jsonOutput = JSON.parse(cleanedOutput);
+      if (!Array.isArray(jsonOutput)) throw new Error("Response is not a JSON array.");
+      
+      // ✅ Log the parsed JSON result for now
+      console.log("✅ /quiz processed output:", JSON.stringify(jsonOutput, null, 2));
+
+      // Return it to frontend (for now, we’re just logging on backend)
+      res.json({ output: jsonOutput });
+    } catch (err) {
+      console.error("❌ Invalid JSON from Gemini /quiz:", rawOutput);
+      res.status(500).json({
+        error: "Model returned invalid JSON.",
+        rawOutput: rawOutput.slice(0, 500),
+        cleanedAttempt: cleanedOutput.slice(0, 500),
+      });
+    }
+  } catch (err) {
+    console.error("Quiz route error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
