@@ -145,3 +145,77 @@
 .shakeOnce:hover {
     animation: shake 0.4s ease;
 }
+
+.trackSelectorContainer {
+    position: relative;
+    min-width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.playButton {
+    position: relative;
+    /*right: 70%;*/
+    width: 150px;
+    background: transparent;
+    color: #416d8e;
+    border: none;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+[data-rwp-option][data-rwp-index='-1'],
+[data-rwp-option][data-rwp-index='1'] {
+  opacity: 0.8;
+  transform: scale(0.95);
+text-align: left;      /* ensure labels start aligned */
+}
+
+[data-rwp-option][data-rwp-index='-2'],
+[data-rwp-option][data-rwp-index='2'] {
+  opacity: 0.6;
+  transform: scale(0.9);
+   text-align: left;      /* ensure labels start aligned */
+}
+
+
+/* Outer wheel */
+.trackWheel {
+  width: 170px;
+  height: 120px;
+  border-radius: 0rem;
+  background-color: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Each option (including current) */
+.trackItem {
+  color: #416d8e; 
+  font-size: 1rem;
+  font-weight: 500;
+  transition: opacity 0.3s, transform 0.3s, color 0.3s;
+    text-align: left;      /* ensure labels start aligned */
+  opacity: 0.6;
+  transform: scale(0.9);
+  text-align: center;
+  max-width: 120px;
+}
+
+/* Highlight band (center slot) */
+.current {
+  background-color:none;
+  color: #416d8e; 
+  opacity: 1;
+  font-weight: 700;
+  max-width: 120px;
+  text-align: left;      /* ensure labels start aligned */
+}
