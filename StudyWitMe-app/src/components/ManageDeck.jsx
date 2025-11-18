@@ -19,6 +19,7 @@ import styles from "./Flashcards.module.css";
 import ImagePicker from "./ImagePicker";
 import ModalPortal from "./ModalPortal";
 import { categories } from "./categories";
+import { refreshPixabayImage } from "../utils/imageRefresh";
 
 export default function ManageDeck() {
   const { deckId } = useParams();
@@ -44,6 +45,7 @@ export default function ManageDeck() {
   const [deckSaving, setDeckSaving] = useState(false);
   const [pickerForCard, setPickerForCard] = useState(null);
   const [pickerForDeck, setPickerForDeck] = useState(false);
+  const [refreshedImageUrls, setRefreshedImageUrls] = useState({});
 
   useEffect(() => {
     const open = Boolean(pickerForCard || pickerForDeck);
@@ -109,6 +111,7 @@ export default function ManageDeck() {
           _back: d.data().back || "",
           _type: d.data().type || "Multiple Choice",
           _imagePath: d.data().imagePath || null,
+          pixabayId: d.data().pixabayId || null, // CAPTURE PIXABAY ID
           _dirty: false,
           _saving: false,
         }));
@@ -122,6 +125,28 @@ export default function ManageDeck() {
 
     return () => unsub();
   }, [currentUser, deckId, decks]);
+  
+  const handleImageError = async (type, obj) => {
+    if (!obj.pixabayId || refreshedImageUrls[obj.id]) return;
+
+    const newUrl = await refreshPixabayImage(
+        type, 
+        obj.id, 
+        obj.pixabayId, 
+        true // canEdit is true because the user is the deck owner on this page
+    );
+
+    if (newUrl) {
+        setRefreshedImageUrls(prev => ({ ...prev, [obj.id]: newUrl }));
+        if (type === 'deck') {
+             setDeck(prev => ({ ...prev, imagePath: newUrl }));
+        } else {
+             setCards(prev => prev.map(c => c.id === obj.id ? { ...c, _imagePath: newUrl } : c));
+        }
+        toast("Image refreshed ✓");
+    }
+  };
+
 
   const handleSaveDeckInfo = async () => {
     if (!deckIsDirty) return;
@@ -163,6 +188,7 @@ export default function ManageDeck() {
         back: card._back,
         type: card._type,
         imagePath: card._imagePath,
+        pixabayId: card.pixabayId || null, // SAVE PIXABAY ID
         category: deck?.category || editCategory,
         isPublic: deck?.isPublic || editIsPublic,
       });
@@ -192,6 +218,7 @@ export default function ManageDeck() {
       back: "",
       type: "Multiple Choice",
       imagePath: null,
+      pixabayId: null, // INITIALIZE PIXABAY ID
       category: deck?.category || "",
       createdAt: serverTimestamp(),
       isPublic: false,
@@ -322,11 +349,15 @@ export default function ManageDeck() {
               background: "#f8fafc",
             }}
           >
-            {deck?.imageUrl ? (
+            {deck?.imagePath ? (
               <img
-                src={deck.imageUrl}
+                src={deck.imagePath}
                 alt=""
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                onError={(e) => {
+                    e.target.style.display = 'none';
+                    handleImageError('deck', deck);
+                }}
               />
             ) : (
               <div
@@ -346,17 +377,17 @@ export default function ManageDeck() {
             className={styles.deckButtonSmall}
             onClick={() => setPickerForDeck(true)}
           >
-            {deck?.imageUrl ? "Change Deck Image" : "Add Deck Image"}
+            {deck?.imagePath ? "Change Deck Image" : "Add Deck Image"}
           </button>
-          {deck?.imageUrl && (
+          {deck?.imagePath && (
             <button
               className={styles.deckButtonSmall}
               onClick={async () => {
-                await updateDoc(doc(db, "deck", deckId), { imageUrl: null });
-                setDeck((d) => ({ ...d, imageUrl: null }));
+                await updateDoc(doc(db, "deck", deckId), { imagePath: null, pixabayId: null });
+                setDeck((d) => ({ ...d, imagePath: null, pixabayId: null }));
                 setDecks((prev) =>
                   prev.map((d) =>
-                    d.id === deckId ? { ...d, imageUrl: null } : d
+                    d.id === deckId ? { ...d, imagePath: null, pixabayId: null } : d
                   )
                 );
                 toast("Removed deck image");
@@ -412,6 +443,10 @@ export default function ManageDeck() {
                       src={c._imagePath}
                       alt=""
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => {
+                          e.target.style.display = 'none';
+                          handleImageError('flashcard', c);
+                      }}
                     />
                   ) : (
                     <div
@@ -548,8 +583,10 @@ export default function ManageDeck() {
                     onClose={() => setPickerForDeck(false)}
                     onSelect={async (img) => {
                       const url = img?.webformatURL || null;
+                      const pid = img?.id || null;
                       await updateDoc(doc(db, "deck", deckId), {
-                        imageUrl: url,
+                        imagePath: url,
+                        pixabayId: pid, // SAVE PIXABAY ID
                         imageAttribution: img
                           ? {
                               pageURL: img.pageURL,
@@ -557,10 +594,10 @@ export default function ManageDeck() {
                             }
                           : null,
                       });
-                      setDeck((d) => ({ ...d, imageUrl: url }));
+                      setDeck((d) => ({ ...d, imagePath: url, pixabayId: pid }));
                       setDecks((prev) =>
                         prev.map((d) =>
-                          d.id === deckId ? { ...d, imageUrl: url } : d
+                          d.id === deckId ? { ...d, imagePath: url, pixabayId: pid } : d
                         )
                       );
                       toast("Deck image updated ✓");
@@ -589,10 +626,17 @@ export default function ManageDeck() {
                     open
                     onClose={() => setPickerForCard(null)}
                     onSelect={(img) => {
+                      const url = img?.webformatURL || null;
+                      const pid = img?.id || null;
                       handleFieldEdit(
                         pickerForCard,
                         "_imagePath",
-                        img?.webformatURL || null
+                        url
+                      );
+                      handleFieldEdit(
+                        pickerForCard,
+                        "pixabayId", // SAVE PIXABAY ID LOCALLY
+                        pid
                       );
                       setPickerForCard(null);
                     }}

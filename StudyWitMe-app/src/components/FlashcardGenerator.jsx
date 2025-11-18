@@ -8,6 +8,7 @@ import styles from "./FlashcardGenerator.module.css";
 import { categories } from "./categories";
 import ImagePicker from "./ImagePicker";
 import ModalPortal from "./ModalPortal";
+import { refreshPixabayImage } from "../utils/imageRefresh";
 
 function FlashcardGenerator() {
     const navigate = useNavigate();
@@ -44,6 +45,8 @@ function FlashcardGenerator() {
     const [pickerForCard, setPickerForCard] = useState(null); // stores index of card being edited
     const [deckImagePath, setDeckImagePath] = useState("");
     const [cardImagePaths, setCardImagePaths] = useState([]);
+    const [deckPixabayId, setDeckPixabayId] = useState(null);
+    const [cardPixabayIds, setCardPixabayIds] = useState([]);
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -288,8 +291,9 @@ function FlashcardGenerator() {
                 createdAt: serverTimestamp(),
                 isPublic: isPublic,
                 category: selectedCategory,
-                subCategory: selectedSubcategory, // Save subcategory
-                imagePath: deckImagePath, // Save deck cover image path
+                subCategory: selectedSubcategory, 
+                imagePath: deckImagePath, 
+                pixabayId: deckPixabayId, // ADD PIXABAY ID
                 collaborators: [],
             };
             const deckDocRef = await addDoc(collection(db, "deck"), deckData);
@@ -303,9 +307,10 @@ function FlashcardGenerator() {
                         front: card.front,
                         back: card.back,
                         createdAt: serverTimestamp(),
-                        isPublic: isPublic, // Inherit deck's public status
+                        isPublic: isPublic, 
                         category: selectedCategory,
-                        imagePath: card.imagePath, // Save card image path
+                        imagePath: card.imagePath, 
+                        pixabayId: card.pixabayId, // ADD PIXABAY ID
                         type: card.type || "Multiple Choice",
                     };
                     return addDoc(collection(db, "flashcard"), flashcardData);
@@ -335,9 +340,11 @@ function FlashcardGenerator() {
                 setEndPage('1');
                 setSelectedCategory("");
                 setSelectedSubcategory("");
-                setIsPublic(false); // Reset public status
-                setDeckImagePath(""); // Reset deck image path
-                setCardImagePaths([]); // Reset card image paths
+                setIsPublic(false); 
+                setDeckImagePath(""); 
+                setCardImagePaths([]); 
+                setDeckPixabayId(null);
+                setCardPixabayIds([]);
                 if (fileInputRef.current) {
                     fileInputRef.current.value = "";
                 }
@@ -379,6 +386,8 @@ function FlashcardGenerator() {
         setIsPublic(false);
         setDeckImagePath("");
         setCardImagePaths([]);
+        setDeckPixabayId(null);
+        setCardPixabayIds([]);
         setView("status")
         showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
@@ -665,6 +674,7 @@ function FlashcardGenerator() {
                                                     const [question, relevant] = currentFlashcard;
                                                     const answer = editedAnswer.trim();
                                                     const currentCardImagePath = cardImagePaths[currentFlashcardIndex] || ""; // Get current card image path
+                                                    const currentCardPixabayId = cardPixabayIds[currentFlashcardIndex] || null; // Get current card Pixabay ID
 
                                                     // Determine if this card has already been saved before
                                                     const isUpdating = savedIndices.has(currentFlashcardIndex);
@@ -679,6 +689,7 @@ function FlashcardGenerator() {
                                                             back: answer, 
                                                             type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice",
                                                             imagePath: currentCardImagePath, // Add image path
+                                                            pixabayId: currentCardPixabayId, // Add Pixabay ID
                                                         };
 
                                                         if (existingIdx !== -1) {
@@ -899,6 +910,7 @@ function FlashcardGenerator() {
                                 onClose={() => setPickerForDeck(false)}
                                 onSelect={(img) => {
                                     setDeckImagePath(img?.webformatURL || "");
+                                    setDeckPixabayId(img?.id || null);
                                     setPickerForDeck(false);
                                 }}
                             />
@@ -918,9 +930,15 @@ function FlashcardGenerator() {
                                 onClose={() => setPickerForCard(null)}
                                 onSelect={(img) => {
                                     const url = img?.webformatURL || "";
+                                    const id = img?.id || null;
                                     setCardImagePaths((prev) => {
                                         const copy = [...prev];
                                         copy[pickerForCard] = url;
+                                        return copy;
+                                    });
+                                    setCardPixabayIds((prev) => {
+                                        const copy = [...prev];
+                                        copy[pickerForCard] = id;
                                         return copy;
                                     });
                                     setPickerForCard(null);

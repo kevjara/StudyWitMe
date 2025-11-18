@@ -7,6 +7,7 @@ import { signOut } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import DefaultProfileIcon from "../assets/Default_Profile_Icon.png";
 import styles from "./Profile.module.css";
+import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
 
 function Profile() {
     const { currentUser } = useAuth();
@@ -26,8 +27,37 @@ function Profile() {
     const [showFinalYes, setShowFinalYes] = useState(false);
     const deleteIntervalRef = useRef(null);
     const showYesTimeoutRef = useRef(null);
+    const [refreshedUrls, setRefreshedUrls] = useState({});
 
     const [profileImage, setProfileImage] = useState(null);
+
+    const handleImageError = async (e, deck) => {
+        const isOwnerOfDeck = currentUser?.uid === deck.ownerId; 
+
+        if (!deck.pixabayId || refreshedUrls[deck.id]) {
+            e.target.style.display = 'none';
+            return;
+        }
+
+        e.target.style.opacity = 0;
+        
+        const newUrl = await refreshPixabayImage(
+            'deck', 
+            deck.id, 
+            deck.pixabayId, 
+            isOwnerOfDeck // Only owner can save the fix permanently to Firestore
+        );
+
+        if (newUrl) {
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: newUrl }));
+            e.target.src = newUrl;
+            e.target.style.opacity = 1;
+            e.target.style.display = 'block';
+        } else {
+            e.target.style.display = 'none';
+        }
+    };
+
 
     useEffect(() => {
         const targetUid = uid || currentUser?.uid;
@@ -161,6 +191,10 @@ function Profile() {
                         </div>
                         <div className={styles.profileMeta}>
                             <h2 className={styles.displayName}> {profile.displayName || "No display name"}</h2>
+                            <div className={styles.levelBadge}>
+                                <span className={styles.levelText}>Lvl </span>
+                                <span className={styles.levelNumber}>{profile.userLevel ?? 0}</span>
+                            </div>
                             {userAchievements.length > 0 && (
                                 <div className={styles.achievementsContainer} title="Achievements Earned">
                                     {userAchievements.map(achievement => (
@@ -187,7 +221,7 @@ function Profile() {
                                 <div className={styles.accountRow}><strong>Member Since:</strong> <span>{profile.createdAt.toDate().toLocaleDateString()}</span></div>
                             )}
                             <div className={styles.accountRow}>
-                                <strong>Email:</strong> 
+                                <strong>Email:</strong>
                                 <span>{isOwner ? profile.email : "Private"}</span>
                             </div>
                         </div>
@@ -225,10 +259,10 @@ function Profile() {
                                     }}
                                     onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
                                 >
-                                    {deck.imageUrl && (
+                                    {deck.imagePath && (
                                         <a href={deck.attributionLink} target="_blank" rel="noopener noreferrer">
                                             <img
-                                                src={deck.imageUrl}
+                                                src={deck.imagePath}
                                                 alt="Deck"
                                                 style={{
                                                     width: "80px",
@@ -237,6 +271,7 @@ function Profile() {
                                                     borderRadius: "8px",
                                                     flexShrink: 0,
                                                 }}
+                                                onError={(e) => handleImageError(e, deck)}
                                             />
                                         </a>
                                     )}

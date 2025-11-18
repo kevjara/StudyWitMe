@@ -2,18 +2,49 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { db } from "../services/firebase";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext"; // Import useAuth to check ownership
+import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
 
 export default function SearchResults() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [deckResults, setDeckResults] = useState([]);
     const [cardResults, setCardResults] = useState([]);
     const [deckTitles, setDeckTitles] = useState({});
     const [profileResults, setProfileResults] = useState([]);
     const [error, setError] = useState("");
+    const [refreshedUrls, setRefreshedUrls] = useState({});
 
     const term = (searchParams.get("q") || "").trim();
+
+    const handleImageError = async (e, item, collectionName) => {
+        const isOwner = currentUser?.uid === item.ownerId; 
+
+        if (!item.pixabayId || refreshedUrls[item.id]) {
+            e.target.style.display = 'none';
+            return;
+        }
+
+        e.target.style.opacity = 0; // Hide broken image while refreshing
+        
+        const newUrl = await refreshPixabayImage(
+            collectionName, 
+            item.id, 
+            item.pixabayId, 
+            isOwner
+        );
+
+        if (newUrl) {
+            setRefreshedUrls(prev => ({ ...prev, [item.id]: newUrl }));
+            e.target.src = newUrl;
+            e.target.style.opacity = 1;
+            e.target.style.display = 'block';
+        } else {
+            e.target.style.display = 'none';
+        }
+    };
 
     useEffect(() => {
         if (!term) {
@@ -177,14 +208,14 @@ export default function SearchResults() {
                                             navigate(`/flashcards/deck/${deck.id}/study`)
                                         }
                                     >
-                                        {deck.imageUrl && (
+                                        {deck.imagePath && (
                                             <a
                                                 href={deck.attributionLink}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
                                                 <img
-                                                    src={deck.imageUrl}
+                                                    src={deck.imagePath}
                                                     alt="Deck"
                                                     style={{
                                                         width: "80px",
@@ -193,6 +224,7 @@ export default function SearchResults() {
                                                         borderRadius: "8px",
                                                         flexShrink: 0,
                                                     }}
+                                                    onError={(e) => handleImageError(e, deck, 'deck')}
                                                 />
                                             </a>
                                         )}
@@ -244,6 +276,7 @@ export default function SearchResults() {
                                                         borderRadius: "8px",
                                                         flexShrink: 0,
                                                     }}
+                                                    onError={(e) => handleImageError(e, card, 'flashcard')}
                                                 />
                                             )}
                                             <div style={{ flex: 1 }}>
