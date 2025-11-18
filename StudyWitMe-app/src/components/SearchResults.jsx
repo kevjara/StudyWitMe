@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { db } from "../services/firebase";
-import {
-    collection,
-    getDocs,
-    query,
-    where,
-    doc,
-    getDoc,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 
 export default function SearchResults() {
     const [searchParams] = useSearchParams();
@@ -17,6 +10,7 @@ export default function SearchResults() {
     const [deckResults, setDeckResults] = useState([]);
     const [cardResults, setCardResults] = useState([]);
     const [deckTitles, setDeckTitles] = useState({});
+    const [profileResults, setProfileResults] = useState([]);
     const [error, setError] = useState("");
 
     const term = (searchParams.get("q") || "").trim();
@@ -25,6 +19,7 @@ export default function SearchResults() {
         if (!term) {
             setDeckResults([]);
             setCardResults([]);
+            setProfileResults([]);
             return;
         }
 
@@ -35,12 +30,13 @@ export default function SearchResults() {
             try {
                 const decksRef = collection(db, "deck");
                 const cardsRef = collection(db, "flashcard");
-                const deckSnap = await getDocs(
-                    query(decksRef, where("isPublic", "==", true))
-                );
-                const cardSnap = await getDocs(
-                    query(cardsRef, where("isPublic", "==", true))
-                );
+                const usersRef = collection(db, "users");
+
+                const [deckSnap, cardSnap, userSnap] = await Promise.all([
+                    getDocs(query(decksRef, where("isPublic", "==", true))),
+                    getDocs(query(cardsRef, where("isPublic", "==", true))),
+                    getDocs(usersRef),
+                ]);
 
                 const qLower = term.toLowerCase();
 
@@ -81,9 +77,18 @@ export default function SearchResults() {
                     }
                 }
 
+                const profiles = userSnap.docs
+                    .map((u) => ({ id: u.id, ...u.data() }))
+                    .filter((u) =>
+                        [u.displayName, u.email]
+                            .filter(Boolean)
+                            .some((field) => field.toLowerCase().includes(qLower))
+                    );
+
                 setDeckTitles(deckTitleMap);
                 setDeckResults(decks);
                 setCardResults(cardsByDeck);
+                setProfileResults(profiles);
             } catch (e) {
                 console.error("Search error:", e);
                 setError("There was a problem searching. Try again.");
@@ -115,6 +120,40 @@ export default function SearchResults() {
             {!loading && !error && (
                 <>
                     <section style={{ marginTop: "1.5rem" }}>
+                        <h3>Profiles</h3>
+                        {profileResults.length === 0 ? (
+                            <p>No profiles found.</p>
+                        ) : (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+                                {profileResults.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "1rem",
+                                            borderRadius: "12px",
+                                            padding: "1rem",
+                                            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                                            cursor: "pointer",
+                                            minWidth: "260px",
+                                            backgroundColor: "#ffffff",
+                                        }}
+                                        onClick={() => navigate(`/profile/${user.id}`)}
+                                    >
+                                        <div style={{ flex: 1 }}>
+                                            <h4>{user.displayName || "Unnamed User"}</h4>
+                                            <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    <section style={{ marginTop: "2rem" }}>
                         <h3>Decks</h3>
                         {deckResults.length === 0 ? (
                             <p>No public decks found.</p>
@@ -139,7 +178,11 @@ export default function SearchResults() {
                                         }
                                     >
                                         {deck.imageUrl && (
-                                            <a href={deck.attributionLink} target="_blank" rel="noopener noreferrer">
+                                            <a
+                                                href={deck.attributionLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
                                                 <img
                                                     src={deck.imageUrl}
                                                     alt="Deck"
@@ -190,7 +233,7 @@ export default function SearchResults() {
                                                 navigate(`/flashcards/deck/${deckId}/study`)
                                             }
                                         >
-                                            {card.imagePath ? (
+                                            {card.imagePath && (
                                                 <img
                                                     src={card.imagePath}
                                                     alt="Flashcard"
@@ -202,7 +245,7 @@ export default function SearchResults() {
                                                         flexShrink: 0,
                                                     }}
                                                 />
-                                            ) : null}
+                                            )}
                                             <div style={{ flex: 1 }}>
                                                 <h4>{deckTitles[deckId] || "Unknown Deck"}</h4>
                                                 <p style={{ fontSize: "0.9rem", margin: 0 }}>

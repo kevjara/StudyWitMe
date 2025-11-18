@@ -21,6 +21,7 @@ function App() {
             <Route path="/main" element={<MainMenu />} />
             <Route path="/create" element={<FlashcardGenerator />} />
             <Route path="/flashcards" element={<Flashcards />} />
+            <Route path="/profile/:uid" element={<Profile />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
