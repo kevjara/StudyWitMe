@@ -12,6 +12,7 @@ function FlashcardsQuiz() {
     const deck = state?.deck;
 
     const [flashcards, setFlashcards] = useState([]);
+    const [filteredFlashcards, setFilteredFlashcards] = useState([]);
     const [processedFlashcards, setProcessedFlashcards] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -23,8 +24,15 @@ function FlashcardsQuiz() {
     const [cardStatuses, setCardStatuses] = useState([]);
     const [quizStarted, setQuizStarted] = useState(false);
     const [savedAnswers, setSavedAnswers] = useState([]);
-    const [quizStats, setQuizStats] = useState(null); // { correct, incorrect, total, grade }
-
+    const [quizStats, setQuizStats] = useState(null); // { correct, incorrect, total, grade, time spent }
+    const [lastWarning, setLastWarning] = useState(null);
+    //Quiz setup
+    const [showSetup, setShowSetup] = useState(false);
+    const [questionCount, setQuestionCount] = useState(0);
+    const [selectedTime, setSelectedTime] = useState(15);
+    const [timeLeft, setTimeLeft] = useState(null);
+    const [timerRunning, setTimerRunning] = useState(false);
+    const [showTimer, setShowTimer] = useState(false);
 
     useEffect(() => {
         if (!deck) {
@@ -59,6 +67,51 @@ function FlashcardsQuiz() {
         fetchFlashcards();
     }, [deck, currentUser]);
 
+    useEffect(() => {
+        if (flashcards.length === 0) return;
+
+        const filtered = flashcards.filter(fc =>
+            (fc.front && fc.front.trim() !== "") &&
+            (fc.back  && fc.back.trim()  !== "")
+        );
+
+        setFilteredFlashcards(filtered);
+
+        if (filtered.length === 0) {
+            setStatus("No flashcards with content to quiz.");
+        }
+    }, [flashcards]);
+
+    useEffect(() => {
+        if (!timerRunning || timeLeft === null) return;
+
+        // ⏰ Timer finished
+        if (timeLeft <= 0) {
+            setTimerRunning(false);
+            autoSubmitDueToTimeout();  // <--- NEW
+            return;
+        }
+
+        // ⚠ 5-minute warning
+        if (timeLeft === 300 && lastWarning !== 300) {
+            alert("⚠️ 5 minutes remaining!");
+            setLastWarning(300);
+        }
+
+        // ⚠ 1-minute warning
+        if (timeLeft === 60 && lastWarning !== 60) {
+            alert("⏳ 1 minute remaining!");
+            setLastWarning(60);
+        }
+
+        const interval = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+
+    }, [timerRunning, timeLeft, lastWarning]);
+
     function showStatus(message, duration = 4500) {
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
@@ -70,22 +123,41 @@ function FlashcardsQuiz() {
         }, duration);
     }
 
+    const handleOpenSetup = () => {
+        setShowSetup(true);
+        setQuestionCount(filteredFlashcards.length);  // default max
+    };
+
+    const getAvailableTimes = () => {
+        const blocks = Math.ceil(questionCount / 12);
+        let times = [];
+
+        for (let i = 1; i <= blocks; i++) {
+            const minutes = i * 15;
+            if (minutes <= 120) times.push(minutes);
+        }
+        return times;
+    };
+
+    const handleStartQuiz = async () => {
+        setLastWarning(null);
+        setTimerRunning(false);
+        // 2. start timer
+        setTimeLeft(selectedTime * 60); 
+
+        // 3. call your original quiz creation logic
+        await startQuiz(questionCount); 
+    };
+
     const startQuiz = async () => {
-        if (flashcards.length === 0) {
+        if (filteredFlashcards.length === 0) {
             setStatus("No flashcards found in this deck.");
             return;
         }
 
         try {
-            showStatus("Creating quiz...");
+            setStatus("Creating quiz...");
             setQuizStarted(false);
-
-            // Filter out empty-front cards
-            const filteredFlashcards = flashcards.filter(fc => fc.front && fc.front.trim() !== "");
-            if (filteredFlashcards.length === 0) {
-                setStatus("No flashcards with content to quiz.");
-                return;
-            }
 
             // Format flashcards for Gemini
             const formatted = filteredFlashcards.map(fc => ({
@@ -140,32 +212,138 @@ function FlashcardsQuiz() {
                 const correctLabel = randomized.find((o) => o.isCorrect)?.label || "A";
                 return [fc.front, randomized, true, correctLabel];
             });
-
+            setStatus("");
+            showStatus(`Quiz ready (${processed.length} cards).`);
             setProcessedFlashcards(processed);
             setCardStatuses(processed.map(() => ""));
             setCurrentIndex(0);
             setQuizStarted(true);
-            showStatus(`Quiz ready (${processed.length} cards).`);
+            setTimerRunning(true);
+            setShowSetup(false);
         } catch (err) {
             console.error("Quiz error:", err);
             showStatus(`Error: ${err.message}`);
         }
     };
 
-    const setCardStatus = (message) => {
-        setCardStatuses((prev) => {
-            const newStatuses = [...prev];
-            newStatuses[currentIndex] = message;
-            return newStatuses;
+    const resetQuizState = () => {
+        setStatus("");
+        setShortResponse("");
+        setCardStatuses("");
+        setShowResult(false);
+        setQuizStats(null);
+        setSavedAnswers([]);
+        setSelectedOption([]);
+        setTimeLeft(selectedTime * 60);  // reset to original
+        setTimerRunning(true);           // start countdown
+        setShowTimer(true);              // show timer
+    };
+
+    const autoSubmitDueToTimeout = async () => {
+        setTimerRunning(false);  // stop the countdown
+        setShowTimer(false);     // hide timer UI
+        setStatus("Time's up! Submitting quiz...");
+        saveAll();
+        // Submit automatically
+        submitQuiz;
+    };
+
+    const saveAll = () => {
+        setSavedAnswers(prev => {
+            const autoSaved = [...(prev || [])];
+
+            processedFlashcards.forEach(([question, response, isMC], i) => {
+                // already saved? skip
+                if (autoSaved[i] !== undefined) return;
+
+                if (isMC) {
+                    const selected = selectedOption?.[i];
+                    if (!selected) return; // matches Save-button behavior
+                    autoSaved[i] = selected;
+                } else {
+                    const answer = shortResponse[i];
+                    if (!answer?.trim()) return;
+                    autoSaved[i] = answer;
+                }
+            });
+
+            return autoSaved;
         });
     };
 
-    const resetQuizState = () => {
-        setSelectedOption(null);
-        setShowResult(false);
-        setShortResponse("");
-        setCardStatus("");
-    };
+
+    const submitQuiz = async () => {
+        setStatus("Submitting quiz...");
+        // This ensures "No answer given" questions look blank
+        setSelectedOption(prev => {
+            const cleaned = [...prev];
+            processedFlashcards.forEach(([, , isMC], i) => {
+                    if (savedAnswers[i] === undefined) {
+                        if (isMC) cleaned[i] = undefined; // clear radio
+                    }
+            });
+            return cleaned;
+        });
+        setShortResponse(prev => {
+            const cleaned = [...prev];
+            processedFlashcards.forEach(([, , isMC], i) => {
+                if (!isMC && savedAnswers[i] === undefined) {
+                    cleaned[i] = ""; // clear text field
+                }
+            });
+            return cleaned;
+        });
+
+        setTimerRunning(false);  // stop the countdown
+        setShowTimer(false);     // hide timer UI 
+        setStatus("");
+        setShowResult(true);
+        try {
+            let correctCount = 0;
+            const total = processedFlashcards.length;
+
+            const results = await Promise.all(
+                processedFlashcards.map(async ([question, response, isMC, correctLabel], index) => {
+                    const userAnswer = savedAnswers[index];
+                    if (userAnswer === undefined) return "No answer given";
+
+                    if (isMC) {
+                        const correct = userAnswer === correctLabel;
+                        if (correct) correctCount++;
+                        const correctText =
+                            response.find((opt) => opt.label === correctLabel)?.text || "N/A";
+                        return correct
+                            ? "✅ Correct!"
+                            : `❌ Incorrect — correct answer: ${correctText}`;
+                    } else {
+                        const res = await fetch("/compare", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                userAnswer,
+                                correctAnswer: response,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (data.correct) correctCount++;
+                        return data.correct
+                            ? "✅ Correct!"
+                            : `❌ Incorrect — correct answer: ${response}`;
+                    }
+                })
+            );
+
+            const incorrectCount = total - correctCount;
+            const grade = ((correctCount / total) * 100).toFixed(1);
+
+            setCardStatuses(results);
+            setQuizStats({ correct: correctCount, incorrect: incorrectCount, total, grade });
+            setStatus("Quiz submitted!");
+        } catch (err) {
+            console.error(err);
+            setStatus("Error submitting quiz.");
+        }
+    }
 
     if (loading) return <div className={styles.studySection}><p>Loading flashcards...</p></div>;
     if (!deck) return <div className={styles.studySection}><p>No deck selected.</p></div>;
@@ -182,7 +360,43 @@ function FlashcardsQuiz() {
             </div>
 
             <div className={styles.studySection}>
-                {!quizStarted && (
+                {showSetup && (
+                    <div className={styles.setupCard}>
+                        <h2>Setup Your Quiz</h2>
+
+                        {/* Question Count */}
+                        <label>Questions (max {filteredFlashcards.length})</label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={filteredFlashcards.length}
+                            value={questionCount}
+                            onChange={(e) => setQuestionCount(Number(e.target.value))}
+                        />
+
+                        {/* Time Selector */}
+                        <label>Time:</label>
+                        <select
+                            value={selectedTime}
+                            onChange={(e) => setSelectedTime(Number(e.target.value))}
+                        >
+                            {getAvailableTimes().map(t => (
+                                <option key={t} value={t}>{t} minutes</option>
+                            ))}
+                        </select>
+
+                        {/* Start Quiz */}
+                        <button
+                            className={styles.startQuizButton}
+                            onClick={handleStartQuiz}
+                        >
+                            Start Quiz
+                        </button>
+
+                        <p className={styles.status}>{status}</p>
+                    </div>
+                )}
+                {!quizStarted && !showSetup &&  (
                     <div className={styles.coverCard}>
                         <div className={styles.deckInfo}>
                             <h2
@@ -207,17 +421,22 @@ function FlashcardsQuiz() {
                         )}
 
                         <div className={styles.buttonRow}>
-                            <button className={styles.studyButton} onClick={startQuiz}>
+                            <button className={styles.studyButton} onClick={handleOpenSetup}>
                                 Create Quiz
                             </button>
                         </div>
-
-                        <p className={styles.status}>{status}</p>
                     </div>
                 )}
 
                 {quizStarted && processedFlashcards.length > 0 && (
                 <div className={styles.quizContainer}>
+                    {/* Timer (bottom right) */}
+                    {timerRunning && (
+                        <div className={styles.timerBox}>
+                            {Math.floor(timeLeft / 60)}:
+                            {String(timeLeft % 60).padStart(2, "0")}
+                        </div>
+                    )}
                     {/* Sidebar */}
                     {!showResult && (
                     <aside className={styles.sidebar}>
@@ -239,6 +458,13 @@ function FlashcardsQuiz() {
                         </div>
                         ))}
                     </div>
+                    <button
+                        type="button"
+                        className={styles.submitButton}
+                        onClick={saveAll}
+                    >
+                        Save all answers
+                    </button>
                     </aside>
                     )}
 
@@ -251,14 +477,7 @@ function FlashcardsQuiz() {
                             <h3>Grade: {quizStats.grade}%</h3>
                             <button
                                 className={styles.retryButton}
-                                onClick={() => {
-                                    setShowResult(false);
-                                    setQuizStats(null);
-                                    setCardStatuses([]);
-                                    setSavedAnswers([]);
-                                    setSelectedOption([]);
-                                    setShortResponse([]);
-                                }}
+                                onClick={(resetQuizState)}
                                 >
                                 Retry Quiz
                             </button>
@@ -285,13 +504,21 @@ function FlashcardsQuiz() {
                                         value={label}
                                         disabled={showResult}
                                         checked={selectedOption?.[index] === label}
-                                        onChange={() =>
-                                        setSelectedOption((prev) => {
-                                            const copy = [...(prev || [])];
-                                            copy[index] = label;
-                                            return copy;
-                                        })
-                                        }
+                                        onChange={() => {
+                                            setSelectedOption((prev) => {
+                                                const copy = [...(prev || [])];
+                                                copy[index] = label;
+                                                return copy;
+                                            })
+                                            // clear savedAnswers for this index if it's different now
+                                            setSavedAnswers(prev => {
+                                                const copy = [...(prev || [])];
+                                                if (copy[index] !== undefined && copy[index] !== label) {
+                                                    copy[index] = undefined;
+                                                }
+                                                return copy;
+                                            });
+                                        }}
                                     />
                                     <span>
                                         <strong>{label})</strong> {text}
@@ -305,13 +532,21 @@ function FlashcardsQuiz() {
                                 placeholder="Type your answer..."
                                 disabled={showResult}
                                 value={shortResponse[index] || ""}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                     setShortResponse((prev) => {
                                     const copy = [...(prev || [])];
                                     copy[index] = e.target.value;
                                     return copy;
                                     })
-                                }
+                                    // If a saved answer exists and is different from the new value, clear it
+                                    setSavedAnswers(prev => {
+                                        const copy = [...(prev || [])];
+                                        if (copy[index] !== undefined && String(copy[index]) !== e.target.value) {
+                                        copy[index] = undefined;
+                                        }
+                                        return copy;
+                                    });
+                                }}
                                 />
                             )}
 
@@ -351,63 +586,13 @@ function FlashcardsQuiz() {
                             <hr className={styles.divider} />
                             </div>
                         ))}
-
                         {/* Submit Quiz Button */}
                         {!showResult && (
                             <button
                                 type="button"
                                 className={styles.finalSubmitButton}
                                 disabled={savedAnswers.filter((a) => a !== undefined).length === 0}
-                                onClick={async () => {
-                                    setStatus("Submitting quiz...");
-                                    setShowResult(true);
-
-                                    try {
-                                        let correctCount = 0;
-                                        const total = processedFlashcards.length;
-
-                                        const results = await Promise.all(
-                                            processedFlashcards.map(async ([question, response, isMC, correctLabel], index) => {
-                                                const userAnswer = savedAnswers[index];
-                                                if (userAnswer === undefined) return "No answer given";
-
-                                                if (isMC) {
-                                                    const correct = userAnswer === correctLabel;
-                                                    if (correct) correctCount++;
-                                                    const correctText =
-                                                        response.find((opt) => opt.label === correctLabel)?.text || "N/A";
-                                                    return correct
-                                                        ? "✅ Correct!"
-                                                        : `❌ Incorrect — correct answer: ${correctText}`;
-                                                } else {
-                                                    const res = await fetch("/compare", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({
-                                                            userAnswer,
-                                                            correctAnswer: response,
-                                                        }),
-                                                    });
-                                                    const data = await res.json();
-                                                    if (data.correct) correctCount++;
-                                                    return data.correct
-                                                        ? "✅ Correct!"
-                                                        : `❌ Incorrect — correct answer: ${response}`;
-                                                }
-                                            })
-                                        );
-
-                                        const incorrectCount = total - correctCount;
-                                        const grade = ((correctCount / total) * 100).toFixed(1);
-
-                                        setCardStatuses(results);
-                                        setQuizStats({ correct: correctCount, incorrect: incorrectCount, total, grade });
-                                        setStatus("Quiz submitted!");
-                                    } catch (err) {
-                                        console.error(err);
-                                        setStatus("Error submitting quiz.");
-                                    }
-                                }}
+                                onClick={submitQuiz}
                             >
                                 Submit Quiz
                             </button>

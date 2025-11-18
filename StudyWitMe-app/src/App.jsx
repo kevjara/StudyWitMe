@@ -18,6 +18,7 @@ import FlashcardsQuiz from "./components/FlashcardsQuiz";
 import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
 import Header from "./components/Header";
+import SearchResults from "./components/SearchResults";
 
 function App() {
   const navigate = useNavigate();
@@ -70,6 +71,7 @@ function App() {
           <Route path="/flashcards_study" element={<FlashcardsStudy />} />
           <Route path="/quiz" element={<FlashcardsQuiz />} />
           <Route path="/manage/:deckId" element={<ManageDeck />} />
+          <Route path="/search" element={<SearchResults />} />
         </Route>
       </Routes>
     </>

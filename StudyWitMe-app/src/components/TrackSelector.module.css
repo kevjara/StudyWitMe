@@ -8,14 +8,11 @@
 
 .playButton {
     position: relative;
-    /*right: 70%;*/
-    width: 150px;
+    width: 147px;
     background: transparent;
     color: #416d8e;
     border: none;
     border-radius: 0;
-    padding: 8px 14px;
-    font-weight: 600;
     font-size: 15px;
     cursor: pointer;
 }
