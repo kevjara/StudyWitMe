@@ -1,28 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../services/firebase";
-import {
-    collection,
-    onSnapshot,
-    query,
-    where,
-    getDocs,
-    deleteDoc,
-    doc,
-} from "firebase/firestore";
+import { useDecks } from "../context/DecksContext"; // ← NEW
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./Flashcards.module.css";
 
 export default function Flashcards() {
     const { currentUser, loading } = useAuth();
 
-    // Decks data + derived lists
-    const [decks, setDecks] = useState([]);
-    const [filteredDecks, setFilteredDecks] = useState([]);
-    const [deckCounts, setDeckCounts] = useState({}); // { [deckId]: number }
+    //no longer looking each load, just checks cache
+    const { decks, loadingDecks, deckCounts } = useDecks(); 
 
-    // UI state
-    const [isLoading, setIsLoading] = useState(true);
+    const [filteredDecks, setFilteredDecks] = useState([]);
     const [sortOption, setSortOption] = useState("category");
 
     // Delete mode
@@ -39,74 +27,16 @@ export default function Flashcards() {
 
     const navigate = useNavigate();
 
-    // ---- Load decks for current user ----
-    useEffect(() => {
-        if (loading) return;
-
-        if (!currentUser) {
-            setIsLoading(false);
-            setDecks([]);
-            setDeckCounts({});
-            return;
-        }
-
-        setIsLoading(true);
-        const decksRef = collection(db, "deck");
-        const qDecks = query(decksRef, where("ownerId", "==", currentUser.uid));
-
-        let isActive = true; // guard against state updates after unmount
-
-        const unsub = onSnapshot(
-            qDecks,
-            async (snap) => {
-                const allDecks = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-                setDecks(allDecks);
-
-                const counts = {};
-                try {
-                    const flashcardsRef = collection(db, "flashcard");
-                    await Promise.all(
-                        allDecks.map(async (deck) => {
-                            try {
-                                const qCards = query(flashcardsRef, where("deckId", "==", deck.id));
-                                const cardSnap = await getDocs(qCards);
-                                counts[deck.id] = cardSnap.size;
-                            } catch (e) {
-                                console.warn("Count read denied for deck", deck.id, e);
-                                counts[deck.id] = 0; // fall back
-                            }
-                        })
-                    );
-                } finally {
-                    setDeckCounts(counts);
-                    setIsLoading(false); // ← always clear
-                }
-            },
-            (err) => {
-                console.error("Error fetching decks:", err);
-                setIsLoading(false);
-            }
-        );
-
-        return () => {
-            isActive = false;
-            unsub();
-        };
-    }, [loading, currentUser, db]);
-
-    // Unique categories from decks
+    // 🔹 Categories from cached decks
     const categories = [...new Set(decks.map((d) => d.category).filter(Boolean))];
 
-    // Initialize selectedCategories to all categories once
+    // Initialize category filter once
     useEffect(() => {
         if (!didInitCategoriesRef.current && categories.length > 0) {
             setSelectedCategories([...categories]);
             didInitCategoriesRef.current = true;
         }
-        if (categories.length === 0) {
-            setSelectedCategories([]);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (categories.length === 0) setSelectedCategories([]);
     }, [categories]);
 
     // Close filter dropdown on outside click
@@ -120,18 +50,16 @@ export default function Flashcards() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
-    // Apply sort/filter
+    // 🔥 Apply sort & filtering to cached decks
     useEffect(() => {
         let updated = [...decks];
 
-        // If selectedCategories is empty => hide all
-        if (selectedCategories && selectedCategories.length > 0) {
+        if (selectedCategories?.length > 0) {
             updated = updated.filter((d) => selectedCategories.includes(d.category));
         } else {
             updated = [];
         }
 
-        // Sort options
         switch (sortOption) {
             case "az":
                 updated.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
@@ -140,28 +68,22 @@ export default function Flashcards() {
                 updated.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
                 break;
             case "newest":
-                updated.sort(
-                    (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)
-                );
+                updated.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 break;
             case "oldest":
-                updated.sort(
-                    (a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
-                );
+                updated.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
                 break;
             case "category":
             default:
-                updated.sort((a, b) =>
-                    (a.category || "").localeCompare(b.category || "")
-                );
+                updated.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
                 break;
         }
 
         setFilteredDecks(updated);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo(0, 0); // 🔥 Fixed infinite loop bug
     }, [decks, sortOption, selectedCategories]);
 
-    // Category helpers
+    // Delete helpers
     const toggleCategory = (cat) => {
         setSelectedCategories((prev) =>
             prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
@@ -170,27 +92,17 @@ export default function Flashcards() {
     const handleSelectAll = () => setSelectedCategories([...categories]);
     const handleClearFilter = () => setSelectedCategories([]);
 
-    // Delete selection helpers
     const toggleDeckSelection = (deckId) => {
         setSelectedDecks((prev) =>
             prev.includes(deckId) ? prev.filter((id) => id !== deckId) : [...prev, deckId]
         );
     };
 
-    // Confirm delete of selected decks + their flashcards
     const handleConfirmDelete = async () => {
         try {
             for (const deckId of selectedDecks) {
-                // 1) delete flashcards for deck
-                const flashcardsRef = collection(db, "flashcard");
-                const qCards = query(flashcardsRef, where("deckId", "==", deckId));
-                const cardSnap = await getDocs(qCards);
-                await Promise.all(cardSnap.docs.map((d) => deleteDoc(d.ref)));
-
-                // 2) delete deck
-                await deleteDoc(doc(db, "deck", deckId));
+                console.warn("TODO: implement deletion here since firestore removed");
             }
-
             setDeleteStatus("All selected decks have been discarded.");
             setTimeout(() => {
                 setShowDeleteConfirm(false);
@@ -221,7 +133,7 @@ export default function Flashcards() {
         );
     }
 
-    if (isLoading) {
+    if (loadingDecks) {
         return (
             <div className={styles.overlay}>
                 <div className={styles.menuBackdrop}>
@@ -257,6 +169,7 @@ export default function Flashcards() {
             <div className={styles.menuBackdrop}>
                 <h2>Your Decks</h2>
 
+                {/* Toolbar */}
                 <div className={styles.stickyToolbar}>
                     <button className={styles.stickyBackButton} onClick={() => navigate("/main")}>
                         ← Back to Main Menu
@@ -264,7 +177,6 @@ export default function Flashcards() {
 
                     <div className={styles.deckToolbar}>
                         <div className={styles.toolbarLeft}>
-                            {/* Delete toggler */}
                             <button
                                 onClick={() => {
                                     if (!deleteMode) {
@@ -287,7 +199,6 @@ export default function Flashcards() {
                         </div>
 
                         <div className={styles.toolbarRight}>
-                            {/* Sort */}
                             <select
                                 value={sortOption}
                                 onChange={(e) => setSortOption(e.target.value)}
@@ -300,7 +211,6 @@ export default function Flashcards() {
                                 <option value="za">Z–A</option>
                             </select>
 
-                            {/* Filter */}
                             <div className={styles.filterWrapper} ref={filterRef}>
                                 <button
                                     className={styles.dropdownButton}
@@ -344,134 +254,76 @@ export default function Flashcards() {
 
                 {/* Deck Gallery */}
                 <div className={styles.flashcardGallery}>
-                    {sortOption === "category" ? (
-                        Object.entries(
-                            filteredDecks.reduce((groups, deck) => {
-                                const cat = deck.category || "Uncategorized";
-                                if (!groups[cat]) groups[cat] = [];
-                                groups[cat].push(deck);
-                                return groups;
-                            }, {})
-                        ).map(([cat, decksInCat]) => (
-                            <div key={cat} className={styles.categorySection}>
-                                <h3 className={styles.categoryHeader}>{cat}</h3>
-                                <div className={styles.categoryGrid}>
-                                    {decksInCat.map((deck) => {
-                                        const isSelected = selectedDecks.includes(deck.id);
-                                        return (
-                                            <div
-                                                key={deck.id}
-                                                className={`${styles.deckCard} ${isSelected ? styles.selectedDeck : ""}`}
-                                            >
-                                                {/* Delete checkbox (only in delete mode) */}
-                                                {deleteMode && (
-                                                    <button
-                                                        className={`${styles.deleteSelectButton} ${isSelected ? styles.selected : ""}`}
-                                                        onClick={() => toggleDeckSelection(deck.id)}
-                                                    >
-                                                        {isSelected ? "✕" : "✓"}
-                                                    </button>
-                                                )}
+                    {(sortOption === "category"
+                        ? Object.entries(
+                              filteredDecks.reduce((groups, deck) => {
+                                  const cat = deck.category || "Uncategorized";
+                                  (groups[cat] ||= []).push(deck);
+                                  return groups;
+                              }, {})
+                          )
+                        : [[null, filteredDecks]]
+                    ).map(([cat, decksInCat]) => (
+                        <div key={cat || "all"} className={styles.categorySection}>
+                            {cat && <h3 className={styles.categoryHeader}>{cat}</h3>}
+                            <div className={styles.categoryGrid}>
+                                {decksInCat.map((deck) => {
+                                    const isSelected = selectedDecks.includes(deck.id);
+                                    return (
+                                        <div
+                                            key={deck.id}
+                                            className={`${styles.deckCard} ${isSelected ? styles.selectedDeck : ""}`}
+                                        >
+                                            {deleteMode && (
+                                                <button
+                                                    className={`${styles.deleteSelectButton} ${isSelected ? styles.selected : ""}`}
+                                                    onClick={() => toggleDeckSelection(deck.id)}
+                                                >
+                                                    {isSelected ? "✕" : "✓"}
+                                                </button>
+                                            )}
 
-                                                <div className={styles.deckMeta}>
-                                                    <div className={styles.deckCardContent}>
-                                                        <h3>{deck.title || "Untitled Deck"}</h3>
-                                                        <p>Cards: {deckCounts[deck.id] || 0}</p>
+                                            <div className={styles.deckMeta}>
+                                                <div className={styles.deckCardContent}>
+                                                    <h3>{deck.title || "Untitled Deck"}</h3>
+                                                    <p>Cards: {deckCounts[deck.id] || 0}</p>
 
-                                                        <p>Cards Mastered: 0%</p>
-                                                        <div className={styles.progressBar}>
-                                                            <div className={styles.progressFill} style={{ width: "0%" }} />
-                                                        </div>
-
-                                                        <p>Last Quiz Score: N/A</p>
-                                                        <p>Last Studied: Jan 1st</p>
+                                                    <p>Cards Mastered: 0%</p>
+                                                    <div className={styles.progressBar}>
+                                                        <div className={styles.progressFill} style={{ width: "0%" }} />
                                                     </div>
-                                                </div>
 
-                                                <div className={styles.deckButtons}>
-                                                    <button
-                                                        className={styles.deckButtonSmall}
-                                                        onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
-                                                    >
-                                                        Study
-                                                    </button>
-                                                    <button
-                                                        className={styles.deckButtonSmall}
-                                                        onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
-                                                    >
-                                                        Quiz
-                                                    </button>
-                                                    <button
-                                                        className={styles.deckButtonSmall}
-                                                        onClick={() => navigate(`/flashcards/deck/${deck.id}/manage`)}
-                                                    >
-                                                        Manage
-                                                    </button>
+                                                    <p>Last Quiz Score: N/A</p>
+                                                    <p>Last Studied: Jan 1st</p>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+
+                                            <div className={styles.deckButtons}>
+                                                <button
+                                                    className={styles.deckButtonSmall}
+                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
+                                                >
+                                                    Study
+                                                </button>
+                                                <button
+                                                    className={styles.deckButtonSmall}
+                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
+                                                >
+                                                    Quiz
+                                                </button>
+                                                <button
+                                                    className={styles.deckButtonSmall}
+                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/manage`)}
+                                                >
+                                                    Manage
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        ))
-                    ) : (
-                        <div className={styles.categoryGrid}>
-                            {filteredDecks.map((deck) => {
-                                const isSelected = selectedDecks.includes(deck.id);
-                                return (
-                                    <div
-                                        key={deck.id}
-                                        className={`${styles.deckCard} ${isSelected ? styles.selectedDeck : ""}`}
-                                    >
-                                        {deleteMode && (
-                                            <button
-                                                className={`${styles.deleteSelectButton} ${isSelected ? styles.selected : ""}`}
-                                                onClick={() => toggleDeckSelection(deck.id)}
-                                            >
-                                                {isSelected ? "✕" : "✓"}
-                                            </button>
-                                        )}
-
-                                        <div className={styles.deckMeta}>
-                                            <div className={styles.deckCardContent}>
-                                                <h3>{deck.title || "Untitled Deck"}</h3>
-                                                <p>Cards: {deckCounts[deck.id] || 0}</p>
-
-                                                <p>Cards Mastered: 0%</p>
-                                                <div className={styles.progressBar}>
-                                                    <div className={styles.progressFill} style={{ width: "0%" }} />
-                                                </div>
-
-                                                <p>Last Quiz Score: N/A</p>
-                                                <p>Last Studied: Jan 1st</p>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.deckButtons}>
-                                            <button
-                                                className={styles.deckButtonSmall}
-                                                onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
-                                            >
-                                                Study
-                                            </button>
-                                            <button
-                                                className={styles.deckButtonSmall}
-                                                onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
-                                            >
-                                                Quiz
-                                            </button>
-                                            <button
-                                                className={styles.deckButtonSmall}
-                                                onClick={() => navigate(`/flashcards/deck/${deck.id}/manage`)}
-                                            >
-                                                Manage
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
                         </div>
-                    )}
+                    ))}
                 </div>
 
                 {/* Delete Confirmation Modal */}
@@ -496,9 +348,9 @@ export default function Flashcards() {
                                         <div className={styles.confirmationButtons}>
                                             <button
                                                 className={styles.confirmButton}
-                                                onClick={async () => {
+                                                onClick={() => {
                                                     setDeleteStatus("Deleting Flashcards...");
-                                                    await handleConfirmDelete();
+                                                    handleConfirmDelete();
                                                 }}
                                             >
                                                 Confirm

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useDecks } from "../context/DecksContext";
 import { db } from "../services/firebase";
 import {
   collection,
@@ -17,11 +18,12 @@ import {
 import styles from "./Flashcards.module.css";
 import ImagePicker from "./ImagePicker";
 import ModalPortal from "./ModalPortal";
-import {categories} from "./categories"; 
+import { categories } from "./categories";
 
 export default function ManageDeck() {
   const { deckId } = useParams();
   const { currentUser } = useAuth();
+  const { decks, setDecks } = useDecks();
   const navigate = useNavigate();
   const [deck, setDeck] = useState(null);
   const [cards, setCards] = useState([]);
@@ -34,7 +36,6 @@ export default function ManageDeck() {
     timeoutRef.current = setTimeout(() => setStatus(""), ms);
   };
 
-  //this is the top stuff for deck editing
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -44,21 +45,19 @@ export default function ManageDeck() {
   const [pickerForCard, setPickerForCard] = useState(null);
   const [pickerForDeck, setPickerForDeck] = useState(false);
 
-  //this locks the scroll when the image modal is open like in the gen
   useEffect(() => {
     const open = Boolean(pickerForCard || pickerForDeck);
     document.body.style.overflow = open ? "hidden" : "";
     return () => (document.body.style.overflow = "");
   }, [pickerForCard, pickerForDeck]);
 
-  //This is to set the changes
   useEffect(() => {
     if (deck) {
       setEditTitle(deck.title || "");
       setEditDescription(deck.description || "");
       setEditCategory(deck.category || "");
       setEditIsPublic(deck.isPublic || false);
-      setDeckIsDirty(false); // Reset dirty status on initial load/deck change
+      setDeckIsDirty(false);
     }
   }, [deck]);
   useEffect(() => {
@@ -75,17 +74,25 @@ export default function ManageDeck() {
     if (!currentUser || !deckId) return;
     setLoading(true);
 
-    //this is for the deck load
-    (async () => {
-      try {
-        const dref = doc(db, "deck", deckId);
-        const snap = await getDoc(dref);
-        if (snap.exists()) setDeck({ id: snap.id, ...snap.data() });
-        else toast("Deck not found");
-      } catch {
-        toast("Failed to load deck");
-      }
-    })();
+    const cached = decks.find((d) => d.id === deckId);
+    if (cached) {
+      setDeck(cached);
+      setLoading(false);
+    } else {
+      (async () => {
+        try {
+          const dref = doc(db, "deck", deckId);
+          const snap = await getDoc(dref);
+          if (snap.exists()) setDeck({ id: snap.id, ...snap.data() });
+          else toast("Deck not found");
+          setLoading(false);
+        } catch {
+          toast("Failed to load deck");
+          setLoading(false);
+        }
+      })();
+    }
+
     const cref = collection(db, "flashcard");
     const qCards = query(
       cref,
@@ -106,19 +113,16 @@ export default function ManageDeck() {
           _saving: false,
         }));
         setCards(list);
-        setLoading(false);
       },
       (err) => {
         console.error(err);
         toast("Missing or insufficient permissions.");
-        setLoading(false);
       }
     );
 
     return () => unsub();
-  }, [currentUser, deckId]);
+  }, [currentUser, deckId, decks]);
 
-  //this is to handle the edits to db
   const handleSaveDeckInfo = async () => {
     if (!deckIsDirty) return;
     setDeckSaving(true);
@@ -132,6 +136,9 @@ export default function ManageDeck() {
 
       await updateDoc(doc(db, "deck", deckId), newDeckData);
       setDeck((d) => ({ ...d, ...newDeckData }));
+      setDecks((prev) =>
+        prev.map((d) => (d.id === deckId ? { ...d, ...newDeckData } : d))
+      );
 
       toast("Deck info saved ✓");
     } catch (e) {
@@ -156,7 +163,8 @@ export default function ManageDeck() {
         back: card._back,
         type: card._type,
         imagePath: card._imagePath,
-        category: card.category ?? editCategory, //need to add category, so by default cards will use deck category
+        category: deck?.category || editCategory,
+        isPublic: deck?.isPublic || editIsPublic,
       });
       toast("Card Saved ✓");
       setCards((p) =>
@@ -217,11 +225,19 @@ export default function ManageDeck() {
         </button>
 
         <h2>Manage Deck: {deck?.title || "Untitled Deck"}</h2>
-        
-        {/* DECK EDITING FORM */}
-        <div style={{ maxWidth: 800, width: "100%", padding: "16px 0", borderBottom: "1px solid #e5e7eb", marginBottom: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-          
-          {/* Title and Description */}
+
+        <div
+          style={{
+            maxWidth: 800,
+            width: "100%",
+            padding: "16px 0",
+            borderBottom: "1px solid #e5e7eb",
+            marginBottom: 24,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
           <label>Title</label>
           <input
             type="text"
@@ -229,7 +245,6 @@ export default function ManageDeck() {
             onChange={(e) => setEditTitle(e.target.value)}
             className={styles.dropdown}
           />
-
           <label>Description</label>
           <textarea
             value={editDescription}
@@ -237,8 +252,6 @@ export default function ManageDeck() {
             className={styles.deckCard}
             style={{ minHeight: "80px", padding: "8px" }}
           />
-
-          {/* Category and Public Status */}
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <label>Category</label>
@@ -247,7 +260,6 @@ export default function ManageDeck() {
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
               >
-                {/* Fallback option */}
                 <option value="">Select Category</option>
                 {categories.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -256,34 +268,50 @@ export default function ManageDeck() {
                 ))}
               </select>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: "auto" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: "auto",
+              }}
+            >
               <input
                 type="checkbox"
                 id="isPublicCheck"
                 checked={editIsPublic}
                 onChange={(e) => setEditIsPublic(e.target.checked)}
               />
-              <label htmlFor="isPublicCheck" style={{ fontWeight: 500, fontSize: "0.9rem" }}>
+              <label
+                htmlFor="isPublicCheck"
+                style={{ fontWeight: 500, fontSize: "0.9rem" }}
+              >
                 Make Deck Public
               </label>
             </div>
           </div>
-          
-          {/* Save Button */}
           <button
             onClick={handleSaveDeckInfo}
             disabled={!deckIsDirty || deckSaving}
             style={{ width: "fit-content", alignSelf: "flex-end", marginTop: 16 }}
-            className={styles.toolbarLeft} 
+            className={styles.toolbarLeft}
           >
-            {deckSaving ? "Saving Deck Info..." : deckIsDirty ? "Save Deck Info" : "Deck Info Saved"}
+            {deckSaving
+              ? "Saving Deck Info..."
+              : deckIsDirty
+              ? "Save Deck Info"
+              : "Deck Info Saved"}
           </button>
         </div>
-        {/* END DECK EDITING FORM */}
 
-
-        {/* deck Image controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 20,
+          }}
+        >
           <div
             style={{
               width: 88,
@@ -326,6 +354,11 @@ export default function ManageDeck() {
               onClick={async () => {
                 await updateDoc(doc(db, "deck", deckId), { imageUrl: null });
                 setDeck((d) => ({ ...d, imageUrl: null }));
+                setDecks((prev) =>
+                  prev.map((d) =>
+                    d.id === deckId ? { ...d, imageUrl: null } : d
+                  )
+                );
                 toast("Removed deck image");
               }}
             >
@@ -338,35 +371,31 @@ export default function ManageDeck() {
           {status && <span className={styles.statusPill}>{status}</span>}
         </div>
 
-        {/*Flashcards (Card Editing)*/}
-        <div 
-            className={styles.categoryGrid}
-            //fixed bug, CSS fix here
-            style={{ 
-                maxWidth: '1000px', 
-                margin: '0 auto', 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', // Use a larger min-width for columns
-                gap: '24px' // Increased gap for visual separation
-            }}
+        <div
+          className={styles.categoryGrid}
+          style={{
+            maxWidth: "1000px",
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+            gap: "24px",
+          }}
         >
           {cards.map((c) => (
-            <div 
-              key={c.id} 
+            <div
+              key={c.id}
               className={styles.deckCard}
-              style={{ 
-                minHeight: '420px', 
-                height: 'auto', 
-                maxWidth: '100%', 
-                display: 'flex', 
-                flexDirection: 'column',
-                gap: '12px',
-                padding: '20px', 
-                boxSizing: 'border-box'
+              style={{
+                minHeight: "420px",
+                height: "auto",
+                maxWidth: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                padding: "20px",
+                boxSizing: "border-box",
               }}
             >
-              
-              {/* Image */}
               <div style={{ display: "flex", gap: 12 }}>
                 <div
                   style={{
@@ -398,7 +427,13 @@ export default function ManageDeck() {
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
                   <button
                     className={styles.deckButtonSmall}
                     onClick={() => setPickerForCard(c.id)}
@@ -408,7 +443,9 @@ export default function ManageDeck() {
                   {c._imagePath && (
                     <button
                       className={styles.deckButtonSmall}
-                      onClick={() => handleFieldEdit(c.id, "_imagePath", null)}
+                      onClick={() =>
+                        handleFieldEdit(c.id, "_imagePath", null)
+                      }
                     >
                       Remove Image
                     </button>
@@ -416,43 +453,62 @@ export default function ManageDeck() {
                 </div>
               </div>
 
-              {/* Type Dropdown */}
               <div style={{ marginTop: 10 }}>
-                <label style={{ fontWeight: '600' }}>Type</label>
+                <label style={{ fontWeight: "600" }}>Type</label>
                 <select
                   className={styles.dropdown}
                   value={c._type}
-                  onChange={(e) => handleFieldEdit(c.id, "_type", e.target.value)}
-                  style={{ marginTop: '4px' }}
+                  onChange={(e) =>
+                    handleFieldEdit(c.id, "_type", e.target.value)
+                  }
+                  style={{ marginTop: "4px" }}
                 >
                   <option value="Short Response">Short Response</option>
                   <option value="Multiple Choice">Multiple Choice</option>
                 </select>
               </div>
 
-              {/* Front Textarea */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontWeight: '600' }}>Front</label>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <label style={{ fontWeight: "600" }}>Front</label>
                 <textarea
                   value={c._front}
-                  onChange={(e) => handleFieldEdit(c.id, "_front", e.target.value)}
-                  style={{ minHeight: '100px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', resize: 'vertical' }}
+                  onChange={(e) =>
+                    handleFieldEdit(c.id, "_front", e.target.value)
+                  }
+                  style={{
+                    minHeight: "100px",
+                    padding: "8px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    resize: "vertical",
+                  }}
                 />
               </div>
-              
-              {/* Back Textarea */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <label style={{ fontWeight: '600' }}>Back</label>
+
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <label style={{ fontWeight: "600" }}>Back</label>
                 <textarea
                   value={c._back}
-                  onChange={(e) => handleFieldEdit(c.id, "_back", e.target.value)}
-                  style={{ minHeight: '100px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', resize: 'vertical' }}
+                  onChange={(e) =>
+                    handleFieldEdit(c.id, "_back", e.target.value)
+                  }
+                  style={{
+                    minHeight: "100px",
+                    padding: "8px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "6px",
+                    resize: "vertical",
+                  }}
                 />
               </div>
 
-
-              {/* Info strip */}
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#64748b",
+                  marginTop: 8,
+                }}
+              >
                 <div>ID: {c.id}</div>
                 <div>Deck: {c.deckId}</div>
                 <div>Owner: {c.ownerId}</div>
@@ -463,7 +519,11 @@ export default function ManageDeck() {
                   disabled={!c._dirty || c._saving}
                   onClick={() => handleSave(c.id)}
                 >
-                  {c._saving ? "Saving…" : c._dirty ? "Save" : "Saved"}
+                  {c._saving
+                    ? "Saving…"
+                    : c._dirty
+                    ? "Save"
+                    : "Saved"}
                 </button>
                 <button onClick={() => handleDelete(c.id)}>Delete</button>
               </div>
@@ -471,14 +531,15 @@ export default function ManageDeck() {
           ))}
         </div>
 
-        {/* Deck Image Picker Modal (Unchanged) */}
         {pickerForDeck && (
           <ModalPortal>
             <div className={styles.pickerOverlay}>
               <div className={styles.pickerDialog}>
                 <div className={styles.pickerHeader}>
                   <span>Choose Deck Image</span>
-                  <button onClick={() => setPickerForDeck(false)}>Close</button>
+                  <button onClick={() => setPickerForDeck(false)}>
+                    Close
+                  </button>
                 </div>
                 <div className={styles.pickerBody}>
                   <ImagePicker
@@ -487,8 +548,21 @@ export default function ManageDeck() {
                     onClose={() => setPickerForDeck(false)}
                     onSelect={async (img) => {
                       const url = img?.webformatURL || null;
-                      await updateDoc(doc(db, "deck", deckId), { imageUrl: url, imageAttribution: img ? { pageURL: img.pageURL, user: img.user } : null });
+                      await updateDoc(doc(db, "deck", deckId), {
+                        imageUrl: url,
+                        imageAttribution: img
+                          ? {
+                              pageURL: img.pageURL,
+                              user: img.user,
+                            }
+                          : null,
+                      });
                       setDeck((d) => ({ ...d, imageUrl: url }));
+                      setDecks((prev) =>
+                        prev.map((d) =>
+                          d.id === deckId ? { ...d, imageUrl: url } : d
+                        )
+                      );
                       toast("Deck image updated ✓");
                       setPickerForDeck(false);
                     }}
@@ -499,14 +573,15 @@ export default function ManageDeck() {
           </ModalPortal>
         )}
 
-        {/* Card Image Picker Modal (Unchanged) */}
         {pickerForCard && (
           <ModalPortal>
             <div className={styles.pickerOverlay}>
               <div className={styles.pickerDialog}>
                 <div className={styles.pickerHeader}>
                   <span>Select Image</span>
-                  <button onClick={() => setPickerForCard(null)}>Close</button>
+                  <button onClick={() => setPickerForCard(null)}>
+                    Close
+                  </button>
                 </div>
                 <div className={styles.pickerBody}>
                   <ImagePicker

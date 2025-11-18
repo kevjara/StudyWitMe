@@ -9,10 +9,12 @@ import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import ManageDeck from "./components/ManageDeck";
 import SearchResults from "./components/SearchResults";
+import { DecksProvider } from "./context/DecksContext";
 
 
 function App() {
   return (
+    <DecksProvider>
     <>
         <Background/>
           <Routes>
@@ -28,6 +30,7 @@ function App() {
             <Route path="/search" element={<SearchResults />} />
           </Routes>
     </>
+    </DecksProvider>
   );
 }
 

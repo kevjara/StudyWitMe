@@ -6,6 +6,8 @@ import { db } from "../services/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import styles from "./FlashcardGenerator.module.css";
 import { categories } from "./categories";
+import ImagePicker from "./ImagePicker";
+import ModalPortal from "./ModalPortal";
 
 function FlashcardGenerator() {
     const navigate = useNavigate();
@@ -36,6 +38,12 @@ function FlashcardGenerator() {
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedSubcategory, setSelectedSubcategory] = useState("");
     const [isFinishLocked, setIsFinishLocked] = useState(false);
+    const [isPublic, setIsPublic] = useState(false); // New state for deck public status
+
+    const [pickerForDeck, setPickerForDeck] = useState(false);
+    const [pickerForCard, setPickerForCard] = useState(null); // stores index of card being edited
+    const [deckImagePath, setDeckImagePath] = useState("");
+    const [cardImagePaths, setCardImagePaths] = useState([]);
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -51,18 +59,25 @@ function FlashcardGenerator() {
         setEditedAnswer(saved);
     }, [currentFlashcardIndex, userAnswers]);
 
+
+    useEffect(() => {
+        const open = Boolean(pickerForDeck || pickerForCard);
+        document.body.style.overflow = open ? "hidden" : "";
+        return () => (document.body.style.overflow = "");
+    }, [pickerForDeck, pickerForCard]);
+
     // When switching cards, load the saved flashcard type (or default if none)
     useEffect(() => {
-    const savedCard = savedFlashcards.find(
-        (card) => card.index === currentFlashcardIndex
-    );
-    if (savedCard) {
-        setFlashcardTypes((prev) => {
-        const copy = [...prev];
-        copy[currentFlashcardIndex] = savedCard.type || "Short Response";
-        return copy;
-        });
-    }
+        const savedCard = savedFlashcards.find(
+            (card) => card.index === currentFlashcardIndex
+        );
+        if (savedCard) {
+            setFlashcardTypes((prev) => {
+                const copy = [...prev];
+                copy[currentFlashcardIndex] = savedCard.type || "Short Response";
+                return copy;
+            });
+        }
     }, [currentFlashcardIndex, savedFlashcards]);
 
     //Handle Status Messages
@@ -94,11 +109,11 @@ function FlashcardGenerator() {
 
     // Keep per-card flashcard type
     const handleTypeChange = (value) => {
-    setFlashcardTypes((prev) => {
-        const copy = [...prev];
-        copy[currentFlashcardIndex] = value;
-        return copy;
-    });
+        setFlashcardTypes((prev) => {
+            const copy = [...prev];
+            copy[currentFlashcardIndex] = value;
+            return copy;
+        });
     };
 
     // Generate flashcards (called on form submit)
@@ -135,8 +150,8 @@ function FlashcardGenerator() {
 
                 // Send to backend
                 response = await fetch("/generate", { method: "POST", body: formData });
-            } 
-            
+            }
+
             else {
                 // --- Direct text input ---
                 const textToSend = textInput.trim();
@@ -188,8 +203,8 @@ function FlashcardGenerator() {
                 const pairs = output.map(f => [f.question, f.relevantText]);
                 setFlashcardPairs(pairs);
                 showStatus(`✅ Generated ${pairs.length} flashcards`);
-            } 
-            
+            }
+
             // --- Case 2: backend returned JSON text ---
             else {
                 let cleanOutput = output.trim();
@@ -221,9 +236,9 @@ function FlashcardGenerator() {
 
             // Transition to viewer after short delay (simulate load time)
             setTimeout(() => {
-            setStatus("");        // clear right before entering viewer
-            setView("viewer");
-            }, 1500); 
+                setStatus("");        // clear right before entering viewer
+                setView("viewer");
+            }, 1500);
 
         } catch (err) {
             console.error("Unexpected error:", err);
@@ -239,13 +254,13 @@ function FlashcardGenerator() {
     const handleNext = () => {
         setCurrentFlashcardIndex((i) => Math.min(flashcardPairs.length - 1, i + 1));
     };
-    
+
     // Keep per-card answer state
     const handleAnswerChange = (value) => {
         setUserAnswers((prev) => {
-        const copy = [...prev];
-        copy[currentFlashcardIndex] = value;
-        return copy;
+            const copy = [...prev];
+            copy[currentFlashcardIndex] = value;
+            return copy;
         });
     };
 
@@ -271,12 +286,11 @@ function FlashcardGenerator() {
                 title: deckTitle.trim() || "Untitled Deck",
                 description: deckDescription,
                 createdAt: serverTimestamp(),
-                isPublic: false,
+                isPublic: isPublic,
                 category: selectedCategory,
+                subCategory: selectedSubcategory, // Save subcategory
+                imagePath: deckImagePath, // Save deck cover image path
                 collaborators: [],
-                //we can add image stuff here when decided
-                imagePath: "",
-
             };
             const deckDocRef = await addDoc(collection(db, "deck"), deckData);
             const newDeckId = deckDocRef.id;
@@ -289,45 +303,47 @@ function FlashcardGenerator() {
                         front: card.front,
                         back: card.back,
                         createdAt: serverTimestamp(),
-                        isPublic: false,
+                        isPublic: isPublic, // Inherit deck's public status
                         category: selectedCategory,
-                        //I will pull the stuff here for the image on the cards
-                        imagePath: "",
+                        imagePath: card.imagePath, // Save card image path
                         type: card.type || "Multiple Choice",
                     };
                     return addDoc(collection(db, "flashcard"), flashcardData);
                 });
                 await Promise.all(flashcardPromises); // Execute all saves concurrently
-        }
-        console.log("Simulated deck save. Deck contents:", savedFlashcards);
-        await new Promise((res) => setTimeout(res, 400));
-        showStatus("Deck saved successfully!");
-        // Delay resetting UI so user sees the success message briefly
-        setTimeout(() => {
-            // Reset/refresh generator so user can create more flashcards
-            setFlashcardPairs([]);
-            setUserAnswers([]);
-            setSavedFlashcards([]);
-            setSavedIndices(new Set());
-            setCurrentFlashcardIndex(0);
-            setFlashcardsGenerated(false);
-            setTextInput("");
-            setFile(null);
-            setAiPrompt("");
-            setDeckTitle("");
-            setDeckDescription("");
-            setStatus("");
-            setShowDeckPrompt(false);
-            setStartPage('1');
-            setEndPage('1');
-            setSelectedCategory("");
-            setSelectedSubcategory("");
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
             }
-            setView("form");
-            setIsFinishLocked(false); // ✅ unlock button after save
-        }, 3000);
+            console.log("Simulated deck save. Deck contents:", savedFlashcards);
+            await new Promise((res) => setTimeout(res, 400));
+            showStatus("Deck saved successfully!");
+            // Delay resetting UI so user sees the success message briefly
+            setTimeout(() => {
+                // Reset/refresh generator so user can create more flashcards
+                setFlashcardPairs([]);
+                setUserAnswers([]);
+                setSavedFlashcards([]);
+                setSavedIndices(new Set());
+                setCurrentFlashcardIndex(0);
+                setFlashcardsGenerated(false);
+                setTextInput("");
+                setFile(null);
+                setAiPrompt("");
+                setDeckTitle("");
+                setDeckDescription("");
+                setStatus("");
+                setShowDeckPrompt(false);
+                setStartPage('1');
+                setEndPage('1');
+                setSelectedCategory("");
+                setSelectedSubcategory("");
+                setIsPublic(false); // Reset public status
+                setDeckImagePath(""); // Reset deck image path
+                setCardImagePaths([]); // Reset card image paths
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+                setView("form");
+                setIsFinishLocked(false); // ✅ unlock button after save
+            }, 3000);
         } catch (err) {
             console.error("Error saving deck:", err);
             showStatus("Error saving deck. Check console.");
@@ -360,6 +376,9 @@ function FlashcardGenerator() {
         setAiPrompt("");
         setStartPage('1');
         setEndPage('1');
+        setIsPublic(false);
+        setDeckImagePath("");
+        setCardImagePaths([]);
         setView("status")
         showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
@@ -376,23 +395,23 @@ function FlashcardGenerator() {
     // Render current flashcard
     const currentFlashcard =
         flashcardPairs.length > 0 && currentFlashcardIndex < flashcardPairs.length
-        ? flashcardPairs[currentFlashcardIndex]
-        : null;
+            ? flashcardPairs[currentFlashcardIndex]
+            : null;
 
     if (!currentUser) {
         return (
-        <div className={styles.flashcardGenerator}>
-            <h2>You must be signed in to use the Flashcard Generator</h2>
-            {/* Back Button (fixed route to Main Menu) */}
-            <button
-                type="button"
-                className={styles.backBtn}
-                onClick={() => navigate("/main")}
+            <div className={styles.flashcardGenerator}>
+                <h2>You must be signed in to use the Flashcard Generator</h2>
+                {/* Back Button (fixed route to Main Menu) */}
+                <button
+                    type="button"
+                    className={styles.backBtn}
+                    onClick={() => navigate("/main")}
                 >
-                ← Back to Main Menu
-            </button>
-            <button onClick={() => navigate("/login")}>Go to Login</button>
-        </div>
+                    ← Back to Main Menu
+                </button>
+                <button onClick={() => navigate("/login")}>Go to Login</button>
+            </div>
         );
     }
 
@@ -409,9 +428,9 @@ function FlashcardGenerator() {
 
             {/* --- STATUS VIEW (after cancel or finalize) --- */}
             {view === "status" && (
-            <div className={styles.statusScreen}>
-                <p className={styles.statusMessage}>{status}</p>
-            </div>
+                <div className={styles.statusScreen}>
+                    <p className={styles.statusMessage}>{status}</p>
+                </div>
             )}
 
             {/* --- FORM VIEW --- */}
@@ -445,17 +464,17 @@ function FlashcardGenerator() {
 
                         {file ? (
                             <div className={styles.fileInfo}>
-                            <span className={styles.fileName}>{file.name}</span>
-                            <button
-                                type="button"
-                                className={styles.removeFileBtn}
-                                onClick={() => {
-                                setFile(null);
-                                fileInputRef.current.value = "";
-                                }}
-                            >
-                                ✖
-                            </button>
+                                <span className={styles.fileName}>{file.name}</span>
+                                <button
+                                    type="button"
+                                    className={styles.removeFileBtn}
+                                    onClick={() => {
+                                        setFile(null);
+                                        fileInputRef.current.value = "";
+                                    }}
+                                >
+                                    ✖
+                                </button>
                             </div>
                         ) : (
                             <span className={styles.fileName}>No file chosen</span>
@@ -474,24 +493,24 @@ function FlashcardGenerator() {
                         <div className={styles.pageRangeContainer}>
                             <label htmlFor="startPage" className={styles.pageLabel}>Start Page</label>
                             <input
-                            type="number"
-                            id="startPage"
-                            name="startPage"
-                            className={styles.pageInput}
-                            value={startPage}
-                            onChange={(e) => setStartPage(e.target.value)}
-                            min="1"
+                                type="number"
+                                id="startPage"
+                                name="startPage"
+                                className={styles.pageInput}
+                                value={startPage}
+                                onChange={(e) => setStartPage(e.target.value)}
+                                min="1"
                             />
 
                             <label htmlFor="endPage" className={styles.pageLabel}>End Page</label>
                             <input
-                            type="number"
-                            id="endPage"
-                            name="endPage"
-                            className={styles.pageInput}
-                            value={endPage}
-                            onChange={(e) => setEndPage(e.target.value)}
-                            min="1"
+                                type="number"
+                                id="endPage"
+                                name="endPage"
+                                className={styles.pageInput}
+                                value={endPage}
+                                onChange={(e) => setEndPage(e.target.value)}
+                                min="1"
                             />
                         </div>
                     )}
@@ -508,7 +527,7 @@ function FlashcardGenerator() {
         Only definitions
         Key Ideas
         Cause/Effect"
-                    />
+                        />
                     </label>
 
                     <button
@@ -539,233 +558,389 @@ function FlashcardGenerator() {
                 <div className={styles.viewerContainer}>
                     {/* Flashcard viewer */}
                     {!showDeckPrompt && currentFlashcard && (
-                    <div className={styles.flashcardViewer}>
-                        {/* Cancel button (top-right) */}
-                        <button className={styles.cancelBtn} type="button" onClick={handleCancelClick}>
-                        Cancel
-                        </button>
-
-                        <div className={styles.viewerInner}>
-                        <div className={styles.viewerContent}>
-                            <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
-                            <p><strong>Q:</strong> {currentFlashcard[0]}</p>
-                            <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-                            {/* Use as Answer */}
-                            <button
-                                type="button"
-                                className={styles.useAsAnswerBtn}
-                                onClick={() => handleAnswerChange(currentFlashcard[1])}
-                            >
-                                Use as Answer
+                        <div className={styles.flashcardViewer}>
+                            {/* Cancel button (top-right) */}
+                            <button className={styles.cancelBtn} type="button" onClick={handleCancelClick}>
+                                Cancel
                             </button>
 
-                                {/* Type selector */}
-                                <select
-                                    value={flashcardTypes[currentFlashcardIndex] || "Multiple Choice"}
-                                    className={styles.typeBtn}
-                                    onChange={(e) => handleTypeChange(e.target.value)}
-                                    >
-                                    <option value="Short Response">Short Response</option>
-                                    <option value="Multiple Choice">Multiple Choice</option>
-                                </select>
-                            </div>
+                            <div className={styles.viewerInner}>
+                                <div className={styles.viewerContent}>
+                                    <h3>Flashcard {currentFlashcardIndex + 1} / {flashcardPairs.length}</h3>
+                                    <p><strong>Q:</strong> {currentFlashcard[0]}</p>
+                                    <p><strong>Relevant:</strong> {currentFlashcard[1]}</p>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                                        {/* Use as Answer */}
+                                        <button
+                                            type="button"
+                                            className={styles.useAsAnswerBtn}
+                                            onClick={() => handleAnswerChange(currentFlashcard[1])}
+                                        >
+                                            Use as Answer
+                                        </button>
 
-                            <textarea
-                                value={editedAnswer}
-                                onChange={(e) => setEditedAnswer(e.target.value)}
-                                placeholder="Your Answer..."
-                            />
-                            <div className={styles.flashcardActions}>
-                                <div className={styles.leftActions}>
-                                    <button type="button" onClick={handlePrev}>
-                                    &lt; Prev
-                                    </button>
-                                    <button type="button" onClick={handleNext}>
-                                    Next &gt;
-                                    </button>
+                                        {/* Type selector */}
+                                        <select
+                                            value={flashcardTypes[currentFlashcardIndex] || "Multiple Choice"}
+                                            className={styles.typeBtn}
+                                            onChange={(e) => handleTypeChange(e.target.value)}
+                                        >
+                                            <option value="Short Response">Short Response</option>
+                                            <option value="Multiple Choice">Multiple Choice</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <textarea
+                                        value={editedAnswer}
+                                        onChange={(e) => setEditedAnswer(e.target.value)}
+                                        placeholder="Your Answer..."
+                                    />
+
+                                    {/* Card Image Controls (Refined Layout) */}
+                                    {cardImagePaths[currentFlashcardIndex] ? (
+                                        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <img 
+                                                src={cardImagePaths[currentFlashcardIndex]} 
+                                                alt="Card Preview" 
+                                                style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px' }} 
+                                            />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                <button 
+                                                    type="button" 
+                                                    className={styles.uploadButton} 
+                                                    onClick={() => setPickerForCard(currentFlashcardIndex)}
+                                                    style={{ width: '150px', padding: '5px' }}
+                                                >
+                                                    Change Image
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.uploadButton} 
+                                                    onClick={() => {
+                                                        setCardImagePaths(prev => {
+                                                            const copy = [...prev];
+                                                            copy[currentFlashcardIndex] = ""; 
+                                                            return copy;
+                                                        });
+                                                    }}
+                                                    style={{ width: '150px', padding: '5px' }}
+                                                >
+                                                    Remove Image
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginTop: '10px' }}>
+                                            <button 
+                                                type="button" 
+                                                className={styles.uploadButton}
+                                                onClick={() => setPickerForCard(currentFlashcardIndex)}
+                                                style={{ padding: '8px 14px' }}
+                                            >
+                                                Add Card Image
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* End Card Image Controls */}
+
+                                    <div className={styles.flashcardActions}>
+                                        <div className={styles.leftActions}>
+                                            <button type="button" onClick={handlePrev}>
+                                                &lt; Prev
+                                            </button>
+                                            <button type="button" onClick={handleNext}>
+                                                Next &gt;
+                                            </button>
+                                        </div>
+
+                                        <p className={styles.savedIndicator}>{status}</p>
+
+                                        <div className={styles.rightActions}>
+                                            <button
+                                                type="button"
+                                                disabled={isButtonLocked}
+                                                onClick={() => {
+                                                    if (isButtonLocked) return; // ignore rapid clicks
+
+                                                    const [question, relevant] = currentFlashcard;
+                                                    const answer = editedAnswer.trim();
+                                                    const currentCardImagePath = cardImagePaths[currentFlashcardIndex] || ""; // Get current card image path
+
+                                                    // Determine if this card has already been saved before
+                                                    const isUpdating = savedIndices.has(currentFlashcardIndex);
+
+                                                    // Update savedFlashcards list
+                                                    setSavedFlashcards((prev) => {
+                                                        const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
+                                                        
+                                                        const cardData = {
+                                                            index: currentFlashcardIndex, 
+                                                            front: question, 
+                                                            back: answer, 
+                                                            type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice",
+                                                            imagePath: currentCardImagePath, // Add image path
+                                                        };
+
+                                                        if (existingIdx !== -1) {
+                                                            const copy = [...prev];
+                                                            copy[existingIdx] = cardData;
+                                                            return copy;
+                                                        } else {
+                                                            return [...prev, cardData];
+                                                        }
+                                                    });
+
+                                                    // Mark as saved
+                                                    setSavedIndices((prev) => new Set(prev).add(currentFlashcardIndex));
+
+                                                    // Call respective status handler
+                                                    if (isUpdating) {
+                                                        handleUpdateAnswer();
+                                                    } else {
+                                                        handleSaveAnswer();
+                                                    }
+                                                }}
+                                            >
+                                                {savedIndices.has(currentFlashcardIndex) ? "Update" : "Save"}
+                                            </button>
+
+                                            {savedIndices.has(currentFlashcardIndex) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSavedFlashcards((prev) =>
+                                                            prev.filter((card) => card.index !== currentFlashcardIndex)
+                                                        );
+                                                        setSavedIndices((prev) => {
+                                                            const newSet = new Set(prev);
+                                                            newSet.delete(currentFlashcardIndex);
+                                                            return newSet;
+                                                        });
+                                                        showStatus("Removed flashcard from deck.")
+                                                    }}
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.doneRow}>
+                                        <button
+                                            type="button"
+                                            className={styles.doneBtn}
+                                            onClick={() => setShowDeckPrompt(true)}
+                                        >
+                                            Done
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <p className={styles.savedIndicator}>{status}</p>
-
-                                <div className={styles.rightActions}>
-                                <button
-                                    type="button"
-                                    disabled={isButtonLocked}
-                                    onClick={() => {
-                                        if (isButtonLocked) return; // ignore rapid clicks
-
-                                        const [question, relevant] = currentFlashcard;
-                                        const answer = editedAnswer.trim();
-
-                                        // Determine if this card has already been saved before
-                                        const isUpdating = savedIndices.has(currentFlashcardIndex);
-
-                                        // Update savedFlashcards list
-                                        setSavedFlashcards((prev) => {
-                                        const existingIdx = prev.findIndex((f) => f.index === currentFlashcardIndex);
-                                        if (existingIdx !== -1) {
-                                            const copy = [...prev];
-                                            copy[existingIdx] = { index: currentFlashcardIndex, front: question, back: answer, type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice"};
-                                            return copy;
-                                        } else {
-                                            return [...prev, { index: currentFlashcardIndex, front: question, back: answer, type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice", }];
-                                        }
-                                        });
-
-                                        // Mark as saved
-                                        setSavedIndices((prev) => new Set(prev).add(currentFlashcardIndex));
-
-                                        // Call respective status handler
-                                        if (isUpdating) {
-                                        handleUpdateAnswer();
-                                        } else {
-                                        handleSaveAnswer();
-                                        }
-                                    }}
-                                >
-                                    {savedIndices.has(currentFlashcardIndex) ? "Update" : "Save"}
-                                </button>
-
-                                {savedIndices.has(currentFlashcardIndex) && (
-                                    <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSavedFlashcards((prev) =>
-                                        prev.filter((card) => card.index !== currentFlashcardIndex)
-                                        );
-                                        setSavedIndices((prev) => {
-                                        const newSet = new Set(prev);
-                                        newSet.delete(currentFlashcardIndex);
-                                        return newSet;
-                                        });
-                                        showStatus("Removed flashcard from deck.")
-                                    }}
-                                    >
-                                    Remove
-                                    </button>
-                                )}
-                                </div>
-                            </div>
-
-                            <div className={styles.doneRow}>
-                            <button
-                                type="button"
-                                className={styles.doneBtn}
-                                onClick={() => setShowDeckPrompt(true)}
-                            >
-                                Done
-                            </button>
                             </div>
                         </div>
-                        </div>
-                    </div>
                     )}
                 </div>
             )}
 
             {/* Deck title + description prompt */}
             {showDeckPrompt && (
-            <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-                <div className={styles.modal}>
-                <h3>Finalize Deck</h3>
+                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.modal}>
+                        <h3>Finalize Deck</h3>
 
-                <label>
-                    Deck Title: (required)
-                    <input
-                    type="text"
-                    value={deckTitle}
-                    onChange={(e) => setDeckTitle(e.target.value)}
-                    placeholder="Enter a title for your deck"
-                    />
-                </label>
+                        <label>
+                            Deck Title: (required)
+                            <input
+                                type="text"
+                                value={deckTitle}
+                                onChange={(e) => setDeckTitle(e.target.value)}
+                                placeholder="Enter a title for your deck"
+                            />
+                        </label>
+                        
+                        {/* Public Status Checkbox */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                            <input
+                                type="checkbox"
+                                id="isPublicCheck"
+                                checked={isPublic}
+                                onChange={(e) => setIsPublic(e.target.checked)}
+                                style={{ width: 'auto', margin: '0' }}
+                            />
+                            <label htmlFor="isPublicCheck" style={{ fontWeight: 500, margin: 0 }}>
+                                Make Deck Public
+                            </label>
+                        </div>
+                        
+                        {/* Deck Image Controls (Refined Layout) */}
+                        <div style={{ marginBottom: '15px' }}>
+                            {deckImagePath ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <img 
+                                        src={deckImagePath} 
+                                        alt="Deck Preview" 
+                                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px' }} 
+                                    />
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <button 
+                                            type="button" 
+                                            className={styles.uploadButton} 
+                                            onClick={() => setPickerForDeck(true)}
+                                            style={{ width: '150px', padding: '5px' }}
+                                        >
+                                            Change Deck Image
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setDeckImagePath("")}
+                                            className={styles.removeFileBtn} 
+                                            style={{ color: '#e74c3c', padding: '5px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', width: '150px' }}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button 
+                                    type="button" 
+                                    className={styles.uploadButton}
+                                    onClick={() => setPickerForDeck(true)}
+                                    style={{ width: '100%', padding: '10px' }}
+                                >
+                                    Add Deck Cover Image
+                                </button>
+                            )}
+                        </div>
+                        {/* End Deck Image Controls */}
 
-                {/* Category dropdown */}
-                <label>
-                    Category (required):
-                    <select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                        setSelectedCategory(e.target.value);
-                        setSelectedSubcategory(""); // reset subcategory on main category change
-                    }}
-                    required
-                    >
-                    <option value="">--Select Category--</option>
-                    {categories.map((cat) => (
-                        <option key={cat.name} value={cat.name}>
-                        {cat.name}
-                        </option>
-                    ))}
-                    </select>
-                </label>
+                        {/* Category dropdown */}
+                        <label>
+                            Category (required):
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => {
+                                    setSelectedCategory(e.target.value);
+                                    setSelectedSubcategory(""); // reset subcategory on main category change
+                                }}
+                                required
+                            >
+                                <option value="">--Select Category--</option>
+                                {categories.map((cat) => (
+                                    <option key={cat.name} value={cat.name}>
+                                        {cat.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
 
-                {/* Subcategory dropdown */}
-                <label>
-                    Subcategory (optional):
-                    <select
-                    value={selectedSubcategory}
-                    onChange={(e) => setSelectedSubcategory(e.target.value)}
-                    >
-                    <option value="">--Select Subcategory--</option>
-                    {categories
-                        .find((cat) => cat.name === selectedCategory)
-                        ?.subcategories.map((sub) => (
-                        <option key={sub} value={sub}>
-                            {sub}
-                        </option>
-                        ))}
-                    </select>
-                </label>
+                        {/* Subcategory dropdown */}
+                        <label>
+                            Subcategory (optional):
+                            <select
+                                value={selectedSubcategory}
+                                onChange={(e) => setSelectedSubcategory(e.target.value)}
+                            >
+                                <option value="">--Select Subcategory--</option>
+                                {categories
+                                    .find((cat) => cat.name === selectedCategory)
+                                    ?.subcategories.map((sub) => (
+                                        <option key={sub} value={sub}>
+                                            {sub}
+                                        </option>
+                                    ))}
+                            </select>
+                        </label>
 
-                <label>
-                    Description:
-                    <textarea
-                    value={deckDescription}
-                    onChange={(e) => setDeckDescription(e.target.value)}
-                    placeholder="Enter a short description (optional)"
-                    />
-                </label>
+                        <label>
+                            Description:
+                            <textarea
+                                value={deckDescription}
+                                onChange={(e) => setDeckDescription(e.target.value)}
+                                placeholder="Enter a short description (optional)"
+                            />
+                        </label>
 
-                <div className={styles.modalActions}>
-                    <button
-                    disabled={isFinishLocked}
-                    onClick={() => {
-                        if (!deckTitle.trim()) {
-                        alert("Please enter a deck title first.");
-                        return;
-                        }
-                        if (!selectedCategory) {
-                        alert("Please select a category.");
-                        return;
-                        }
-                        // Lock button to prevent double click
-                        setIsFinishLocked(true);
+                        <div className={styles.modalActions}>
+                            <button
+                                disabled={isFinishLocked}
+                                onClick={() => {
+                                    if (!deckTitle.trim()) {
+                                        alert("Please enter a deck title first.");
+                                        return;
+                                    }
+                                    if (!selectedCategory) {
+                                        alert("Please select a category.");
+                                        return;
+                                    }
+                                    // Lock button to prevent double click
+                                    setIsFinishLocked(true);
 
-                        // Close modal instantly so user sees deck creation
-                        setShowDeckPrompt(false);
+                                    // Close modal instantly so user sees deck creation
+                                    setShowDeckPrompt(false);
 
-                        handleDoneConfirmYes();
-                    }}
-                    >
-                    Finish
-                    </button>
-                    <button onClick={() => setShowDeckPrompt(false)}>Cancel</button>
+                                    handleDoneConfirmYes();
+                                }}
+                            >
+                                Finish
+                            </button>
+                            <button onClick={() => setShowDeckPrompt(false)}>Cancel</button>
+                        </div>
+                    </div>
                 </div>
-                </div>
-            </div>
+            )}
+
+            {/* Image Picker for Deck Cover */}
+            {pickerForDeck && (
+                <ModalPortal>
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modal} style={{ maxWidth: '800px', height: '80vh', top: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <ImagePicker
+                                mode="inline"
+                                open
+                                onClose={() => setPickerForDeck(false)}
+                                onSelect={(img) => {
+                                    setDeckImagePath(img?.webformatURL || "");
+                                    setPickerForDeck(false);
+                                }}
+                            />
+                        </div>
+                    </div>
+                </ModalPortal>
+            )}
+
+            {/* Image Picker for Single Card */}
+            {pickerForCard !== null && (
+                <ModalPortal>
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modal} style={{ maxWidth: '800px', height: '80vh', top: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <ImagePicker
+                                mode="inline"
+                                open
+                                onClose={() => setPickerForCard(null)}
+                                onSelect={(img) => {
+                                    const url = img?.webformatURL || "";
+                                    setCardImagePaths((prev) => {
+                                        const copy = [...prev];
+                                        copy[pickerForCard] = url;
+                                        return copy;
+                                    });
+                                    setPickerForCard(null);
+                                }}
+                            />
+                        </div>
+                    </div>
+                </ModalPortal>
             )}
 
             {/* Cancel confirmation modal */}
             {showCancelConfirm && (
                 <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-                <div className={styles.modal}>
-                    <p>Are you sure? All flashcards will be lost.</p>
-                    <div className={styles.modalActions}>
-                    <button onClick={handleCancelConfirmYes}>Yes</button>
-                    <button onClick={handleCancelConfirmNo}>Never mind</button>
+                    <div className={styles.modal}>
+                        <p>Are you sure? All flashcards will be lost.</p>
+                        <div className={styles.modalActions}>
+                            <button onClick={handleCancelConfirmYes}>Yes</button>
+                            <button onClick={handleCancelConfirmNo}>Never mind</button>
+                        </div>
                     </div>
-                </div>
                 </div>
             )}
         </div>

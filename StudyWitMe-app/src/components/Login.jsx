@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../services/firebase"; // adjust path if needed
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, updateDoc} from "firebase/firestore";
 import { handleBack } from "../utils/navigation";
 import "./Login.css";
 
@@ -24,7 +24,34 @@ export default function Login() {
         if (mode === "login") {
             // LOGIN
             const userCreds = await signInWithEmailAndPassword(auth, email, password);
+            const uid = userCreds.user.uid;
             console.log("Logged in:", userCreds.user.uid);
+
+            //checks for updated user schema
+            const userDocRef = doc(db, "users", uid);
+            const userDoc = await getDoc(userDocRef); 
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const updates = {};
+                
+                //checksfor 'mastery' field
+                if (!('mastery' in userData)) {
+                    updates.mastery = [];
+                    console.log("Applying mastery field update.");
+                }
+                
+                //check and update achievements
+                const achievementID = "OhOrf6CEK4BSmhsjdmBo"; 
+                if (!('achievements' in userData)) {
+                    updates.achievements = [achievementID]; 
+                    console.log("Applying achievements field update and granting Beta User achievement.");
+                }
+                //if updates are needed, it will save to db
+                if (Object.keys(updates).length > 0) {
+                    await updateDoc(userDocRef, updates); 
+                    console.log(`Schema updated for user ${uid}`);
+                }
+            }
             alert("Login Successful!");
         } else {
             // SIGNUP
@@ -33,6 +60,8 @@ export default function Login() {
             email,
             displayName: username || null,
             createdAt: serverTimestamp(),
+            mastery: [],
+            achievments: ["OhOrf6CEK4BSmhsjdmBo"],
             });
             console.log("Signed up:", newUser.user.uid);
             alert("Signup Successful!");

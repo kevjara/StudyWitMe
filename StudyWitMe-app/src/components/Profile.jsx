@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from "../services/firebase";
-import { doc, onSnapshot, collection, getDocs, query, where, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, getDocs, query, where, getDoc, FieldPath } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { auth } from "../services/firebase";
 import { signOut } from "firebase/auth";
@@ -18,7 +18,7 @@ function Profile() {
     const [isOwner, setIsOwner] = useState(false);
     const [publicDecks, setPublicDecks] = useState([]);
     const [loadingDecks, setLoadingDecks] = useState(false);
-
+    const [userAchievements, setUserAchievements] = useState([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteStep, setDeleteStep] = useState(0);
     const [deleteTimer, setDeleteTimer] = useState(20);
@@ -75,6 +75,38 @@ function Profile() {
         fetchPublicDecks();
     }, [uid, currentUser]);
 
+    //this should fetch the achievements
+    useEffect(() => {
+        const fetchAchievements = async () => {
+            if (!profile || !profile.achievements || profile.achievements.length === 0) {
+                setUserAchievements([]);
+                return;
+            }
+
+            try {
+                const achievementsSnap = await getDocs(
+                    query(
+                        collection(db, "achievements"),
+                        where('__name__', "in", profile.achievements)
+                    )
+                );
+                setUserAchievements(achievementsSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                })));
+
+            } catch (e) {
+                console.error("Error fetching achievements:", e);
+                if (e.code === 'failed-precondition') {
+                    console.warn("Achievement list is too long for a single query (max 10 'in' clauses). Consider splitting the array.");
+                }
+                setUserAchievements([]);
+            }
+        };
+
+        fetchAchievements();
+    }, [profile]);
+
     const startDeleteCountdown = () => {
         setDeleteStep(1);
         setDeleteTimer(20);
@@ -128,8 +160,20 @@ function Profile() {
                             </div>
                         </div>
                         <div className={styles.profileMeta}>
-                            <h2 className={styles.displayName}>Display Name: {profile.displayName || "No display name"}</h2>
-                            <p className={styles.email}>Email: {isOwner ? profile.email : "Private"}</p>
+                            <h2 className={styles.displayName}> {profile.displayName || "No display name"}</h2>
+                            {userAchievements.length > 0 && (
+                                <div className={styles.achievementsContainer} title="Achievements Earned">
+                                    {userAchievements.map(achievement => (
+                                        <img
+                                            key={achievement.id}
+                                            src={achievement.badge} // Use the path stored in the 'badge' field
+                                            alt={achievement.name}
+                                            className={styles.achievementBadge}
+                                            title={achievement.name + ": " + achievement.description} // Tooltip for details
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -142,6 +186,10 @@ function Profile() {
                             {profile.createdAt && (
                                 <div className={styles.accountRow}><strong>Member Since:</strong> <span>{profile.createdAt.toDate().toLocaleDateString()}</span></div>
                             )}
+                            <div className={styles.accountRow}>
+                                <strong>Email:</strong> 
+                                <span>{isOwner ? profile.email : "Private"}</span>
+                            </div>
                         </div>
                     </div>
 
