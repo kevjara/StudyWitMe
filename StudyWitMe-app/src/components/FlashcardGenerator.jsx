@@ -48,6 +48,7 @@ function FlashcardGenerator() {
     const [pickerForDeck, setPickerForDeck] = useState(false);
     const [deckImage, setDeckImage] = useState("");
 
+
     useEffect(() => {
     const open = Boolean(pickerForCard || pickerForDeck);
         document.body.style.overflow = open ? "hidden" : "";
@@ -963,6 +964,57 @@ function FlashcardGenerator() {
                 </div>
                 </div>
             )}
+
+            {/*  -------------------- Quiz Mode Section --------------------*/}
+            <div style={{ padding: "20px", textAlign: "center" }}>
+                <button
+                    onClick={async () => {
+                        try {
+                            // Disable button & show loading
+                            const button = document.getElementById("quiz-test-btn");
+                            button.disabled = true;
+                            button.innerText = "Loading...";
+
+                            console.log("🚀 Sending dummy flashcards to /quiz route...");
+
+                            const res = await fetch("http://localhost:3000/quiz", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ flashcards: dummyFlashcards }),
+                            });
+                            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+                            const data = await res.json();
+                            console.log("✅ Quiz JSON output:", data.output);
+                        } catch (err) {
+                            console.error("❌ Error during quiz generation:", err.message);
+                        } finally {
+                            // Restore button state
+                            const button = document.getElementById("quiz-test-btn");
+                            button.disabled = false;
+                            button.innerText = "Quiz Testing";
+                        }
+                    }}
+                    id="quiz-test-btn"
+                    style={{
+                        backgroundColor: "#007bff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "12px 24px",
+                        fontSize: "16px",
+                        cursor: "pointer",
+                        transition: "background-color 0.3s ease",
+                    }}
+                >
+                    Quiz Testing
+                </button>
+            </div>
+            {/*  -------------------- Quiz Mode Section --------------------*/}
+
+
+
+
         </div>
     );
 }

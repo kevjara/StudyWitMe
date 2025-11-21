@@ -238,26 +238,50 @@ app.post("/quiz", async (req, res) => {
 
     const prompt = `
 You are an advanced quiz generator.
-You will receive a deck of flashcards, each with:
-- "question": a study question
+
+You will receive a deck of flashcards, each containing:
+- "question": the study prompt or fact
 - "relevantText": the factual or conceptual answer
 
-Your goal:
-Create a comprehensive quiz that tests overall mastery of the entire flashcard deck.
+Your task:
+Create a fully new, comprehensive quiz that tests understanding of the ENTIRE flashcard deck.
 
-Rules for the quiz:
-1. The quiz should combine and integrate the knowledge across flashcards.
-2. Include both short response and multiple choice questions — whichever best assesses understanding.
-3. For multiple choice questions, create **exactly four options (A–D)** with only one correct answer.
-4. For short response questions, provide only the expected text answer.
-5. You must output ONLY valid JSON — an array of objects. Each object must follow this structure:
+Requirements for quiz generation:
+
+1. You MUST generate completely NEW questions.
+   - Do NOT reuse the flashcard fronts as questions.
+   - The quiz should test understanding, relationships, comparisons, applications, and conceptual depth.
+
+2. The quiz MUST stay fully on-topic and contextually correct.
+   - All questions must logically follow from the information in the flashcards.
+   - The quiz should reflect the subject matter and difficulty of the deck.
+
+3. You MUST use **100%** of the information contained in the flashcards.
+   - Every flashcard’s content must contribute to at least one quiz question or answer.
+
+4. Each quiz question must be returned as a JSON object with the fields:
    {
-     "question": "string",
-     "relevantText": "string",
+     "question": "string (the newly generated quiz question)",
+     "relevantText": "string (the correct answer)",
      "isMultipleChoice": true or false
    }
-6. Do NOT include explanations, markdown, or any text outside JSON.
-7. Avoid trivial recall — focus on conceptual understanding, comparisons, and applied reasoning.
+
+5. For short-answer questions:
+   - "relevantText" must contain ONLY the correct answer as a plain string.
+   - No explanations or extra text.
+
+6. For multiple-choice questions:
+   - "relevantText" MUST follow this strict format:
+     "|||A|||Correct Answer|||B|||Wrong Option 1|||C|||Wrong Option 2|||D|||Wrong Option 3"
+   - The correct answer MUST be the first option after "A".
+   - All distractors MUST be relevant, plausible, and academically meaningful.
+
+7. The entire output MUST be:
+   - A SINGLE JSON ARRAY of objects
+   - No text before or after the JSON
+   - No markdown
+   - No comments
+   - No natural language outside the JSON array
 
 FLASHCARDS INPUT:
 ${JSON.stringify(flashcards, null, 2)}
@@ -267,7 +291,7 @@ ${JSON.stringify(flashcards, null, 2)}
     const result = await model.generateContent(prompt);
     const rawOutput = result.response.text().trim();
 
-    console.log("🧠 /quiz raw output:", rawOutput);
+    console.log("/quiz raw output:", rawOutput);
 
     let cleanedOutput = rawOutput
       .replace(/```json\s*/gi, "")
@@ -280,12 +304,27 @@ ${JSON.stringify(flashcards, null, 2)}
     try {
       const jsonOutput = JSON.parse(cleanedOutput);
       if (!Array.isArray(jsonOutput)) throw new Error("Response is not a JSON array.");
+
+      const normalized = jsonOutput.map((q) => {
+        const question = q.question ?? "";
+        const relevantText = q.relevantText ?? "";
+        
+        // Auto-detect MC format based on delimiter
+        const looksMC = typeof relevantText === "string" && relevantText.includes("|||");
+
+        return {
+          question,
+          relevantText,
+          isMultipleChoice: q.isMultipleChoice === true || looksMC
+        };
+      });
+
       
-      // ✅ Log the parsed JSON result for now
-      console.log("✅ /quiz processed output:", JSON.stringify(jsonOutput, null, 2));
+      //Log the parsed JSON result for now
+      console.log("/quiz processed output:", JSON.stringify(jsonOutput, null, 2));
 
       // Return it to frontend (for now, we’re just logging on backend)
-      res.json({ output: jsonOutput });
+      res.json({ output: normalized });
     } catch (err) {
       console.error("❌ Invalid JSON from Gemini /quiz:", rawOutput);
       res.status(500).json({
