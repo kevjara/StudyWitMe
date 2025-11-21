@@ -11,27 +11,37 @@ function FlashcardsQuiz() {
   const { state } = useLocation();
   const deck = state?.deck;
 
-  const [flashcards, setFlashcards] = useState([]);
-  const [processedFlashcards, setProcessedFlashcards] = useState([]); // each item: [question, responseOrOptions, isMC, correctLabel]
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("");
-  const [selectedOption, setSelectedOption] = useState([]); // array of labels for MC
-  const [showResult, setShowResult] = useState(false);
-  const [shortResponse, setShortResponse] = useState([]); // array of strings for short answers
-  const statusTimeoutRef = useRef(null);
-  const [cardStatuses, setCardStatuses] = useState([]);
-  const [quizStarted, setQuizStarted] = useState(false);
-  const [savedAnswers, setSavedAnswers] = useState([]); // user's saved answers (label or text)
-  const [quizStats, setQuizStats] = useState(null); // { correct, incorrect, total, grade }
+const [flashcards, setFlashcards] = useState([]);
+const [filteredFlashcards, setFilteredFlashcards] = useState([]); // from Elvis branch
+const [processedFlashcards, setProcessedFlashcards] = useState([]); 
+const [currentIndex, setCurrentIndex] = useState(0);
+const [loading, setLoading] = useState(true);
+const [status, setStatus] = useState("");
+const [selectedOption, setSelectedOption] = useState([]); 
+const [showResult, setShowResult] = useState(false);
+const [shortResponse, setShortResponse] = useState([]); 
+const statusTimeoutRef = useRef(null);
+const [cardStatuses, setCardStatuses] = useState([]);
+const [quizStarted, setQuizStarted] = useState(false);
+const [savedAnswers, setSavedAnswers] = useState([]); 
+const [quizStats, setQuizStats] = useState(null); // { correct, incorrect, total, grade }
+const [lastWarning, setLastWarning] = useState(null);
 
-  useEffect(() => {
-    if (!deck) {
-      setStatus("No deck selected. Returning...");
-      const timer = setTimeout(() => navigate("/flashcards"), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [deck, navigate]);
+// NEW quiz-setup logic (keep these!)
+const [showSetup, setShowSetup] = useState(false);
+const [questionCount, setQuestionCount] = useState(0);
+const [selectedTime, setSelectedTime] = useState(15);
+const [timeLeft, setTimeLeft] = useState(null);
+const [timerRunning, setTimerRunning] = useState(false);
+const [showTimer, setShowTimer] = useState(false);
+
+useEffect(() => {
+  if (!deck) {
+    setStatus("No deck selected. Returning...");
+    const timer = setTimeout(() => navigate("/flashcards"), 2000);
+    return () => clearTimeout(timer);
+  }
+}, [deck, navigate]);
 
   useEffect(() => {
     const fetchFlashcards = async () => {
@@ -69,26 +79,19 @@ function FlashcardsQuiz() {
     }, duration);
   }
 
+
   /**
-   * parseMCOptions - robust parser that supports several possible
-   * generator outputs:
-   * 1) "|||A|||Correct|||B|||Wrong1|||C|||Wrong2|||D|||Wrong3"
-   * 2) "A) Correct\nB) Wrong1\nC) Wrong2\nD) Wrong3"
-   * 3) "A. Correct\nB. Wrong1\n..."
-   * 4) fallback: tries to split on pipes or pairs if possible
-   *
-   * returns: [{ label: "A", text: "...", isCorrect: boolean }, ...]
+   * parseMCOptions - robust parser that supports several formats.
+   * Returns: [{ label: "A", text: "...", isCorrect: boolean }, ...]
    */
   const parseMCOptions = (relevantText) => {
     if (!relevantText || typeof relevantText !== "string") return [];
 
-    // 1) Try the strict triple-pipe format first
+    // 1) Strict triple-pipe format: |||A|||Correct|||B|||Wrong...
     try {
       const pipeParts = relevantText.split("|||").map((s) => s.trim());
-      // If first token is empty due to leading |||, remove it
-      if (pipeParts.length > 0 && pipeParts[0] === "") pipeParts.shift();
+      if (pipeParts[0] === "") pipeParts.shift();
 
-      // Expect pairs like ["A", "Correct", "B", "Wrong", ...]
       if (pipeParts.length >= 2 && /^[A-D]$/i.test(pipeParts[0])) {
         const options = [];
         for (let i = 0; i < pipeParts.length; i += 2) {
@@ -98,67 +101,166 @@ function FlashcardsQuiz() {
           options.push({
             label,
             text,
-            isCorrect: label === "A", // backend contract: A is correct
+            isCorrect: label === "A",
           });
         }
         if (options.length) return options;
       }
-    } catch (e) {
-      // fall through to next strategies
-    }
+    } catch (_) {}
 
-    // 2) Try common labeled-lines format: "A) Text" or "A. Text" or "A: Text"
-    // We'll capture groups for A-D
+    // 2) A) Correct  (multi-line)
     try {
-      const lineRegex = /(^|\n)\s*([A-D])\s*[\)\.\:]\s*(.+?)(?=(\n\s*[A-D]\s*[\)\.\:])|$)/gis;
+      const lineRegex =
+        /(^|\n)\s*([A-D])\s*[\)\.\:]\s*(.+?)(?=(\n\s*[A-D]\s*[\)\.\:])|$)/gis;
       const matches = [];
       let m;
       while ((m = lineRegex.exec(relevantText)) !== null) {
-        const label = m[2].toUpperCase();
-        const text = m[3].trim();
-        if (label && text) matches.push({ label, text, isCorrect: label === "A" });
+        matches.push({
+          label: m[2].toUpperCase(),
+          text: m[3].trim(),
+          isCorrect: m[2].toUpperCase() === "A",
+        });
       }
       if (matches.length) return matches;
-    } catch (e) {
-      // ignore
-    }
+    } catch (_) {}
 
-    // 3) Try "A)Text B)Text" single-line or split by newlines with label prefix
+    // 3) Inline A)Text B)Text…
     try {
       const inlineRegex = /([A-D])\s*[\)\.\:]\s*([^A-D]+)/g;
       const arr = [];
       let mm;
       while ((mm = inlineRegex.exec(relevantText)) !== null) {
-        const label = mm[1].toUpperCase();
-        const text = mm[2].trim();
-        if (label && text) arr.push({ label, text, isCorrect: label === "A" });
+        arr.push({
+          label: mm[1].toUpperCase(),
+          text: mm[2].trim(),
+          isCorrect: mm[1].toUpperCase() === "A",
+        });
       }
       if (arr.length) return arr;
-    } catch (e) {}
+    } catch (_) {}
 
-    // 4) Fallback - try splitting by pipe '|' tokens and pair them
+    // 4) Simple pipe "|": A | Correct | B | Wrong
     try {
       const tokens = relevantText.split("|").map((s) => s.trim()).filter(Boolean);
-      // tokens like ["A", "Correct", "B", "Wrong", "C", "Wrong"]
       if (tokens.length >= 2 && /^[A-D]$/i.test(tokens[0])) {
         const opts = [];
         for (let i = 0; i < tokens.length; i += 2) {
           const label = tokens[i]?.toUpperCase();
           const text = tokens[i + 1];
           if (!label || !text) continue;
-          opts.push({ label, text, isCorrect: label === "A" });
+          opts.push({
+            label,
+            text,
+            isCorrect: label === "A",
+          });
         }
         if (opts.length) return opts;
       }
-    } catch (e) {}
+    } catch (_) {}
 
-    // If nothing worked, return empty to let caller fallback to short-answer
-    console.warn("parseMCOptions: unable to parse MC options from:", relevantText);
+    console.warn("parseMCOptions failed:", relevantText);
     return [];
   };
 
+
+  // ----------------------------------------------------------------------------
+  // FIRESTORE LOADING (UNCHANGED)
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    if (!deck || !currentUser) return;
+    const fetchFlashcards = async () => {
+      try {
+        setLoading(true);
+        const flashRef = collection(db, "flashcard");
+        const q = query(flashRef, where("deckId", "==", deck.id));
+        const snap = await getDocs(q);
+        const cards = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setFlashcards(cards);
+      } catch (err) {
+        console.error("Error loading flashcards:", err);
+        setStatus("Error loading flashcards.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFlashcards();
+  }, [deck, currentUser]);
+
+
+  // ----------------------------------------------------------------------------
+  // FILTER EMPTY FLASHCARDS (UNCHANGED)
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    if (flashcards.length === 0) return;
+    const filtered = flashcards.filter(
+      (fc) =>
+        fc.front &&
+        fc.front.trim() !== "" &&
+        fc.back &&
+        fc.back.trim() !== ""
+    );
+    setFilteredFlashcards(filtered);
+    if (filtered.length === 0) setStatus("No flashcards with content to quiz.");
+  }, [flashcards]);
+
+
+  // ----------------------------------------------------------------------------
+  // TIMER LOGIC (UNCHANGED)
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    if (!timerRunning || timeLeft === null) return;
+
+    if (timeLeft <= 0) {
+      setTimerRunning(false);
+      autoSubmitDueToTimeout();
+      return;
+    }
+
+    if (timeLeft === 300 && lastWarning !== 300) {
+      alert("⚠️ 5 minutes remaining!");
+      setLastWarning(300);
+    }
+
+    if (timeLeft === 60 && lastWarning !== 60) {
+      alert("⏳ 1 minute remaining!");
+      setLastWarning(60);
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerRunning, timeLeft, lastWarning]);
+
+
+  function showStatus(message, duration = 4500) {
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    setStatus(message);
+    statusTimeoutRef.current = setTimeout(() => {
+      setStatus("");
+      statusTimeoutRef.current = null;
+    }, duration);
+  }
+
+  const handleOpenSetup = () => {
+    setShowSetup(true);
+    setQuestionCount(filteredFlashcards.length);
+  };
+
+
+  // ----------------------------------------------------------------------------
+  // START QUIZ
+  // ----------------------------------------------------------------------------
+  const handleStartQuiz = async () => {
+    setLastWarning(null);
+    setTimerRunning(false);
+    setTimeLeft(selectedTime * 60);
+    await startQuiz();
+  };
+
   const startQuiz = async () => {
-    if (flashcards.length === 0) {
+    if (filteredFlashcards.length === 0) {
       setStatus("No flashcards found in this deck.");
       return;
     }
@@ -167,23 +269,12 @@ function FlashcardsQuiz() {
       showStatus("Creating quiz...");
       setQuizStarted(false);
 
-      // Filter out empty-front cards
-      const filteredFlashcards = flashcards.filter(
-        (fc) => fc.front && fc.front.trim() !== ""
-      );
-      if (filteredFlashcards.length === 0) {
-        setStatus("No flashcards with content to quiz.");
-        return;
-      }
-
-      // Format flashcards for the backend - keep using front/back fields as the source content
       const formatted = filteredFlashcards.map((fc) => ({
         question: fc.front,
         relevantText: fc.back,
         isMultipleChoice: fc.type === "Multiple Choice",
       }));
 
-      // POST to your new /quiz backend route
       const response = await fetch("/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -191,62 +282,41 @@ function FlashcardsQuiz() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Server error");
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Server error");
       }
 
-      const data = await response.json();
-      if (!data.output || !Array.isArray(data.output)) {
-        throw new Error("Invalid quiz response from server");
-      }
+      const { output } = await response.json();
+      if (!Array.isArray(output)) throw new Error("Invalid quiz response");
 
-      // IMPORTANT: The backend returns fully NEW quiz items. Use them directly.
-      // Each output item should be { question, relevantText, isMultipleChoice }
-      const outputs = data.output;
-
-      const processed = outputs.map((item, idx) => {
+      const processed = output.map((item) => {
         const q = item.question || "";
         const isMC = !!item.isMultipleChoice;
         const relevant = (item.relevantText ?? "").toString();
 
-        if (!isMC) {
-          // Short answer: relevant is a plain string (the correct answer)
-          return [q, relevant, false, null];
-        }
+        if (!isMC) return [q, relevant, false, null];
 
-        // Multiple choice: parse options from the various possible formats
         const parsedOptions = parseMCOptions(relevant);
+        if (!parsedOptions.length) return [q, relevant, false, null];
 
-        // If parsing failed, fall back to short answer (prevents empty MC blocks)
-        if (!parsedOptions || parsedOptions.length === 0) {
-          console.warn(
-            `Quiz item ${idx} marked MC but parser returned 0 options. Falling back to short-answer. RelevantText:`,
-            relevant
-          );
-          return [q, relevant, false, null];
-        }
-
-        // Shuffle the parsed options (shuffle whole objects to keep labels paired with text)
+        // --- SHUFFLE + NORMALIZE OPTIONS ---
         const shuffled = [...parsedOptions];
         for (let i = shuffled.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
 
-        // Normalize display labels to A/B/C/D while keeping isCorrect anchored to original label
         const normalized = shuffled.map((o, i) => ({
           label: ["A", "B", "C", "D"][i],
           text: o.text,
-          isCorrect: o.isCorrect, // correctness derived from original label (A is correct)
+          isCorrect: o.isCorrect,
         }));
 
-        // Determine correct label after normalization
         const correctLabel = normalized.find((o) => o.isCorrect)?.label || null;
 
         return [q, normalized, true, correctLabel];
       });
 
-      // initialize UI state
       setProcessedFlashcards(processed);
       setCardStatuses(processed.map(() => ""));
       setCurrentIndex(0);
@@ -256,34 +326,375 @@ function FlashcardsQuiz() {
       setSavedAnswers([]);
       setShowResult(false);
       setQuizStats(null);
+      setTimerRunning(true);
+      setShowSetup(false);
 
-      showStatus(`Quiz ready (${processed.length} questions).`);
+      showStatus(`Quiz ready (${processed.length} cards).`);
     } catch (err) {
       console.error("Quiz error:", err);
       showStatus(`Error: ${err.message}`);
     }
   };
 
-  const setCardStatus = (message) => {
-    setCardStatuses((prev) => {
-      const newStatuses = [...prev];
-      newStatuses[currentIndex] = message;
-      return newStatuses;
+
+  // ----------------------------------------------------------------------------
+  // QUIZ HELPERS (RESET / AUTOSAVE / SUBMIT)
+  // ----------------------------------------------------------------------------
+  const resetQuizState = () => {
+    setStatus("");
+    setShortResponse([]);
+    setCardStatuses([]);
+    setShowResult(false);
+    setQuizStats(null);
+    setSavedAnswers([]);
+    setSelectedOption([]);
+    setTimeLeft(selectedTime * 60);
+    setTimerRunning(true);
+    setShowTimer(true);
+  };
+
+  const autoSubmitDueToTimeout = () => {
+    setTimerRunning(false);
+    setShowTimer(false);
+    setStatus("Time's up! Submitting quiz...");
+    saveAll();
+    submitQuiz();
+  };
+
+  const saveAll = () => {
+    setSavedAnswers((prev) => {
+      const autoSaved = [...(prev || [])];
+
+      processedFlashcards.forEach(([question, response, isMC], i) => {
+        if (autoSaved[i] !== undefined) return;
+
+        if (isMC) {
+          const selected = selectedOption?.[i];
+          if (selected) autoSaved[i] = selected;
+        } else {
+          const answer = shortResponse[i];
+          if (answer?.trim()) autoSaved[i] = answer;
+        }
+      });
+
+      return autoSaved;
     });
   };
 
-  const resetQuizState = () => {
-    setSelectedOption([]);
-    setShowResult(false);
-    setShortResponse([]);
-    setCardStatus("");
+  const submitQuiz = async () => {
+    setStatus("Submitting quiz...");
+    setTimerRunning(false);
+    setShowTimer(false);
+    setShowResult(true);
+
+    try {
+      let correctCount = 0;
+      const total = processedFlashcards.length;
+
+      const results = await Promise.all(
+        processedFlashcards.map(async ([question, response, isMC, correctLabel], index) => {
+          const userAnswer = savedAnswers[index];
+          if (userAnswer === undefined) return "No answer given";
+
+          if (isMC) {
+            const correct = userAnswer === correctLabel;
+            if (correct) correctCount++;
+            const correctText =
+              response.find((opt) => opt.label === correctLabel)?.text || "N/A";
+            return correct
+              ? "✅ Correct!"
+              : `❌ Incorrect — correct answer: ${correctText}`;
+          } else {
+            const res = await fetch("/compare", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userAnswer,
+                correctAnswer: response,
+              }),
+            });
+            const data = await res.json();
+            if (data.correct) correctCount++;
+            return data.correct
+              ? "✅ Correct!"
+              : `❌ Incorrect — correct answer: ${response}`;
+          }
+        })
+      );
+
+      const incorrectCount = total - correctCount;
+      const grade = ((correctCount / total) * 100).toFixed(1);
+
+      setCardStatuses(results);
+      setQuizStats({ correct: correctCount, incorrect: incorrectCount, total, grade });
+      setStatus("Quiz submitted!");
+    } catch (err) {
+      console.error(err);
+      setStatus("Error submitting quiz.");
+    }
   };
+
+
+
+
+
 
   if (loading)
     return (
-      <div className={styles.studySection}>
-        <p>Loading flashcards...</p>
-      </div>
+        <>
+            <div className={styles.stickyToolbar}>
+                <button
+                    className={styles.backButton}
+                    onClick={() => navigate("/flashcards")}
+                >
+                    ← Back
+                </button>
+            </div>
+
+            <div className={styles.studySection}>
+                {showSetup && (
+                    <div className={styles.setupCard}>
+                        <h2>Setup Your Quiz</h2>
+
+                        {/* Question Count */}
+                        <label>Questions (max {filteredFlashcards.length})</label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={filteredFlashcards.length}
+                            value={questionCount}
+                            onChange={(e) => setQuestionCount(Number(e.target.value))}
+                        />
+
+                        {/* Time Selector */}
+                        <label>Time:</label>
+                        <select
+                            value={selectedTime}
+                            onChange={(e) => setSelectedTime(Number(e.target.value))}
+                        >
+                            {getAvailableTimes().map(t => (
+                                <option key={t} value={t}>{t} minutes</option>
+                            ))}
+                        </select>
+
+                        {/* Start Quiz */}
+                        <button
+                            className={styles.startQuizButton}
+                            onClick={handleStartQuiz}
+                        >
+                            Start Quiz
+                        </button>
+
+                        <p className={styles.status}>{status}</p>
+                    </div>
+                )}
+                {!quizStarted && !showSetup &&  (
+                    <div className={styles.coverCard}>
+                        <div className={styles.deckInfo}>
+                            <h2
+                                className={styles.deckTitle}
+                                title={deck.title || "Untitled Deck"}
+                            >
+                                {deck.title?.length > 50 ? deck.title.slice(0, 50) + "…" : deck.title || "Untitled Deck"}
+                            </h2>
+                            <p className={styles.deckCategory}><strong>Category:</strong> {deck.category || "Uncategorized"}</p>
+                            <div className={styles.deckDescription}>
+                                <p className={styles.descLabel}><strong>Description:</strong></p>
+                                <p className={styles.descText}>{deck.description?.trim() || "No description available."}</p>
+                            </div>
+                            <p className={styles.deckMeta}>{flashcards.length} cards</p>
+                            <p className={styles.deckMeta}>Created: {deck.createdAt ? new Date(deck.createdAt.seconds ? deck.createdAt.seconds*1000 : deck.createdAt).toLocaleString() : "Unknown"}</p>
+                        </div>
+
+                        {deck.imagePath && (
+                            <div className={styles.deckCoverImage}>
+                                <img src={deck.imagePath} alt="Deck cover" />
+                            </div>
+                        )}
+
+                        <div className={styles.buttonRow}>
+                            <button className={styles.studyButton} onClick={handleOpenSetup}>
+                                Create Quiz
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {quizStarted && processedFlashcards.length > 0 && (
+                <div className={styles.quizContainer}>
+                    {/* Timer (bottom right) */}
+                    {timerRunning && (
+                        <div className={styles.timerBox}>
+                            {Math.floor(timeLeft / 60)}:
+                            {String(timeLeft % 60).padStart(2, "0")}
+                        </div>
+                    )}
+                    {/* Sidebar */}
+                    {!showResult && (
+                    <aside className={styles.sidebar}>
+                    <h3 className={styles.sidebarTitle}>Questions</h3>
+                    <div className={styles.questionGrid}>
+                        {processedFlashcards.map((_, i) => (
+                        <div
+                            key={i}
+                            className={`${styles.questionBox} ${
+                            savedAnswers[i] !== undefined ? styles.saved : styles.unsaved
+                            }`}
+                            onClick={() => {
+                            const el = document.getElementById(`question-${i}`);
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                        >
+                            {i + 1}
+                            {savedAnswers[i] !== undefined && <span className={styles.checkmark}>✓</span>}
+                        </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        className={styles.submitButton}
+                        onClick={saveAll}
+                    >
+                        Save all answers
+                    </button>
+                    </aside>
+                    )}
+
+                    {showResult && quizStats && (
+                        <div className={styles.resultsSummary}>
+                            <h2>Results Summary</h2>
+                            <p>Total Questions: {quizStats.total}</p>
+                            <p>Correct: ✅ {quizStats.correct}</p>
+                            <p>Incorrect: ❌ {quizStats.incorrect}</p>
+                            <h3>Grade: {quizStats.grade}%</h3>
+                            <button
+                                className={styles.retryButton}
+                                onClick={(resetQuizState)}
+                                >
+                                Retry Quiz
+                            </button>
+                        </div>
+                    )}
+                    <div className={styles.quizContent}>
+                        {/* Quiz Form */}
+                        <form
+                        className={styles.studyBox}
+                        onSubmit={(e) => e.preventDefault()}
+                        >
+                        {processedFlashcards.map(([question, response, isMC, correctLabel], index) => (
+                            <div key={index} id={`question-${index}`} className={styles.questionBlock}>
+                            <h3 className={styles.questionHeader}>Question {index + 1}</h3>
+                            <p className={styles.questionText}>{question}</p>
+
+                            {isMC ? (
+                                <div className={styles.optionGroup}>
+                                {response.map(({ label, text }) => (
+                                    <label key={label} className={styles.optionLabel}>
+                                    <input
+                                        type="radio"
+                                        name={`q${index}`}
+                                        value={label}
+                                        disabled={showResult}
+                                        checked={selectedOption?.[index] === label}
+                                        onChange={() => {
+                                            setSelectedOption((prev) => {
+                                                const copy = [...(prev || [])];
+                                                copy[index] = label;
+                                                return copy;
+                                            })
+                                            // clear savedAnswers for this index if it's different now
+                                            setSavedAnswers(prev => {
+                                                const copy = [...(prev || [])];
+                                                if (copy[index] !== undefined && copy[index] !== label) {
+                                                    copy[index] = undefined;
+                                                }
+                                                return copy;
+                                            });
+                                        }}
+                                    />
+                                    <span>
+                                        <strong>{label})</strong> {text}
+                                    </span>
+                                    </label>
+                                ))}
+                                </div>
+                            ) : (
+                                <textarea
+                                className={styles.shortResponseInput}
+                                placeholder="Type your answer..."
+                                disabled={showResult}
+                                value={shortResponse[index] || ""}
+                                onChange={(e) => {
+                                    setShortResponse((prev) => {
+                                    const copy = [...(prev || [])];
+                                    copy[index] = e.target.value;
+                                    return copy;
+                                    })
+                                    // If a saved answer exists and is different from the new value, clear it
+                                    setSavedAnswers(prev => {
+                                        const copy = [...(prev || [])];
+                                        if (copy[index] !== undefined && String(copy[index]) !== e.target.value) {
+                                        copy[index] = undefined;
+                                        }
+                                        return copy;
+                                    });
+                                }}
+                                />
+                            )}
+
+                            {/* Save Button */}
+                            {!showResult && (
+                                <button
+                                    type="button"
+                                    className={styles.submitButton}
+                                    disabled={savedAnswers[index] !== undefined}
+                                    onClick={() => {
+                                        if (isMC) {
+                                            const selected = selectedOption?.[index];
+                                            if (!selected) return;
+                                            setSavedAnswers((prev) => {
+                                                const copy = [...(prev || [])];
+                                                copy[index] = selected;
+                                                return copy;
+                                            });
+                                        } else {
+                                            const userAnswer = shortResponse[index];
+                                            if (!userAnswer?.trim()) return;
+                                            setSavedAnswers((prev) => {
+                                                const copy = [...(prev || [])];
+                                                copy[index] = userAnswer;
+                                                return copy;
+                                            });
+                                        }
+                                    }}
+                                >
+                                    {savedAnswers[index] !== undefined ? "Saved" : "Save"}
+                                </button>
+                            )}
+                            {cardStatuses[index] && (
+                                <p className={styles.quizStatus}>{cardStatuses[index]}</p>
+                            )}
+
+                            <hr className={styles.divider} />
+                            </div>
+                        ))}
+                        {/* Submit Quiz Button */}
+                        {!showResult && (
+                            <button
+                                type="button"
+                                className={styles.finalSubmitButton}
+                                disabled={savedAnswers.filter((a) => a !== undefined).length === 0}
+                                onClick={submitQuiz}
+                            >
+                                Submit Quiz
+                            </button>
+                        )}
+                        </form>
+                    </div>
+                </div>
+                )}
+            </div>
+        </>
     );
   if (!deck)
     return (
