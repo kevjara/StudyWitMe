@@ -34,26 +34,37 @@ function Profile() {
     const handleImageError = async (e, deck) => {
         const isOwnerOfDeck = currentUser?.uid === deck.ownerId; 
 
-        if (!deck.pixabayId || refreshedUrls[deck.id]) {
+        if (!deck.pixabayId) {
+            console.warn(`⚠️ No pixabayId for deck ${deck.id}`);
             e.target.style.display = 'none';
             return;
         }
 
-        e.target.style.opacity = 0;
+        const currentStatus = refreshedUrls[deck.id];
+        if (currentStatus === 'loading' || currentStatus === 'failed') {
+            return;
+        }
+
+        if (currentStatus && currentStatus !== deck.imagePath) {
+            console.warn(`⚠️ Refreshed URL also expired for deck ${deck.id}`);
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
+            e.target.style.display = 'none';
+            return;
+        }
+
+        setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'loading' }));
         
         const newUrl = await refreshPixabayImage(
             'deck', 
             deck.id, 
             deck.pixabayId, 
-            isOwnerOfDeck // Only owner can save the fix permanently to Firestore
+            isOwnerOfDeck
         );
 
         if (newUrl) {
             setRefreshedUrls(prev => ({ ...prev, [deck.id]: newUrl }));
-            e.target.src = newUrl;
-            e.target.style.opacity = 1;
-            e.target.style.display = 'block';
         } else {
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
             e.target.style.display = 'none';
         }
     };
@@ -262,7 +273,7 @@ function Profile() {
                                     {deck.imagePath && (
                                         <a href={deck.attributionLink} target="_blank" rel="noopener noreferrer">
                                             <img
-                                                src={deck.imagePath}
+                                                src={refreshedUrls[deck.id] || deck.imagePath}
                                                 alt="Deck"
                                                 style={{
                                                     width: "80px",
@@ -270,6 +281,8 @@ function Profile() {
                                                     objectFit: "cover",
                                                     borderRadius: "8px",
                                                     flexShrink: 0,
+                                                    opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
+                                                    transition: 'opacity 0.3s'
                                                 }}
                                                 onError={(e) => handleImageError(e, deck)}
                                             />
