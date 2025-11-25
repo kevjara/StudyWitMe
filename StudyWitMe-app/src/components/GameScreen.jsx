@@ -7,42 +7,57 @@ function GameScreen() {
     const { roomCode } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+
+    // State
     const [isHost, setIsHost] = useState(location.state?.isHost || false);
     const [players, setPlayers] = useState([]);
     const [gameState, setGameState] = useState('lobby'); // lobby, in=game, game-over
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [scores, setScores] = useState({});
-    const [correctAnswerIndex, setCorrectAnswerIndex] = useState(null);
+
+    //Game Logic state
+    const [revealedAnswer, setRevealedAnswer] = useState(null);
     const [roundWinner, setRoundWinner] = useState(null);
     const [timer, setTimer] = useState(30);
-    const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+    const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
 
     // timer countdown
     useEffect(() => {
-        if (gameState === 'in-game' && correctAnswerIndex === null){
+        if (gameState === 'in-game' && revealedAnswer === null){
             const interval = setInterval(() => {
                 setTimer(prevTimer => (prevTimer > 0 ? prevTimer - 1 : 0));
             }, 1000);
             return () => clearInterval(interval);
         }
-    }, [gameState, correctAnswerIndex]);
+    }, [gameState, revealedAnswer]);
 
     // listener logic
     useEffect(() => {
-        const onUpdatePlayerList = (playerList) => setPlayers(playerList);
+        const onUpdatePlayerList = (playerList) => {
+            // only update player list if change occurs
+            setPlayers(prevPlayers => {
+                if(prevPlayers.length !== playerList.length){
+                    return playerList;
+                }
+
+                return prevPlayers;
+            });
+        };
+
         const onGameStarted = () => setGameState('in-game');
 
         const onNewQuestion = (questionData) => {
             setCurrentQuestion(questionData);
-            setCorrectAnswerIndex(null);
+            setRevealedAnswer(null);
             setRoundWinner(null);
-            setSelectedAnswer(null);
+            setSelectedOptionIndex(null);
             setTimer(30);
             setGameState('in-game')
         };
 
         const onQuestionResult = (resultData) => {
-            setCorrectAnswerIndex(resultData.correctAnswerIndex);
+            setRevealedAnswer(resultData.correctAnswer);
             setScores(resultData.scores);
             setRoundWinner(resultData.winnerId);
             setTimer(0); // manually set timer to zero since server clock ahead by 1 sec
@@ -85,20 +100,23 @@ function GameScreen() {
             socket.off('roomClosed', onRoomCLosed);
         }
 
-    }, [navigate]);
+    }, [navigate, roomCode]);
 
     const handleStartGame = () => {
         socket.emit('startGame', roomCode);
     };
 
-    const handleAnswer = (answerIndex) => {
-        if(correctAnswerIndex === null){
-            setSelectedAnswer(answerIndex);
-            socket.emit('submitAnswer', {roomCode, answerIndex});
+    const handleAnswer = (index) => {
+        if (revealedAnswer !== null || selectedOptionIndex !== null){
+            return;
         }
+
+        setSelectedOptionIndex(index);
+
+        socket.emit('submitAnswer', {roomCode, answerIndex: index});
     };
 
-    const HostLobby = () => (
+    const renderHostLobby = () => (
         <div className="host-lobby-overlay">
             <div className="host-lobby-container">
                 <h1>Room Code: <span>{roomCode}</span></h1>
@@ -117,7 +135,7 @@ function GameScreen() {
         </div>
     );
 
-    const PlayerLobby = () => (
+    const renderPlayerLobby = () => (
         <div className="join-lobby-overlay">
             <div className="join-lobby-container">
                 <h1>Room Code: {roomCode}</h1>
@@ -126,46 +144,53 @@ function GameScreen() {
         </div>
     )
 
-    const HostGameView = () => (
+    const renderHostGameView = () => (
         <div className="game-host-overlay">
             <div className="game-host-container">
                 <div className="game-host-main">
                     {currentQuestion && ((
-                        <>
-                            <div className="game-host-timer">Time remaining: {timer} </div>
-                            <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
+                        <>  
+                            <div className="game-host-header">
+                                <div className="game-host-timer">Time remaining: {timer} </div>
+                                <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
+                            </div>
+
                             <h2 className="game-host-q-text">{currentQuestion.question}</h2>
+
                             <div className="game-host-options-grid">
                                 {currentQuestion.options.map((option, index) => {
-                                    let buttonClass = '';
-                                    const isRoundOver = correctAnswerIndex !== null;
+                                    const isRoundOver = revealedAnswer !== null;
+                                    const isCorrect = option === revealedAnswer;
 
-                                    if (isRoundOver){
-                                        buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
-                                    } else if (selectedAnswer === index ){
-                                        buttonClass = 'selected';
+                                    let buttonClass = 'host-option-display'
+                                    
+                                    if(isRoundOver){
+                                        if(isCorrect){
+                                            buttonClass += ' correct-reveal';
+                                        }
+                                        else{
+                                            buttonClass += ' dimmed';
+                                        }
                                     }
 
                                     return(
-                                        <button
-                                            //display only buttons
-                                            key={index}
-                                            className={buttonClass}
-                                        >
+                                        <div key={index} className={buttonClass}>
                                             {option}
-                                        </button>
+                                        </div>
                                     );
                                 })}
                             </div>
                             <div className="host-game-result-message">
-                                {correctAnswerIndex !== null && (
-                                    <div>
-                                        {roundWinner ?(
-                                            <p>{roundWinner === socket.id ? 'you got it correct' : `${roundWinner.substring(0,5)}... was first!`}</p>
-                                        ) : (
-                                            <p>Times up</p>
-                                        )}
+                                {revealedAnswer ?(
+                                    <div className="correct-answer-reveal">
+                                        <p className="winner-text">
+                                            {roundWinner
+                                                ? `${roundWinner.substring(0,5)} got it right!`
+                                                : "Times up! No one got it."}
+                                        </p>
                                     </div>
+                                ) : (
+                                    <p className="waiting-text">Waiting for players...</p>
                                 )}
                             </div>
                         </>
@@ -186,29 +211,39 @@ function GameScreen() {
         </div>
     );
 
-    const PlayerGameView = () => (
+    const renderPlayerGameView = () => (
         <div className="player-trivia-screen-overlay">
             <div className="player-trivia-screen-container">
                 {!currentQuestion ? <p className="player-trivia-waiting-text">Waiting for question...</p> : (
                     <>
-                        <h3 className="player-trivia-status-title">{correctAnswerIndex !==null ? "Round Over!" : "Choose an answer"}</h3>
+                        <h3 className="player-trivia-status-title">
+                            {revealedAnswer !==null ? "Round Over!" : "Choose an answer"}
+                        </h3>
+                        
                         <div className="player-trivia-options-grid">
                             {currentQuestion.options.map((option, index) => {
-                                let buttonClass = '';
-                                const isRoundOver = correctAnswerIndex !== null;
-
-                                if(isRoundOver){
-                                    buttonClass = index === correctAnswerIndex ? 'correct' : 'incorrect';
+                                let buttonClass = 'player-option-btn';
+                                
+                                if(revealedAnswer !== null ){
+                                    if(option === revealedAnswer){
+                                        buttonClass += ' correct';
+                                    }
+                                    else if(selectedOptionIndex === index){
+                                        buttonClass += ' incorrect';
+                                    }
+                                    else {
+                                        buttonClass += ' dimmed';
+                                    }
                                 }
-                                else if (selectedAnswer === index){
-                                    buttonClass = 'selected';
+                                else if(selectedOptionIndex === index){
+                                  buttonClass += ' selected';
                                 }
 
                                 return (
                                     <button
                                         key={index}
                                         onClick={() => handleAnswer(index)}
-                                        disabled={isRoundOver}
+                                        disabled={revealedAnswer !== null || selectedOptionIndex !== null}
                                         className={buttonClass}
                                     >
                                         {option}
@@ -217,12 +252,12 @@ function GameScreen() {
                             })}
                         </div>
                         <div className="player-trivia-result-message">
-                            {correctAnswerIndex !== null && (
+                            {revealedAnswer !== null && (
                                 <div>
-                                    {roundWinner ?(
-                                        <p>{roundWinner === socket.id ? 'You got it correct' : 'someone else was first'}</p>
+                                    {roundWinner === socket.id ?(
+                                        <p>You won!</p>
                                     ) : (
-                                        <p>Time's up</p>
+                                        <p>{roundWinner ? "Someone else was faster!" : "Time's up!"}</p>
                                     )}
                                 </div>
                             )}
@@ -233,7 +268,7 @@ function GameScreen() {
         </div>
     );
 
-    const GameOver = () => {
+    const renderGameOver = () => {
         const sortedPlayers = [...players].sort((a,b) => (scores[b.id] || 0) - (scores[a.id]||0));
 
         return (
@@ -257,9 +292,9 @@ function GameScreen() {
 
     const renderGameState = () => {
         switch (gameState) {
-            case 'in-game': return isHost ? <HostGameView/> : <PlayerGameView/>;
-            case 'game-over': return <GameOver/>;
-            default: return isHost ? <HostLobby/> : <PlayerLobby/>;
+            case 'in-game': return isHost ? renderHostGameView() : renderPlayerGameView();
+            case 'game-over': return renderGameOver();
+            default: return isHost ? renderHostLobby() : renderPlayerLobby();
         }
     };
 

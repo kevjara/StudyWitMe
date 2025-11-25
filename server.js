@@ -8,8 +8,27 @@ import fetch from "node-fetch";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import admin from "firebase-admin";
+import { readFile } from "fs/promises";
 
 dotenv.config();
+
+// FIREBASE ADMIN SETUP FOR GAME
+try {
+  const serviceAccount = JSON.parse(
+    await readFile(new URL('./ServiceAccountKey.json', import.meta.url))
+  );
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+} catch (error) {
+  console.error("Error couldn't initialize Firebase Admin:", error.message);
+  process.exit(1);
+}
+
+const db = admin.firestore();
+// END OF FIREBASE ADMIN SETUP
 
 const app = express();
 const port = 3000;
@@ -239,26 +258,6 @@ User answer: "${userAnswer}"
 
 /////// SOCKET.IO GAME LOGIC ///////
 
-// hardcoded for now
-// TODO: query firebase
-const questions = [
-    {
-        question : "what is the capital of New York?",
-        options : ["albany","new york city","yonkers","syracuse"],
-        correctAnswerIndex : 0,
-
-    },
-    {
-        question : "what element has the atomic symbol K?",
-        options:    ["hydrogen", "sodium", "potassium", "gold"],
-        correctAnswerIndex : 2,
-    },
-    {
-        question : "what branch of government is the president apart of?",
-        options : ["judical", "executive", "senate", "congress"],
-        correctAnswerIndex : 1,
-    }
-]
 
 /**
  * Stores info on every game lobby in the following format:
@@ -270,6 +269,7 @@ const questions = [
  *      scores : {int} (array of scores where index corresponds to which players score)
  *      currentQuestionIndex : int (the index of which question the game is currently displaying in the question array)
  *      questionTimer : the timer object (object used to keep track of time for each question)
+ *      questions : [] (an array of the users flashcards from firebase)
  * }
  */
 const gameSessionsContainer = {};
@@ -288,27 +288,43 @@ function generateRoomCode(length) {
     return result;
 }
 
+function shuffleArray(array){
+  for(let i = array.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+}
+
 function sendQuestion(roomCode) {
     const game = gameSessionsContainer[roomCode];
     if (!game) return;
+
+    const gameQuestions = game.questions;
+    if(!gameQuestions || gameQuestions.length === 0){
+      io.to(roomCode).emit('gameError', "No Questions loaded");
+      return;
+    }
 
     if (game.questionTimer) {
         clearTimeout(game.questionTimer)
     }
 
     const questionIndex = game.currentQuestionIndex;
-    if( questionIndex >= questions.length) {
+    if( questionIndex >= gameQuestions.length) {
         io.to(roomCode).emit('gameOver', {scores: game.scores});
         return;
     }
 
-    const currentQuestion = questions[questionIndex];
+    const currentQuestion = gameQuestions[questionIndex];
 
+   
     const questionData = {
         question : currentQuestion.question,
         options: currentQuestion.options,
         questionNumber: questionIndex + 1,
-        totalQuestions : questions.length
+        totalQuestions : gameQuestions.length
     };
 
     io.to(roomCode).emit('newQuestion', questionData);
@@ -317,7 +333,7 @@ function sendQuestion(roomCode) {
         console.log(`Time is up for room ${roomCode}`);
 
         io.to(roomCode).emit('questionResult', {
-            correctAnswerIndex: currentQuestion.correctAnswerIndex,
+            correctAnswer: currentQuestion.answerText,
             scores: game.scores,
             winnerID: null //no winner
         });
@@ -325,7 +341,7 @@ function sendQuestion(roomCode) {
         setTimeout(() => {
             game.currentQuestionIndex++;
             sendQuestion(roomCode);
-        }, 3000) // 3 secs between questions
+        }, 4000) // 4 secs between questions
 
     }, 30000) //30 sec to answer question
 }
@@ -333,7 +349,69 @@ function sendQuestion(roomCode) {
 io.on('connection', (socket) => {
     console.log(`New user connected ${socket.id}`);
 
-    socket.on('createGame', () => {
+    socket.on('createGame', async (deckId) => {
+        //Query Firebase for questions
+        let gameQuestions = [];
+
+        if(!deckId){
+          socket.emit('gameError', 'No deck selected');
+          return;
+        }
+
+        try {
+          const flashcardsRef = db.collection("flashcard");
+          const snapshot = await flashcardsRef.where("deckId", "==", deckId).get();
+
+          if (snapshot.empty) {
+            socket.emit('gameError', 'This deck has no cards');
+            return;
+          }
+          
+          // fetch all cards from deck
+          const rawCards = snapshot.docs.map(doc => ({
+            front: doc.data().front,
+            back: doc.data().back
+          }));
+
+          if (rawCards.length < 4){
+            socket.emit('gameError', 'Deck must have at least 4 cards to play');
+            return;
+          }
+
+          // fetch answers from cards
+          const onlyAnswers = rawCards.map(c => c.back);
+
+          gameQuestions = rawCards.map((card) => {
+            const correctAnswer = card.back;
+
+            const otherAnswers = onlyAnswers.filter(ans => ans !== correctAnswer);
+
+            // pick 3 random wrong answers from deck
+            const wrongOptions = shuffleArray([...otherAnswers].slice(0,3));
+
+            let options = [correctAnswer, ...wrongOptions];
+
+            options = shuffleArray(options);
+
+            const correctIndex = options.indexOf(correctAnswer);
+
+            return{
+              question: card.front,
+              options: options,
+              correctAnswerIndex: correctIndex,
+              answerText: correctAnswer
+            };
+          })
+
+          console.log(`Successfully added ${gameQuestions.length} questions from deck ${deckId}`);
+
+        } catch (error) {
+          console.error("Error fetching flashcards:", error);
+          socket.emit('gameError', 'Server error loading deck.');
+          return;
+        }
+
+        // Game session setup
         // check if user is already hosting another room
         const existingRoomCode = Object.keys(gameSessionsContainer).find(
             (roomCode) => gameSessionsContainer[roomCode].hostId === socket.id
@@ -363,6 +441,7 @@ io.on('connection', (socket) => {
             scores: {},
             currentQuestionIndex: 0,
             questionTimer: null,
+            questions: gameQuestions,
         };
 
         socket.emit('gameCreated', roomCode);
@@ -419,16 +498,19 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const currentQuestion = questions[game.currentQuestionIndex];
+        const currentQuestion = game.questions[game.currentQuestionIndex];
+        
         const isCorrect = currentQuestion.correctAnswerIndex === answerIndex;
+
 
         if(isCorrect) {
             clearTimeout(game.questionTimer);
             game.questionTimer = null;
             game.scores[socket.id] += 10;
 
+            
             io.to(roomCode).emit('questionResult', {
-                correctAnswerIndex: currentQuestion.correctAnswerIndex,
+                correctAnswer: currentQuestion.answerText,
                 scores: game.scores,
                 winnerId: socket.id
             });
@@ -436,10 +518,10 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 game.currentQuestionIndex++;
                 sendQuestion(roomCode);
-            }, 3000);
+            }, 4000); // wait for 4 secs for next question
         }
 
-        // do nothing if answer is wrong
+        // do nothing if answer is wrong let users try again
     });
 
     socket.on('disconnect', () => {

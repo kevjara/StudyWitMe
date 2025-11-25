@@ -3,6 +3,7 @@
     "@google/generative-ai": "^0.24.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "firebase-admin": "^13.6.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",

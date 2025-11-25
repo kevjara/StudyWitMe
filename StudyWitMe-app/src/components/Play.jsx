@@ -1,18 +1,57 @@
-import React, {useState, useEffect, use} from "react";
+import React, {useState, useEffect} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
+import { db } from "../services/firebase";
+import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
+import styles from "./Flashcards.module.css";
 import "./Play.css";
 
 function Play() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
-
+    const [decks, setDecks] = useState([]);
+    const [deckCounts, setDeckCounts] = useState({});
     const [mode, setMode] = useState('menu');
     const [isLoading, setIsLoading] = useState(false);
     const [roomCode, setRoomCode] = useState('');
     const [error, setError] = useState('');
     const [showLoginPrompt, setLoginPrompt] = useState(false);
+
+    useEffect(() => {
+        if(!currentUser){
+            setDecks([])
+            return;
+        }
+        
+        const decksCollectionRef = collection(db, "deck");
+        const q = query(decksCollectionRef, where("ownerId", "==", currentUser.uid));
+
+        const unsubscribe = onSnapshot(
+            q,
+            async (snapshot) => {
+                const userDecks = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setDecks(userDecks);
+
+                const counts = {};
+                const flashcardsCollectionRef = collection(db, "flashcard");
+                for (const deck of userDecks){
+                    const cardQuery = query(flashcardsCollectionRef, where("deckId", "==", deck.id), where("ownerId", "==", currentUser.uid));
+                    const cardSnapshot = await getDocs(cardQuery);
+                    counts[deck.id] = cardSnapshot.size;
+                }
+                setDeckCounts(counts);
+            },
+            (error) => {
+                console.error("error fetching cards", error);
+            }
+        );
+
+        return() => unsubscribe();
+    }, [currentUser]);
 
     useEffect(() => {
         const onGameCreated = (newRoomCode) => {
@@ -39,14 +78,18 @@ function Play() {
         }
     }, [navigate]);
 
-    const handleHostGame = () => {
+    const handleHostGame = (deckId) => {
         if(!currentUser) {
             setLoginPrompt(true);
             return;
         }
 
         setIsLoading(true);
-        socket.emit('createGame');
+        socket.emit('createGame', deckId);
+    }
+
+    const handleShowChooseDeck = () => {
+        setMode('choosing-deck')
     }
 
     const handleShowJoinMenu = () => {
@@ -95,6 +138,52 @@ function Play() {
         );
     }
 
+    if (mode === 'choosing-deck'){
+        return(
+            <div className={styles.overlay}>
+                <div className={styles.stickyToolbar}>
+                    <div className={styles.deckToolbar}>
+                        <div className={styles.toolbarLeft}>
+                            <button className={styles.backbutton} onClick={handleBackToMenu}>
+                                Back
+                            </button>
+                        </div>
+                        <h1 className={styles.toolbarTitle}>Choose a Deck to Host</h1>
+                        <div className={styles.tollbarRight}></div>
+                    </div>
+                </div>
+                <div className={styles.menuBackdrop}>
+                    <div >
+                        <div className={styles.categoryGrid}>
+                            {decks.length    > 0 ?(
+                                decks.map((deck) => (
+                                    <div key={deck.id} className={styles.deckCard}>
+                                        <div className={styles.deckMeta}>
+                                            <div className={styles.deckCardContent}>
+                                                <h3>{deck.title || "Untitled Deck"}</h3>
+                                                <p>Cards: {deckCounts[deck.id] || 0}</p>
+                                            </div>
+                                        </div>
+                                        <div className={styles.deckButtons}>
+                                            <button className={styles.deckButtonSmall} onClick={() => handleHostGame(deck.id)}>
+                                                Host this Deck
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div>
+                                    <h2>No decks Found</h2>
+                                    <p>Create a deck first to host a game</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     if (mode === 'joining') {
         return (
             <>
@@ -123,7 +212,7 @@ function Play() {
         <> 
             <div className="menu-overlay"> 
                 <div className="menu-button-box">
-                    <button onClick={handleHostGame}>Host Game</button>
+                    <button onClick={handleShowChooseDeck}>Host Game</button>
                     <button onClick={handleShowJoinMenu}>Join Game</button>
                 </div>
             </div>
