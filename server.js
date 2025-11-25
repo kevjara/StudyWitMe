@@ -5,6 +5,7 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import cors from "cors";
 dotenv.config();
 
 const app = express();
@@ -13,6 +14,12 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
 app.use(express.static("public"));
+app.use(cors({
+  origin: "http://localhost:5173", // allow your frontend
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -219,6 +226,119 @@ User answer: "${userAnswer}"
     res.status(500).json({ error: "Comparison failed." });
   }
 });
+
+// /quiz route — creates a comprehensive quiz from a flashcard deck
+app.post("/quiz", async (req, res) => {
+  try {
+    const flashcards = req.body.flashcards || [];
+
+    if (!Array.isArray(flashcards) || flashcards.length === 0) {
+      return res.status(400).json({ error: "No flashcards provided." });
+    }
+
+    const prompt = `
+You are an advanced quiz generator.
+
+You will receive a deck of flashcards, each containing:
+- "question": the study prompt or fact
+- "relevantText": the factual or conceptual answer
+
+Your task:
+Create a fully new, comprehensive quiz that tests understanding of the ENTIRE flashcard deck.
+
+Requirements for quiz generation:
+
+1. You MUST generate completely NEW questions.
+   - Do NOT reuse the flashcard fronts as questions.
+   - The quiz should test understanding, relationships, comparisons, applications, and conceptual depth.
+
+2. The quiz MUST stay fully on-topic and contextually correct.
+   - All questions must logically follow from the information in the flashcards.
+   - The quiz should reflect the subject matter and difficulty of the deck.
+
+3. You MUST use **100%** of the information contained in the flashcards.
+   - Every flashcard’s content must contribute to at least one quiz question or answer.
+
+4. Each quiz question must be returned as a JSON object with the fields:
+   {
+     "question": "string (the newly generated quiz question)",
+     "relevantText": "string (the correct answer)",
+     "isMultipleChoice": true or false
+   }
+
+5. For short-answer questions:
+   - "relevantText" must contain ONLY the correct answer as a plain string.
+   - No explanations or extra text.
+
+6. For multiple-choice questions:
+   - "relevantText" MUST follow this strict format:
+     "|||A|||Correct Answer|||B|||Wrong Option 1|||C|||Wrong Option 2|||D|||Wrong Option 3"
+   - The correct answer MUST be the first option after "A".
+   - All distractors MUST be relevant, plausible, and academically meaningful.
+
+7. The entire output MUST be:
+   - A SINGLE JSON ARRAY of objects
+   - No text before or after the JSON
+   - No markdown
+   - No comments
+   - No natural language outside the JSON array
+
+FLASHCARDS INPUT:
+${JSON.stringify(flashcards, null, 2)}
+`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const rawOutput = result.response.text().trim();
+
+    console.log("/quiz raw output:", rawOutput);
+
+    let cleanedOutput = rawOutput
+      .replace(/```json\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/^[^{\[]*/, "")
+      .replace(/[^}\]]*$/, "")
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .trim();
+
+    try {
+      const jsonOutput = JSON.parse(cleanedOutput);
+      if (!Array.isArray(jsonOutput)) throw new Error("Response is not a JSON array.");
+
+      const normalized = jsonOutput.map((q) => {
+        const question = q.question ?? "";
+        const relevantText = q.relevantText ?? "";
+        
+        // Auto-detect MC format based on delimiter
+        const looksMC = typeof relevantText === "string" && relevantText.includes("|||");
+
+        return {
+          question,
+          relevantText,
+          isMultipleChoice: q.isMultipleChoice === true || looksMC
+        };
+      });
+
+      
+      //Log the parsed JSON result for now
+      console.log("/quiz processed output:", JSON.stringify(jsonOutput, null, 2));
+
+      // Return it to frontend (for now, we’re just logging on backend)
+      res.json({ output: normalized });
+    } catch (err) {
+      console.error("❌ Invalid JSON from Gemini /quiz:", rawOutput);
+      res.status(500).json({
+        error: "Model returned invalid JSON.",
+        rawOutput: rawOutput.slice(0, 500),
+        cleanedAttempt: cleanedOutput.slice(0, 500),
+      });
+    }
+  } catch (err) {
+    console.error("Quiz route error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
