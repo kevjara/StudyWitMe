@@ -127,7 +127,18 @@ export default function ManageDeck() {
   }, [currentUser, deckId, decks]);
   
   const handleImageError = async (type, obj) => {
-    if (!obj.pixabayId || refreshedImageUrls[obj.id]) return;
+    // Prevent infinite retry loops
+    if (!obj.pixabayId) return;
+    
+    // If we've already tried refreshing this image, don't try again
+    if (refreshedImageUrls[obj.id]) {
+        console.warn(`⚠️ Already attempted refresh for ${type} ${obj.id}, giving up`);
+        return;
+    }
+
+    // Mark as attempting refresh
+    setRefreshedImageUrls(prev => ({ ...prev, [obj.id]: 'loading' }));
+    console.log(`🖼️ Cached image expired for ${type} ${obj.id}, fetching fresh URL...`);
 
     const newUrl = await refreshPixabayImage(
         type, 
@@ -137,6 +148,7 @@ export default function ManageDeck() {
     );
 
     if (newUrl) {
+        console.log(`✅ Fresh URL obtained for ${type} ${obj.id}`);
         setRefreshedImageUrls(prev => ({ ...prev, [obj.id]: newUrl }));
         if (type === 'deck') {
              setDeck(prev => ({ ...prev, imagePath: newUrl }));
@@ -144,6 +156,9 @@ export default function ManageDeck() {
              setCards(prev => prev.map(c => c.id === obj.id ? { ...c, _imagePath: newUrl } : c));
         }
         toast("Image refreshed ✓");
+    } else {
+        console.error(`❌ Failed to fetch fresh URL for ${type} ${obj.id}`);
+        setRefreshedImageUrls(prev => ({ ...prev, [obj.id]: 'failed' }));
     }
   };
 
@@ -287,10 +302,10 @@ export default function ManageDeck() {
                 value={editCategory}
                 onChange={(e) => setEditCategory(e.target.value)}
               >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
+                <option key="select-category" value="">Select Category</option>
+                {categories.map((cat, index) => (
+                  <option key={cat.name || index} value={cat.name}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -351,12 +366,21 @@ export default function ManageDeck() {
           >
             {deck?.imagePath ? (
               <img
-                src={deck.imagePath}
+                src={refreshedImageUrls[deck.id] && refreshedImageUrls[deck.id] !== 'loading' && refreshedImageUrls[deck.id] !== 'failed'
+                  ? refreshedImageUrls[deck.id]
+                  : deck.imagePath}
                 alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ 
+                  width: "100%", 
+                  height: "100%", 
+                  objectFit: "cover",
+                  opacity: refreshedImageUrls[deck?.id] === 'loading' ? 0.3 : 1,
+                  transition: 'opacity 0.3s'
+                }}
                 onError={(e) => {
-                    e.target.style.display = 'none';
-                    handleImageError('deck', deck);
+                    if (refreshedImageUrls[deck?.id] !== 'loading' && refreshedImageUrls[deck?.id] !== 'failed') {
+                        handleImageError('deck', deck);
+                    }
                 }}
               />
             ) : (
@@ -440,12 +464,21 @@ export default function ManageDeck() {
                 >
                   {c._imagePath ? (
                     <img
-                      src={c._imagePath}
+                      src={refreshedImageUrls[c.id] && refreshedImageUrls[c.id] !== 'loading' && refreshedImageUrls[c.id] !== 'failed'
+                        ? refreshedImageUrls[c.id]
+                        : c._imagePath}
                       alt=""
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "cover",
+                        opacity: refreshedImageUrls[c.id] === 'loading' ? 0.3 : 1,
+                        transition: 'opacity 0.3s'
+                      }}
                       onError={(e) => {
-                          e.target.style.display = 'none';
-                          handleImageError('flashcard', c);
+                          if (refreshedImageUrls[c.id] !== 'loading' && refreshedImageUrls[c.id] !== 'failed') {
+                              handleImageError('flashcard', c);
+                          }
                       }}
                     />
                   ) : (
@@ -498,8 +531,8 @@ export default function ManageDeck() {
                   }
                   style={{ marginTop: "4px" }}
                 >
-                  <option value="Short Response">Short Response</option>
-                  <option value="Multiple Choice">Multiple Choice</option>
+                  <option key="short-response" value="Short Response">Short Response</option>
+                  <option key="multiple-choice" value="Multiple Choice">Multiple Choice</option>
                 </select>
               </div>
 

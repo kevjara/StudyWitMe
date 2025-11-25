@@ -205,7 +205,7 @@ export default function SearchResults() {
                                             backgroundColor: "#ffffff",
                                         }}
                                         onClick={() =>
-                                            navigate(`/flashcards/deck/${deck.id}/study`)
+                                            navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })
                                         }
                                     >
                                         {deck.imagePath && (
@@ -262,7 +262,7 @@ export default function SearchResults() {
                                                 marginBottom: "1rem",
                                             }}
                                             onClick={() =>
-                                                navigate(`/flashcards/deck/${deckId}/study`)
+                                                navigate(`/flashcards/deck/${deckId}/study`, { state: { deck: { id: deckId } } })
                                             }
                                         >
                                             {card.imagePath && (

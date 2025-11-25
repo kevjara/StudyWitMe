@@ -14,12 +14,16 @@ export const refreshPixabayImage = async (collectionName, docId, pixabayId, canE
     if (!pixabayId) return null;
     console.log(`🔄 Refreshing expired image for ${collectionName} ${docId} using Pixabay ID: ${pixabayId}`);
     try {
-        //fetches url from pixabay
-        const response = await fetch(`https://pixabay.com/api/?key=${PIXABAY_API_KEY}&id=${pixabayId}`);
+        //fetches url from pixabay via backend proxy
+        const response = await fetch(`http://localhost:3000/pixabay-id/${pixabayId}`);
         const data = await response.json();
+        
+        console.log(`📦 Pixabay API response for ID ${pixabayId}:`, data);
 
-        if (data.hits && data.hits.length > 0) {
-            const newUrl = data.hits[0].webformatURL; // Or imageURL for HD
+        if (data.webformatURL) {
+            const newUrl = data.webformatURL; // Or largeImageURL for HD
+            console.log(`🔗 New URL obtained: ${newUrl}`);
+            
             //It will update firestore link with the most recent image if user is the owner.
             if (canEdit) {
                 const docRef = doc(db, collectionName, docId);
@@ -28,6 +32,8 @@ export const refreshPixabayImage = async (collectionName, docId, pixabayId, canE
             }
             
             return newUrl;
+        } else {
+            console.warn(`⚠️ No webformatURL in response for Pixabay ID ${pixabayId}`);
         }
     } catch (error) {
         console.error("Failed to refresh Pixabay image:", error);

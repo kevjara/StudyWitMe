@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useDecks } from "../context/DecksContext"; // ← NEW
 import { useNavigate, Link } from "react-router-dom";
 import styles from "./Flashcards.module.css";
+import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
 
 export default function Flashcards() {
     const { currentUser, loading } = useAuth();
@@ -18,6 +19,7 @@ export default function Flashcards() {
     const [selectedDecks, setSelectedDecks] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteStatus, setDeleteStatus] = useState("");
+    const [refreshedUrls, setRefreshedUrls] = useState({});
 
     // Filter state
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -27,8 +29,11 @@ export default function Flashcards() {
 
     const navigate = useNavigate();
 
-    // 🔹 Categories from cached decks
-    const categories = [...new Set(decks.map((d) => d.category).filter(Boolean))];
+    // 🔹 Categories from cached decks - memoized to prevent infinite loops
+    const categories = useMemo(() => 
+        [...new Set(decks.map((d) => d.category).filter(Boolean))],
+        [decks]
+    );
 
     // Initialize category filter once
     useEffect(() => {
@@ -113,6 +118,61 @@ export default function Flashcards() {
         } catch (err) {
             console.error("Error deleting decks:", err);
             setDeleteStatus("Error deleting decks. Check console.");
+        }
+    };
+    
+    const handleImageError = async (e, deck) => {
+        const isOwner = currentUser?.uid === deck.ownerId; 
+        
+        // Prevent infinite retry loops - no pixabayId means we can't fetch a new image
+        if (!deck.pixabayId) {
+            console.warn(`⚠️ No pixabayId for deck ${deck.id}, cannot refresh`);
+            e.target.style.display = 'none';
+            return;
+        }
+        
+        // Check current refresh status
+        const currentStatus = refreshedUrls[deck.id];
+        if (currentStatus === 'loading') {
+            console.log(`⏳ Already fetching fresh URL for deck ${deck.id}...`);
+            return;
+        }
+        if (currentStatus === 'failed') {
+            console.warn(`⚠️ Previously failed to refresh deck ${deck.id}, hiding image`);
+            e.target.style.display = 'none';
+            return;
+        }
+        // If we have a refreshed URL and it's STILL failing, don't retry
+        if (currentStatus && currentStatus !== 'loading' && currentStatus !== 'failed') {
+            console.warn(`⚠️ Refreshed URL also expired for deck ${deck.id}, giving up`);
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
+            e.target.style.display = 'none';
+            return;
+        }
+
+        // Mark that we're attempting a refresh to prevent multiple simultaneous calls
+        setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'loading' }));
+        e.target.style.opacity = 0.3;
+        console.log(`🖼️ Cached image expired for deck ${deck.id} (Pixabay ID: ${deck.pixabayId}), fetching fresh URL...`);
+        
+        // Fetch fresh URL from Pixabay and update Firestore cache
+        const newUrl = await refreshPixabayImage(
+            'deck', 
+            deck.id, 
+            deck.pixabayId, 
+            isOwner // Only update database if user owns this deck
+        );
+
+        if (newUrl) {
+            console.log(`✅ Fresh URL obtained for deck ${deck.id}: ${newUrl.substring(0, 50)}...`);
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: newUrl }));
+            e.target.src = newUrl;
+            e.target.style.opacity = 1;
+            e.target.style.display = 'block';
+        } else {
+            console.error(`❌ Failed to fetch fresh URL for deck ${deck.id}`);
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
+            e.target.style.display = 'none';
         }
     };
 
@@ -282,6 +342,27 @@ export default function Flashcards() {
                                                     {isSelected ? "✕" : "✓"}
                                                 </button>
                                             )}
+                                            
+                                            {/* Deck Cover Image with Smart Caching */}
+                                            {(deck.imagePath || deck.pixabayId) && (
+                                                <div style={{width: '100%', height: '100px', overflow: 'hidden', borderRadius: '8px 8px 0 0', background: '#f0f0f0'}}>
+                                                    <img
+                                                        src={refreshedUrls[deck.id] && refreshedUrls[deck.id] !== 'loading' && refreshedUrls[deck.id] !== 'failed' 
+                                                            ? refreshedUrls[deck.id] 
+                                                            : deck.imagePath}
+                                                        alt={deck.title}
+                                                        style={{
+                                                            width: '100%', 
+                                                            height: '100%', 
+                                                            objectFit: 'cover',
+                                                            opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
+                                                            transition: 'opacity 0.3s'
+                                                        }}
+                                                        onError={(e) => handleImageError(e, deck)}
+                                                    />
+                                                </div>
+                                            )}
+                                            {/* End Deck Cover Image */}
 
                                             <div className={styles.deckMeta}>
                                                 <div className={styles.deckCardContent}>
@@ -301,7 +382,7 @@ export default function Flashcards() {
                                             <div className={styles.deckButtons}>
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
+                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })}
                                                 >
                                                     Study
                                                 </button>

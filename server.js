@@ -12,6 +12,21 @@ const app = express();
 const port = 3000;
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Enable CORS for frontend
+app.use((req, res, next) => {
+  const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json());
 app.use(express.static("public"));
 
@@ -163,5 +178,42 @@ app.get("/pixabay-search", async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Pixabay search failed" });
+  }
+});
+
+// Get Pixabay image by ID
+app.get("/pixabay-id/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ error: "Missing image ID" });
+    
+    const url = new URL("https://pixabay.com/api/");
+    url.searchParams.set("key", process.env.PIXABAY_API_KEY);
+    url.searchParams.set("id", id);
+    
+    const r = await fetch(url.toString());
+    if (!r.ok) {
+      const text = await r.text();
+      return res.status(r.status).json({ error: text });
+    }
+    const data = await r.json();
+    
+    if (data.hits && data.hits.length > 0) {
+      const hit = data.hits[0];
+      res.json({
+        id: hit.id,
+        previewURL: hit.previewURL,
+        webformatURL: hit.webformatURL,
+        largeImageURL: hit.largeImageURL,
+        pageURL: hit.pageURL,
+        user: hit.user,
+        tags: hit.tags
+      });
+    } else {
+      res.status(404).json({ error: "Image not found" });
+    }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Pixabay ID lookup failed" });
   }
 });

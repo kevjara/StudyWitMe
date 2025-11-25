@@ -382,8 +382,8 @@
     align-items: center;
 }
 .achievementBadge {
-    width: 50px; 
-    height: 50px;
+    width: 80px; 
+    height: 80px;
     object-fit: contain; 
     cursor: help;
     transition: transform 0.2s;

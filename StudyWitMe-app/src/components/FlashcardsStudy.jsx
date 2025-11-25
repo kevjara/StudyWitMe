@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import styles from "./FlashcardsStudy.module.css";
+import { refreshPixabayImage } from "../utils/imageRefresh";
 
 function FlashcardsStudy() {
     const { currentUser } = useAuth();
@@ -24,6 +25,7 @@ function FlashcardsStudy() {
     const [cardStatuses, setCardStatuses] = useState([]);
      const [mode, setMode] = useState(null); // null | "practice" | "review"
     const [isFlipped, setIsFlipped] = useState(false);
+    const [refreshedUrls, setRefreshedUrls] = useState({});
 
     // Safety check: no deck
     useEffect(() => {
@@ -41,7 +43,15 @@ function FlashcardsStudy() {
             try {
                 setLoading(true);
                 const flashRef = collection(db, "flashcard");
-                const q = query(flashRef, where("deckId", "==", deck.id));
+                // Query flashcards - either user owns them OR deck is public
+                const isOwner = deck.ownerId === currentUser.uid;
+                const q = isOwner || !deck.isPublic
+                    ? query(
+                        flashRef, 
+                        where("deckId", "==", deck.id),
+                        where("ownerId", "==", currentUser.uid)
+                    )
+                    : query(flashRef, where("deckId", "==", deck.id));
                 const snap = await getDocs(q);
 
                 const cards = snap.docs.map((doc) => ({
@@ -81,6 +91,45 @@ function FlashcardsStudy() {
             statusTimeoutRef.current = null;
         }, duration);
     }
+
+    // Handle image refresh for expired Pixabay URLs
+    const handleImageError = async (e, obj, type) => {
+        const isOwner = currentUser?.uid === deck?.ownerId;
+        
+        if (!obj.pixabayId) {
+            console.warn(`⚠️ No pixabayId for ${type} ${obj.id}, cannot refresh`);
+            e.target.style.display = 'none';
+            return;
+        }
+        
+        const currentStatus = refreshedUrls[obj.id];
+        if (currentStatus === 'loading' || currentStatus === 'failed') {
+            e.target.style.display = 'none';
+            return;
+        }
+        if (currentStatus && currentStatus !== 'loading' && currentStatus !== 'failed') {
+            console.warn(`⚠️ Refreshed URL also expired for ${type} ${obj.id}, giving up`);
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'failed' }));
+            e.target.style.display = 'none';
+            return;
+        }
+
+        setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'loading' }));
+        e.target.style.opacity = 0.3;
+        
+        const newUrl = await refreshPixabayImage(type, obj.id, obj.pixabayId, isOwner);
+
+        if (newUrl) {
+            console.log(`✅ Fresh URL obtained for ${type} ${obj.id}`);
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: newUrl }));
+            e.target.src = newUrl;
+            e.target.style.opacity = 1;
+            e.target.style.display = 'block';
+        } else {
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'failed' }));
+            e.target.style.display = 'none';
+        }
+    };
 
     // --- Gemini integration (same logic as Quiz) ---
     const startStudying = async () => {
@@ -243,7 +292,17 @@ function FlashcardsStudy() {
 
                         {deck.imagePath && (
                             <div className={styles.deckCoverImage}>
-                                <img src={deck.imagePath} alt="Deck cover" />
+                                <img 
+                                    src={refreshedUrls[deck.id] && refreshedUrls[deck.id] !== 'loading' && refreshedUrls[deck.id] !== 'failed'
+                                        ? refreshedUrls[deck.id]
+                                        : deck.imagePath}
+                                    alt="Deck cover"
+                                    style={{
+                                        opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
+                                        transition: 'opacity 0.3s'
+                                    }}
+                                    onError={(e) => handleImageError(e, deck, 'deck')}
+                                />
                             </div>
                         )}
 
@@ -274,9 +333,16 @@ function FlashcardsStudy() {
                                     {/* Display image if available */}
                                     {flashcards[currentIndex].imagePath && (
                                         <img
-                                            src={flashcards[currentIndex].imagePath}
+                                            src={refreshedUrls[flashcards[currentIndex].id] && refreshedUrls[flashcards[currentIndex].id] !== 'loading' && refreshedUrls[flashcards[currentIndex].id] !== 'failed'
+                                                ? refreshedUrls[flashcards[currentIndex].id]
+                                                : flashcards[currentIndex].imagePath}
                                             alt="Flashcard visual"
                                             className={styles.flashcardImage}
+                                            style={{
+                                                opacity: refreshedUrls[flashcards[currentIndex].id] === 'loading' ? 0.3 : 1,
+                                                transition: 'opacity 0.3s'
+                                            }}
+                                            onError={(e) => handleImageError(e, flashcards[currentIndex], 'flashcard')}
                                         />
                                     )}
                                 </div>

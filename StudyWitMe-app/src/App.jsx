@@ -9,6 +9,7 @@ import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import ManageDeck from "./components/ManageDeck";
 import SearchResults from "./components/SearchResults";
+import FlashcardsStudy from "./components/FlashcardsStudy";
 import { DecksProvider } from "./context/DecksContext";
 
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="/main" element={<MainMenu />} />
             <Route path="/create" element={<FlashcardGenerator />} />
             <Route path="/flashcards" element={<Flashcards />} />
+            <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
             <Route path="/profile/:uid" element={<Profile />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />

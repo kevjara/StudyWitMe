@@ -257,7 +257,7 @@ function Profile() {
                                         minWidth: "260px",
                                         backgroundColor: "#ffffff",
                                     }}
-                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`)}
+                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })}
                                 >
                                     {deck.imagePath && (
                                         <a href={deck.attributionLink} target="_blank" rel="noopener noreferrer">
