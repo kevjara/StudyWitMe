@@ -10,6 +10,10 @@ import Settings from "./components/Settings";
 import ManageDeck from "./components/ManageDeck";
 import SearchResults from "./components/SearchResults";
 import FlashcardsStudy from "./components/FlashcardsStudy";
+import FlashcardsQuiz from "./components/FlashcardsQuiz";
+import Play from "./components/Play";
+import GameConnection from "./components/GameConnection";
+import GameScreen from "./components/GameScreen";
 import { DecksProvider } from "./context/DecksContext";
 
 
@@ -29,7 +33,12 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
+            <Route path="/flashcards/deck/:deckId/quiz" element={<FlashcardsQuiz />} />
             <Route path="/search" element={<SearchResults />} />
+            <Route element={<GameConnection />}>
+              <Route path="/play" element={<Play />} />
+              <Route path="/game/:roomCode" element={<GameScreen />} />
+            </Route>
           </Routes>
     </>
     </DecksProvider>
