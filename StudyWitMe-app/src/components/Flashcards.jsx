@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useDecks } from "../context/DecksContext"; // ← NEW
 import { useNavigate, Link } from "react-router-dom";
+import { db } from "../services/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import styles from "./Flashcards.module.css";
 import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
 
@@ -20,6 +22,7 @@ export default function Flashcards() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteStatus, setDeleteStatus] = useState("");
     const [refreshedUrls, setRefreshedUrls] = useState({});
+    const [masteryData, setMasteryData] = useState({}); // deckId -> mastery info
 
     // Filter state
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -87,6 +90,35 @@ export default function Flashcards() {
         setFilteredDecks(updated);
         window.scrollTo(0, 0); // 🔥 Fixed infinite loop bug
     }, [decks, sortOption, selectedCategories]);
+
+    // Fetch mastery data for all user's decks
+    useEffect(() => {
+        const fetchMasteryData = async () => {
+            if (!currentUser || decks.length === 0) return;
+
+            try {
+                const masteryRef = collection(db, "mastery");
+                const q = query(masteryRef, where("userId", "==", currentUser.uid));
+                const snap = await getDocs(q);
+
+                const masteryMap = {};
+                snap.docs.forEach((doc) => {
+                    const data = doc.data();
+                    masteryMap[data.deckId] = {
+                        masteryLevel: data.masteryLevel || 0,
+                        lastStudied: data.lastStudied,
+                        quizAttempts: data.quizAttempts || []
+                    };
+                });
+
+                setMasteryData(masteryMap);
+            } catch (err) {
+                console.error("Error fetching mastery data:", err);
+            }
+        };
+
+        fetchMasteryData();
+    }, [currentUser, decks]);
 
     // Delete helpers
     const toggleCategory = (cat) => {
@@ -369,13 +401,21 @@ export default function Flashcards() {
                                                     <h3>{deck.title || "Untitled Deck"}</h3>
                                                     <p>Cards: {deckCounts[deck.id] || 0}</p>
 
-                                                    <p>Cards Mastered: 0%</p>
+                                                    <p>Cards Mastered: {masteryData[deck.id]?.masteryLevel || 0}%</p>
                                                     <div className={styles.progressBar}>
-                                                        <div className={styles.progressFill} style={{ width: "0%" }} />
+                                                        <div className={styles.progressFill} style={{ width: `${masteryData[deck.id]?.masteryLevel || 0}%` }} />
                                                     </div>
 
-                                                    <p>Last Quiz Score: N/A</p>
-                                                    <p>Last Studied: Jan 1st</p>
+                                                    <p>Last Quiz Score: {
+                                                        masteryData[deck.id]?.quizAttempts?.length > 0
+                                                            ? `${masteryData[deck.id].quizAttempts[masteryData[deck.id].quizAttempts.length - 1]}%`
+                                                            : "N/A"
+                                                    }</p>
+                                                    <p>Last Studied: {
+                                                        masteryData[deck.id]?.lastStudied
+                                                            ? new Date(masteryData[deck.id].lastStudied.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                                                            : "Never"
+                                                    }</p>
                                                 </div>
                                             </div>
 
