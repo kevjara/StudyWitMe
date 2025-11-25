@@ -113,7 +113,11 @@ export default function Flashcards() {
         }
 
         // Sorting
-        if (sortOption === "az") {
+        if (sortOption === "public") {
+        updated = updated.filter(deck => deck.isPublic === true);
+        } else if (sortOption === "private") {
+            updated = updated.filter(deck => deck.isPublic === false);
+        } else if (sortOption === "az") {
         updated.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
         } else if (sortOption === "za") {
         updated.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
@@ -270,6 +274,8 @@ export default function Flashcards() {
                     <option value="oldest">Oldest</option>
                     <option value="az">A–Z</option>
                     <option value="za">Z–A</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
                     </select>
 
                     {/* Filter Button + Floating Panel */}
