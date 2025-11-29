@@ -11,6 +11,7 @@ import Login from "./components/Login";
 import FlashcardGenerator from "./components/FlashcardGenerator";
 import Background from "./components/Background";
 import Flashcards from "./components/Flashcards";
+import { DecksProvider } from "./context/DecksContext";
 import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import FlashcardsStudy from "./components/FlashcardsStudy";
@@ -19,6 +20,7 @@ import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
 import Header from "./components/Header";
 import SearchResults from "./components/SearchResults";
+
 
 function App() {
   const navigate = useNavigate();
@@ -43,38 +45,40 @@ function App() {
   const hideHeader = ["/", "/login"].includes(location.pathname);
 
   return (
-    <>
-      <Background />
-      {!hideHeader && <Header handleSignOut={handleGlobalSignOut} />}
+    <DecksProvider>
+      <>
+        <Background />
+        {!hideHeader && <Header handleSignOut={handleGlobalSignOut} />}
 
-      {showSignOutOverlay && (
-        <div className={styles.signoutOverlay}>
-          <div className={styles.signoutModal}>
-            <h2>Signing out...</h2>
-            <p>Please wait...</p>
+        {showSignOutOverlay && (
+          <div className={styles.signoutOverlay}>
+            <div className={styles.signoutModal}>
+              <h2>Signing out...</h2>
+              <p>Please wait...</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <Routes>
-        {/* Routes WITHOUT header */}
-        <Route path="/" element={<TitleScreen />} />
-        <Route path="/login" element={<Login />} />
+        <Routes>
+          {/* Routes WITHOUT header */}
+          <Route path="/" element={<TitleScreen />} />
+          <Route path="/login" element={<Login />} />
 
-        {/* Routes WITH header */}
-        <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
-          <Route path="/main" element={<MainMenu />} />
-          <Route path="/create" element={<FlashcardGenerator />} />
-          <Route path="/flashcards" element={<Flashcards />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/flashcards_study" element={<FlashcardsStudy />} />
-          <Route path="/quiz" element={<FlashcardsQuiz />} />
-          <Route path="/manage/:deckId" element={<ManageDeck />} />
-          <Route path="/search" element={<SearchResults />} />
-        </Route>
-      </Routes>
-    </>
+          {/* Routes WITH header */}
+          <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
+            <Route path="/main" element={<MainMenu />} />
+            <Route path="/create" element={<FlashcardGenerator />} />
+            <Route path="/flashcards" element={<Flashcards />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
+            <Route path="/flashcards/deck/:deckId/quiz" element={<FlashcardsQuiz />} />
+            <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
+            <Route path="/search" element={<SearchResults />} />
+          </Route>
+        </Routes>
+      </>
+    </DecksProvider>
   );
 }
 

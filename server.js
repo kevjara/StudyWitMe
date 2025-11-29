@@ -230,7 +230,12 @@ User answer: "${userAnswer}"
 // /quiz route — creates a comprehensive quiz from a flashcard deck
 app.post("/quiz", async (req, res) => {
   try {
-    const flashcards = req.body.flashcards || [];
+    const {
+      flashcards = [],
+      mode = "full",           // "full" or "short"
+      difficulty = "normal",   // "easy", "normal", "hard"
+      questionCount = null     // used only if mode === "short"
+    } = req.body;
 
     if (!Array.isArray(flashcards) || flashcards.length === 0) {
       return res.status(400).json({ error: "No flashcards provided." });
@@ -245,6 +250,43 @@ You will receive a deck of flashcards, each containing:
 
 Your task:
 Create a fully new, comprehensive quiz that tests understanding of the ENTIRE flashcard deck.
+
+ // SETTINGS FROM USER
+    MODE: ${mode}
+    DIFFICULTY: ${difficulty}
+    QUESTION COUNT (if short mode): ${questionCount}
+
+    BEHAVIOR RULES BASED ON SETTINGS:
+
+    === MODE ===
+    1. FULL MODE:
+       - You MUST incorporate 100% of the information from ALL flashcards.
+       - Every flashcard’s facts MUST appear in some question or answer.
+
+    2. SHORT MODE:
+       - Create EXACTLY the number of questions specified: ${questionCount}.
+       - Try to incorporate as many unique flashcards as possible.
+       - If ${questionCount} < flashcards.length:
+         - Prioritize the highest-value or most central concepts.
+         - Combine multiple flashcards into a single question if needed.
+
+    === DIFFICULTY ===
+    1. EASY:
+       - Questions should resemble the flashcards closely.
+       - Simple recall or recognition.
+       - Minimal reasoning required.
+
+    2. NORMAL:
+       - Standard quiz difficulty.
+       - Application, comprehension, comparison.
+       - Similar to the quiz generation you currently perform.
+
+    3. HARD:
+       - Deep reasoning, synthesis, multi-step connections.
+       - More abstract inference across multiple flashcards.
+       - Very challenging academic-style questions.
+
+    === FORMATTING RULES REMAIN THE SAME ===
 
 Requirements for quiz generation:
 
