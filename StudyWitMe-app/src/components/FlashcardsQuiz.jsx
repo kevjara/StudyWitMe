@@ -259,12 +259,17 @@ function FlashcardsQuiz() {
             isMultipleChoice: fc.type === "Multiple Choice",
         }));
 
-        // POST to /quiz (Version 1)
         const response = await fetch("/quiz", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ flashcards: formatted }),
+            body: JSON.stringify({
+                flashcards: formatted,
+                mode: quizLength === "full" ? "full" : "short",
+                difficulty: difficulty,        // ← FIXED HERE
+                questionCount: quizLength === "short" ? questionCount : null
+            }),
         });
+
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
