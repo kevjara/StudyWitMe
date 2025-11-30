@@ -20,6 +20,9 @@ import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
 import Header from "./components/Header";
 import SearchResults from "./components/SearchResults";
+import Play from "./components/Play";
+import GameScreen from "./components/GameScreen";
+import GameConnection from "./components/GameConnection";
 
 
 function App() {
@@ -41,14 +44,10 @@ function App() {
     }
   };
 
-  //Only show Header if not on these routes
-  const hideHeader = ["/", "/login"].includes(location.pathname);
-
   return (
     <DecksProvider>
       <>
         <Background />
-        {!hideHeader && <Header handleSignOut={handleGlobalSignOut} />}
 
         {showSignOutOverlay && (
           <div className={styles.signoutOverlay}>
@@ -63,6 +62,10 @@ function App() {
           {/* Routes WITHOUT header */}
           <Route path="/" element={<TitleScreen />} />
           <Route path="/login" element={<Login />} />
+          <Route element={<GameConnection />}>
+              <Route path="/play" element={<Play />} />
+              <Route path="/game/:roomCode" element={<GameScreen/>} />
+          </Route>
 
           {/* Routes WITH header */}
           <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
@@ -72,7 +75,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
-            <Route path="/flashcards/deck/:deckId/quiz" element={<FlashcardsQuiz />} />
+            <Route path="/flashcards_quiz" element={<FlashcardsQuiz />} />
             <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
             <Route path="/search" element={<SearchResults />} />
           </Route>
