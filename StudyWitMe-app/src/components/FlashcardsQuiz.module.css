@@ -190,6 +190,18 @@
     text-align: left;
 }
 
+.labelRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;             /* spacing between label & tooltip */
+}
+
+.toggleLabel {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
 .switch {
     --_switch-bg-clr: #70a9c5;
     --_switch-padding: 4px; /* padding around button*/
@@ -397,6 +409,65 @@
     border-radius: 50%;
     text-align: center;
     line-height: 20px;
+}
+
+.timeInputRow {
+    display: flex;
+    gap: 1.2rem;
+    justify-content: center;
+    align-items: flex-end;
+    margin-top: 10px;
+}
+
+.timeField {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90px;        /* Consistent width for each field */
+}
+
+.timeField label {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    color: #1b3c4f;
+    margin-bottom: 6px;
+}
+
+/* The number field style */
+.timeField input {
+    width: 100%;
+    text-align: center;
+    padding: 10px 0;
+    
+    font-size: 1.3rem;
+    font-weight: 600;
+
+    border: 2px solid #dadada;
+    border-radius: 10px;
+    background: #fafafa;
+
+    transition: all 0.2s ease;
+}
+
+/* On focus */
+.timeField input:focus {
+    outline: none;
+    border-color: #6a8dff;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(106, 141, 255, 0.2);
+}
+
+/* Remove spin buttons (Chrome, Edge) */
+.timeField input::-webkit-outer-spin-button,
+.timeField input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Remove spin buttons (Firefox) */
+.timeField input[type=number] {
+    -moz-appearance: textfield;
 }
 
 

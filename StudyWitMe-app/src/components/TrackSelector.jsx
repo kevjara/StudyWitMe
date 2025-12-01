@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import {
-    WheelPicker,
-    WheelPickerWrapper,
-} from "@ncdai/react-wheel-picker";
+import { WheelPicker, WheelPickerWrapper } from "@ncdai/react-wheel-picker";
 import { useMusic } from "../context/MusicProvider";
 import styles from "./TrackSelector.module.css";
 import disc from "../assets/disc.svg";

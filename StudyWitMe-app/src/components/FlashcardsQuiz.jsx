@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import TimeSelector from "./TimeSelector";
 import styles from "./FlashcardsQuiz.module.css";
 
 function FlashcardsQuiz() {
@@ -16,6 +17,7 @@ function FlashcardsQuiz() {
     const [filteredFlashcards, setFilteredFlashcards] = useState([]);
     const [processedFlashcards, setProcessedFlashcards] = useState([]); // each item: [question, responseOrOptions, isMC, correctLabel]
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [maxShortCards, setMaxShortCards] = useState(0);
 
     // UI state
     const [loading, setLoading] = useState(true);
@@ -33,6 +35,11 @@ function FlashcardsQuiz() {
     const [difficulty, setDifficulty] = useState("normal"); //"easy, normal, hard"
 
     // Setup & timer (from version 2)
+    // Time selection mode
+    const [timeMode, setTimeMode] = useState("auto"); // "auto" | "custom"
+    const [customHours, setCustomHours] = useState("0");
+    const [customMinutes, setCustomMinutes] = useState("6");
+    const [customSeconds, setCustomSeconds] = useState("0");
     const [lastWarning, setLastWarning] = useState(null);
     const [showSetup, setShowSetup] = useState(false);
     const [questionCount, setQuestionCount] = useState(0);
@@ -76,24 +83,53 @@ function FlashcardsQuiz() {
 
     // Keep filteredFlashcards from Version 2 (only cards that have front & back)
     useEffect(() => {
-        if (flashcards.length === 0) {
-        setFilteredFlashcards([]);
-        return;
+        if (!flashcards.length) {
+            setFilteredFlashcards([]);
+            setMaxShortCards(0);
+            setQuestionCount(0);
+            return;
         }
 
         const filtered = flashcards.filter(
-        (fc) => fc.front && fc.front.trim() !== "" && fc.back && fc.back.trim() !== ""
+            (fc) => fc.front?.trim() && fc.back?.trim()
         );
 
         setFilteredFlashcards(filtered);
 
+        const maxShort = Math.ceil(filtered.length / 2);
+        setMaxShortCards(maxShort);
+
+        // Update questionCount based on quizLength and filtered cards
+        setQuestionCount((prev) => {
+            if (quizLength === "short") {
+                // If previous count is valid, keep it; else default to maxShort
+                return prev > 0 && prev <= maxShort ? prev : maxShort;
+            } else {
+                return filtered.length;
+            }
+        });
+
         if (filtered.length === 0) {
-        setStatus("No flashcards with content to quiz.");
-        } else {
-        // default questionCount to max available if not set yet
-        if (!questionCount) setQuestionCount(filtered.length);
+            setStatus("No flashcards with content to quiz.");
         }
-    }, [flashcards]);
+    }, [flashcards, quizLength]);
+
+
+    //Time Mode Custom
+    useEffect(() => {
+        if (timeMode === "custom") {
+            updateCustomTime();
+        }
+    }, [customHours, customMinutes, customSeconds, timeMode]);
+
+    //Time Mode Auto
+    useEffect(() => {
+        if (timeMode === "auto") {
+            const times = getAvailableTimes();
+            const maxTime = Math.max(...times);
+            setSelectedTime(maxTime);
+        }
+    }, [timeMode, questionCount]);
 
     // Timer effect (from Version 2)
     useEffect(() => {
@@ -229,13 +265,22 @@ function FlashcardsQuiz() {
         return times;
     };
 
+    //Set quiz time based on user input from custom time mode
+    const updateCustomTime = () => {
+        const h = Number(customHours) || 0;
+        const m = Number(customMinutes) || 0;
+        const s = Number(customSeconds) || 0;
+
+        const totalMinutes = (h * 60) + m + (s / 60);
+        if (totalMinutes > 0) {
+            setSelectedTime(totalMinutes);
+        }
+    };
+
     // handle start quiz: set timer and call startQuiz (but our startQuiz uses /quiz)
     const handleStartQuiz = async () => {
         setLastWarning(null);
         setTimerRunning(false);
-        // set timer
-        setTimeLeft(selectedTime * 60);
-        setShowTimer(true);
         // Start the timer after quiz created (or start it now and keep it running once quiz starts)
         // We'll start countdown when we set timerRunning = true after quiz creation to avoid wasted time during generation
         await startQuiz(); // per decision: startQuiz uses /quiz and ignores questionCount
@@ -244,16 +289,30 @@ function FlashcardsQuiz() {
     // startQuiz uses the /quiz route (Version 1 logic). It ignores questionCount (Option 1).
     const startQuiz = async () => {
         if (filteredFlashcards.length === 0) {
-        setStatus("No flashcards found in this deck.");
-        return;
+            setStatus("No flashcards found in this deck.");
+            return;
         }
 
         try {
         setStatus("Creating quiz...");
         setQuizStarted(false);
 
+        // Determine which flashcards to send
+        let flashcardsToSend = filteredFlashcards;
+
+        if (quizLength === "short") {
+            const shuffled = [...filteredFlashcards];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            // Clamp to questionCount to avoid out-of-range
+            const maxCards = Math.min(questionCount, shuffled.length);
+            flashcardsToSend = shuffled.slice(0, maxCards);
+        }
+
         // Format flashcards for the backend - use front/back fields
-        const formatted = filteredFlashcards.map((fc) => ({
+        const formatted = flashcardsToSend.map((fc) => ({
             question: fc.front,
             relevantText: fc.back,
             isMultipleChoice: fc.type === "Multiple Choice",
@@ -266,7 +325,7 @@ function FlashcardsQuiz() {
                 flashcards: formatted,
                 mode: quizLength === "full" ? "full" : "short",
                 difficulty: difficulty,        // ← FIXED HERE
-                questionCount: quizLength === "short" ? questionCount : null
+                questionCount: quizLength === "short" ? flashcardsToSend.length : null
             }),
         });
 
@@ -284,6 +343,11 @@ function FlashcardsQuiz() {
         // IMPORTANT: The backend returns fully NEW quiz items. Use them directly.
         // Each output item should be { question, relevantText, isMultipleChoice }
         const outputs = data.output;
+        setQuestionCount(outputs.length);
+        if (timeMode === "auto") {
+            const times = getAvailableTimes();
+            setSelectedTime(Math.max(...times));
+        }
 
         const processed = outputs.map((item, idx) => {
             const q = item.question || "";
@@ -341,6 +405,7 @@ function FlashcardsQuiz() {
         // start timer now that quiz is ready
         if (selectedTime && selectedTime > 0) {
             setTimeLeft(selectedTime * 60);
+            setShowTimer(true);
             setTimerRunning(true);
         }
         setStatus("");
@@ -350,14 +415,6 @@ function FlashcardsQuiz() {
         console.error("Quiz error:", err);
         showStatus(`Error: ${err.message}`);
         }
-    };
-
-    const setCardStatus = (message) => {
-        setCardStatuses((prev) => {
-        const newStatuses = [...prev];
-        newStatuses[currentIndex] = message;
-        return newStatuses;
-        });
     };
 
     const resetQuizState = () => {
@@ -519,7 +576,18 @@ function FlashcardsQuiz() {
             <div className={styles.setupCard}>
                 <h2>Setup Your Quiz</h2>
                 {/* Quiz Length Toggle */}
-                <label className={styles.toggleLabel}>Length of Quiz</label>
+                <div className={styles.labelRow}>
+                    <label className={styles.toggleLabel}>Length of Quiz</label>
+                    {/* Tooltip */}
+                    <div className={styles.toolTip}>
+                        <div className={styles.icon}>i
+                            <div className={styles.toolTipTextOne}>
+                                Full uses the complete deck, Short only uses part of the deck 
+                                (Short quiz scores won't overwrite previous quiz score)
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <label for="filter" class={styles.switch} aria-label="Toggle Filter">
                     <input 
@@ -533,38 +601,34 @@ function FlashcardsQuiz() {
                     <span>Full</span>
                     <span>Short</span>
                 </label>
-                {/* Tooltip */}
-                <div class={styles.toolTip}>
-                    <div class={styles.icon}>i
-                    <div class={styles.toolTipTextOne}>Full uses the complete deck, Short only uses part of the deck (Short quiz scores won't overwrite previous quiz score)</div>
-                    </div>
-                </div>
                 {/* Question Count */}
                 {quizLength === "short" && (
                 <>
-                    <label>Questions (max {filteredFlashcards.length})</label>
+                    <label className={styles.toggleLabel}>Cards to use (max {maxShortCards})</label>
                     <input
-                    type="number"
-                    min={1}
-                    max={filteredFlashcards.length}
-                    value={questionCount}
-                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                        type="number"
+                        min={1}
+                        max={maxShortCards}
+                        value={questionCount}
+                        onChange={(e) => setQuestionCount(Number(e.target.value))}
                     />
                 </>
                 )}
 
-                {/* Time Selector */}
-                {/* <label>Time:</label>
-                <select value={selectedTime} onChange={(e) => setSelectedTime(Number(e.target.value))}>
-                {getAvailableTimes().map((t) => (
-                    <option key={t} value={t}>
-                    {t} minutes
-                    </option>
-                ))}
-                </select> */}
-
                 {/* Difficulty Selector */}
-                <label className={styles.toggleLabel}>Difficulty</label>
+                <div className={styles.labelRow}>
+                    <label className={styles.toggleLabel}>Difficulty</label>
+                    {/* Tooltip */}
+                    <div className={styles.toolTipTwo}>
+                        <div className={styles.iconTwo}>i
+                            <div className={styles.toolTipTextTwo}>
+                                Easy: 1-to-1 Quiz of flashcards <br />
+                                Normal: Standard Quiz <br />
+                                Hard: Comprehensive Quiz on deck content
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <select
                     className={styles.selectInput}
@@ -575,16 +639,90 @@ function FlashcardsQuiz() {
                     <option value="normal">Normal</option>
                     <option value="hard">Hard</option>
                 </select>
-                {/* Tooltip */}
-                <div class={styles.toolTipTwo}>
-                    <div class={styles.iconTwo}>i
-                        <div class={styles.toolTipTextTwo}>
-                            Easy: 1-to-1 Quiz of flashcards <br />
-                            Normal: Standard Quiz <br />
-                            Hard: Comprehensive Quiz on deck content
+
+                {/* Time Mode Toggle*/}
+                <div className={styles.labelRow}>
+                    <label className={styles.toggleLabel}>Time Selection</label>
+                </div>
+                <label htmlFor="timeToggle" className={styles.switch} aria-label="Time Mode Toggle">
+                    <input
+                        type="checkbox"
+                        id="timeToggle"
+                        checked={timeMode === "custom"}
+                        onChange={(e) => setTimeMode(e.target.checked ? "custom" : "auto")}
+                    />
+                    <span>Auto</span>
+                    <span>Custom</span>
+                </label>
+                {timeMode === "custom" && (
+                    <div className={styles.timeInputRow}>
+                        {/* Hours */}
+                        <div className={styles.timeField}>
+                            <label>Hours</label>
+                            <input
+                                type="number"
+                                maxLength={2}
+                                max={99}
+                                value={customHours}
+                                onChange={(e) => {
+                                    if(e.target.value > 99)
+                                    {
+                                        setCustomHours(99);
+                                        e.target.value = 99;
+                                    }
+                                    setCustomHours(e.target.value);
+                                    updateCustomTime();
+                                }}
+                            />
+                        </div>
+
+                        {/* Minutes */}
+                        <div className={styles.timeField}>
+                            <label>Minutes</label>
+                            <input
+                                type="number"
+                                maxLength={2}
+                                min={6}
+                                max={59}
+                                value={customMinutes}
+                                onChange={(e) => {
+                                    if(e.target.value > 59)
+                                    {
+                                        setCustomMinutes(59);
+                                        e.target.value = 59;
+                                    }
+                                    if(e.target.value < 6)
+                                    {
+                                        setCustomMinutes(6);
+                                        e.target.value = 6;
+                                    }
+                                    setCustomMinutes(e.target.value);
+                                    updateCustomTime();
+                                }}
+                            />
+                        </div>
+
+                        {/* Seconds */}
+                        <div className={styles.timeField}>
+                            <label>Seconds</label>
+                            <input
+                                type="number"
+                                maxLength={2}
+                                max={59}
+                                value={customSeconds}
+                                onChange={(e) => {
+                                    if(e.target.value > 59)
+                                    {
+                                        setCustomSeconds(59);
+                                        e.target.value = 59;
+                                    }
+                                    setCustomSeconds(e.target.value);
+                                    updateCustomTime();
+                                }}
+                            />
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Start Quiz */}
                 <button className={styles.startQuizButton} onClick={handleStartQuiz}>
@@ -653,11 +791,19 @@ function FlashcardsQuiz() {
                         <div
                         key={i}
                         className={`${styles.questionBox} ${savedAnswers[i] !== undefined ? styles.saved : styles.unsaved}`}
-                        onClick={() => {
-                            const el = document.getElementById(`question-${i}`);
-                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                            setCurrentIndex(i);
-                        }}
+                            onClick={() => {
+                                const container = document.getElementById("quiz-scroll-container");
+                                const el = document.getElementById(`question-${i}`);
+
+                                if (container && el) {
+                                    container.scrollTo({
+                                        top: el.offsetTop - 10, // small padding
+                                        behavior: "smooth"
+                                    });
+                                }
+
+                                setCurrentIndex(i);
+                            }}
                         >
                         {i + 1}
                         {savedAnswers[i] !== undefined && <span className={styles.checkmark}>✓</span>}
@@ -683,9 +829,12 @@ function FlashcardsQuiz() {
                 </div>
                 )}
 
-                <div className={styles.quizContent}>
+                <div className={styles.quizContent} id="quiz-scroll-container">
                 {/* Quiz Form */}
-                <form className={styles.studyBox} onSubmit={(e) => e.preventDefault()}>
+                <form
+                    className={styles.studyBox}
+                    onSubmit={(e) => e.preventDefault()}
+                >
                     {processedFlashcards.map(([question, response, isMC, correctLabel], index) => (
                     <div key={index} id={`question-${index}`} className={styles.questionBlock}>
                         <h3 className={styles.questionHeader}>Question {index + 1}</h3>
