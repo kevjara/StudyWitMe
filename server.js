@@ -341,7 +341,7 @@ function sendQuestion(roomCode) {
         setTimeout(() => {
             game.currentQuestionIndex++;
             sendQuestion(roomCode);
-        }, 4000) // 4 secs between questions
+        }, 8000) // 8 secs between questions
 
     }, 30000) //30 sec to answer question
 }
@@ -518,7 +518,7 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 game.currentQuestionIndex++;
                 sendQuestion(roomCode);
-            }, 4000); // wait for 4 secs for next question
+            }, 8000); // wait for 8 secs for next question
         }
 
         // do nothing if answer is wrong let users try again
