@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import {useState, useEffect} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
@@ -6,6 +6,7 @@ import { db } from "../services/firebase";
 import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import styles from "./Flashcards.module.css";
 import "./Play.css";
+import home from "../assets/home.svg";
 
 function Play() {
     const navigate = useNavigate();
@@ -149,11 +150,11 @@ function Play() {
                             </button>
                         </div>
                         <h1 className={styles.toolbarTitle}>Choose a Deck to Host</h1>
-                        <div className={styles.tollbarRight}></div>
+                        <div className={styles.toolbarRight}></div>
                     </div>
                 </div>
                 <div className={styles.menuBackdrop}>
-                    <div >
+                    <div className={styles.flashcardGallery}>
                         <div className={styles.categoryGrid}>
                             {decks.length    > 0 ?(
                                 decks.map((deck) => (
@@ -211,6 +212,13 @@ function Play() {
     return (
         <> 
             <div className="menu-overlay"> 
+                <img
+                    src={home}
+                    alt="Home"
+                    className="home"
+                    onClick={() => navigate("/main")}
+                    title="Home"
+                />
                 <div className="menu-button-box">
                     <button onClick={handleShowChooseDeck}>Host Game</button>
                     <button onClick={handleShowJoinMenu}>Join Game</button>

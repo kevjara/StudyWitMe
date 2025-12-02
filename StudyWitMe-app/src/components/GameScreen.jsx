@@ -19,7 +19,7 @@ function GameScreen() {
     const [revealedAnswer, setRevealedAnswer] = useState(null);
     const [roundWinner, setRoundWinner] = useState(null);
     const [timer, setTimer] = useState(30);
-
+    const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
     const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
 
     // timer countdown
@@ -54,6 +54,7 @@ function GameScreen() {
             setSelectedOptionIndex(null);
             setTimer(30);
             setGameState('in-game')
+            setShowTransitionScoreboard(false);
         };
 
         const onQuestionResult = (resultData) => {
@@ -61,6 +62,10 @@ function GameScreen() {
             setScores(resultData.scores);
             setRoundWinner(resultData.winnerId);
             setTimer(0); // manually set timer to zero since server clock ahead by 1 sec
+
+            setTimeout(() => {
+                setShowTransitionScoreboard(true);  
+            }, 4000) // delay showing scoreboard to allow reveal answer for 4 secs
         };
 
         const onGameOver = (data) => {
@@ -76,7 +81,7 @@ function GameScreen() {
 
         const onRoomCLosed = (message) => {
             alert(message);
-            navigate('/main'); // redirect back to main menu
+            navigate('/play'); // redirect back to game menu
         }
 
         socket.on('updatePlayerList', onUpdatePlayerList);
@@ -102,6 +107,16 @@ function GameScreen() {
 
     }, [navigate, roomCode]);
 
+    const handleLeaveRoom = () => {
+        socket.emit("leaveRoom", roomCode);
+        navigate("/play");
+    };
+
+    const handleCloseRoom = () => {
+        socket.emit("closeRoom", roomCode);
+        navigate("/play");
+    };
+
     const handleStartGame = () => {
         socket.emit('startGame', roomCode);
     };
@@ -120,6 +135,9 @@ function GameScreen() {
         <div className="host-lobby-overlay">
             <div className="host-lobby-container">
                 <h1>Room Code: <span>{roomCode}</span></h1>
+                <button onClick={handleCloseRoom} className="close-room-btn">
+                    Close Room
+                </button>
                 <div className="player-display">
                     <p>Players ({players.length}):</p>
                     <ul>
@@ -140,76 +158,95 @@ function GameScreen() {
             <div className="join-lobby-container">
                 <h1>Room Code: {roomCode}</h1>
                 <p>Waiting for host to start the game...</p>
-            </div>
-        </div>
-    )
-
-    const renderHostGameView = () => (
-        <div className="game-host-overlay">
-            <div className="game-host-container">
-                <div className="game-host-main">
-                    {currentQuestion && ((
-                        <>  
-                            <div className="game-host-header">
-                                <div className="game-host-timer">Time remaining: {timer} </div>
-                                <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
-                            </div>
-
-                            <h2 className="game-host-q-text">{currentQuestion.question}</h2>
-
-                            <div className="game-host-options-grid">
-                                {currentQuestion.options.map((option, index) => {
-                                    const isRoundOver = revealedAnswer !== null;
-                                    const isCorrect = option === revealedAnswer;
-
-                                    let buttonClass = 'host-option-display'
-                                    
-                                    if(isRoundOver){
-                                        if(isCorrect){
-                                            buttonClass += ' correct-reveal';
-                                        }
-                                        else{
-                                            buttonClass += ' dimmed';
-                                        }
-                                    }
-
-                                    return(
-                                        <div key={index} className={buttonClass}>
-                                            {option}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="host-game-result-message">
-                                {revealedAnswer ?(
-                                    <div className="correct-answer-reveal">
-                                        <p className="winner-text">
-                                            {roundWinner
-                                                ? `${roundWinner.substring(0,5)} got it right!`
-                                                : "Times up! No one got it."}
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="waiting-text">Waiting for players...</p>
-                                )}
-                            </div>
-                        </>
-                    ))}
-                </div>
-
-                <div className="game-host-scoreboard">
-                    <h4>Scores:</h4>
-                    <ul>
-                        {players.map(player => (
-                            <li key={player.id}>
-                                {player.id.substring(0,5)}: {scores[player.id] || 0}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <button onClick={handleLeaveRoom} className="leave-room-btn">
+                    Leave Room
+                </button>
             </div>
         </div>
     );
+
+    const renderHostGameView = () =>{
+        if(showTransitionScoreboard){
+            return renderTransitionScoreboard();
+        }
+
+        return(
+            <div className="game-host-overlay">
+                <div className="game-host-container">
+                    <div className="game-host-main">
+                        {currentQuestion && ((
+                            <>  
+                                <div className="game-host-header">
+                                    <div className="game-host-timer">Time remaining: {timer} </div>
+                                    <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
+                                </div>
+
+                                <h2 className="game-host-q-text">{currentQuestion.question}</h2>
+
+                                <div className="game-host-options-grid">
+                                    {currentQuestion.options.map((option, index) => {
+                                        const isRoundOver = revealedAnswer !== null;
+                                        const isCorrect = option === revealedAnswer;
+
+                                        let buttonClass = 'host-option-display'
+                                        
+                                        if(isRoundOver){
+                                            if(isCorrect){
+                                                buttonClass += ' correct-reveal';
+                                            }
+                                            else{
+                                                buttonClass += ' dimmed';
+                                            }
+                                        }
+
+                                        return(
+                                            <div key={index} className={buttonClass}>
+                                                {option}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="host-game-result-message">
+                                    {revealedAnswer ?(
+                                        <div className="correct-answer-reveal">
+                                            <p className="winner-text">
+                                                {roundWinner
+                                                    ? `${roundWinner.substring(0,5)} got it right!`
+                                                    : "Times up! No one got it."}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="waiting-text">Waiting for players...</p>
+                                    )}
+                                </div>
+                            </>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderTransitionScoreboard = () => {
+        const sortedPlayers = [...players].sort((a,b) => (scores[b.id] || 0) - (scores[a.id] || 0)); 
+        return (
+            <div className="game-host-overlay">
+                <div className="transition-scoreboard-container">
+                    <h2>Scoreboard</h2>
+                    <div className="scoreboard-list">
+                        <ol>
+                            {sortedPlayers.map((player) => (
+                                <li key={player.id}>
+                                    <span className="player-name">{player.id.substring(0,5)}</span>
+                                    <span className="player-score">{scores[player.id] || 0}</span>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     const renderPlayerGameView = () => (
         <div className="player-trivia-screen-overlay">

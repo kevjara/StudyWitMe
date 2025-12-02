@@ -72,6 +72,10 @@
     cursor: pointer;
 }
 
+.host-lobby-start-game-btn:hover {
+    background-color: rgb(10, 10, 159);
+}
+
 .join-lobby-overlay{
     display: flex;
     justify-content: center;
@@ -215,26 +219,61 @@
     margin: 0;
 }
 
-.game-host-scoreboard h4{
+.transition-scoreboard-container{
+    width: 90%;
+    max-width: 600px;
+    background-color: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     text-align: center;
-    font-size: 1.5rem;
+    animation: slideUp 0.5s ease-out;
+}
+
+.transition-scoreboard-container h2 {
+    font-size: 2.5rem;
+    color: #2c3e50;
     margin-top: 0;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 1rem;
 }
 
-.game-host-scoreboard ul{
-    list-style: none;
+.scoreboard-list ol{
     padding: 0;
-    margin: 0;
-    overflow-y: auto;
+    list-style: none;
+    margin-bottom: 2rem;
 }
 
-.game-host-scoreboard li {
+.scoreboard-list li{
     display: flex;
     justify-content: space-between;
-    font-size: 1.1rem;
-    padding: 10px 5px;
+    padding: 15px 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
     border-bottom: 1px solid #f0f0f0;
+}
+
+.scoreboard-list li:first-child{
+    background-color: gold;
+    color: white;
+    border-radius: 8px;
+    transform: scale(8px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.player-score{
+    color: #2ecc71
+}
+
+.scoreboard-list li:first-child .player-score {
+    color: white;
+}
+
+@keyframes slideUp{
+    from { transform: translateY(50px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
 }
 
 .player-trivia-screen-overlay {
@@ -354,3 +393,53 @@
     border-bottom: 1px solid #eee;
 }
 
+/* --- CLOSE ROOM (Host Only) --- */
+.close-room-btn {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    padding: 10px 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    background-color: #d9534f; /* Bootstrap red tone */
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.close-room-btn:hover {
+    background-color: #c9302c;
+    transform: scale(1.05);
+}
+
+.close-room-btn:active {
+    transform: scale(0.97);
+}
+
+
+/* --- LEAVE ROOM (Player Lobby) --- */
+.leave-room-btn {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 12px 26px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.leave-room-btn:hover {
+    background-color: #5a6268;
+    transform: scale(1.05);
+}
+
+.leave-room-btn:active {
+    transform: scale(0.97);
+}

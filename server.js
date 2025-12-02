@@ -532,7 +532,7 @@ function sendQuestion(roomCode) {
         setTimeout(() => {
             game.currentQuestionIndex++;
             sendQuestion(roomCode);
-        }, 4000) // 4 secs between questions
+        }, 8000) // 8 secs between questions
 
     }, 30000) //30 sec to answer question
 }
@@ -671,6 +671,43 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('leaveRoom', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+        if (!game) return;
+
+        // Remove player
+        game.players = game.players.filter(p => p.id !== socket.id);
+        delete game.scores[socket.id];
+
+        // If host leaves → pick a new host or close room
+        if (game.hostId === socket.id) {
+            if (game.players.length > 0) {
+                // transfer host
+                game.hostId = game.players[0].id;
+                io.to(roomCode).emit("newHost", game.hostId);
+            } else {
+                // no players left → close room completely
+                delete gameSessionsContainer[roomCode];
+                io.to(roomCode).emit("roomClosed", "The host left. Room closed.");
+                return;
+            }
+        }
+
+        io.to(roomCode).emit("updatePlayerList", game.players);
+        socket.leave(roomCode);
+    });
+
+    socket.on('closeRoom', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+        if (!game) return;
+
+        // Only host can close
+        if (socket.id !== game.hostId) return;
+
+        io.to(roomCode).emit("roomClosed", "Host closed the room.");
+        delete gameSessionsContainer[roomCode];
+    });
+
     socket.on('startGame', (roomCode) => {
         const game = gameSessionsContainer[roomCode];
         if (game && game.hostId == socket.id) {
@@ -709,7 +746,7 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 game.currentQuestionIndex++;
                 sendQuestion(roomCode);
-            }, 4000); // wait for 4 secs for next question
+            }, 8000); // wait for 8 secs for next question
         }
 
         // do nothing if answer is wrong let users try again
