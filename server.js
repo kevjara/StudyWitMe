@@ -10,6 +10,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import admin from "firebase-admin";
 import { readFile } from "fs/promises";
+import { getProjectManagement } from "firebase-admin/project-management";
 
 dotenv.config();
 
@@ -524,6 +525,23 @@ io.on('connection', (socket) => {
         // do nothing if answer is wrong let users try again
     });
 
+    socket.on('restartGame', (roomCode) => {
+      const game = gameSessionsContainer[roomCode];
+
+      if(game && game.hostId === socket.id){
+        console.log(`Host restarting game for room ${roomCode}`);
+
+        game.currentQuestionIndex = 0;
+        game.players.forEach(player => {
+          game.scores[player.id] = 0;
+        })
+
+        io.to(roomCode).emit('gameStarted');
+        sendQuestion(roomCode);
+      }
+
+    })
+
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
         let roomToUpdate = null;
@@ -550,6 +568,19 @@ io.on('connection', (socket) => {
                 console.log(`Player ${socket.id} disconnect from room ${roomCode}`);
                 game.players.splice(playerIndex, 1);
                 delete game.scores[socket.id];
+
+                if(game.players.length === 0){
+                  console.log(`All players left room ${roomCode}, Closing Room`);
+
+                  if(game.questionTimer){
+                    clearTimeout(game.questionTimer);
+                  }
+
+                  io.to(roomCode).emit('roomClosed', 'All players have left the game');
+
+                  delete gameSessionsContainer[roomCode];
+                  break;
+                }
 
                 roomToUpdate = roomCode;
                 break;

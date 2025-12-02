@@ -121,6 +121,10 @@ function GameScreen() {
         socket.emit('submitAnswer', {roomCode, answerIndex: index});
     };
 
+    const handleRestart = () => {
+        socket.emit('restartGame', roomCode);
+    }
+
     const renderHostLobby = () => (
         <div className="host-lobby-overlay">
             <div className="host-lobby-container">
@@ -306,6 +310,25 @@ function GameScreen() {
                             ))}
                         </ol>
                     </div>
+                    {isHost ? (
+                        <div className="gameover-controls">
+                            <button className="gameover-replay-btn" onClick={handleRestart}>
+                                Play Again
+                            </button>
+                            <button className="gameover-host-deck-btn">
+                                Choose Another Deck
+                            </button>
+                            <button className="gameover-main-menu-btn" onClick={() => navigate("/main")}>
+                                Main Menu
+                            </button>
+                        </div>
+                    ):(
+                        <div className="gameover-controls">
+                            <button className="gameover-main-menu-btn" onClick={() => navigate("/main")}>
+                                Main Menu
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         );  
