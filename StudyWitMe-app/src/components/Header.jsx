@@ -48,7 +48,7 @@ function Header({ handleSignOut }) {
                 <button onClick={() => navigate("/create")}>Create</button>
                 <button onClick={() => navigate("/play")}>Play</button>
                 {currentUser ? (
-                <button onClick={handleSignOut}>Sign Out</button>
+                <button onClick={handleSignOut}>Sign-Out</button>
                 ) : (
                 <button onClick={() => navigate("/login")}>Sign In</button>
                 )}

@@ -1,9 +1,10 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
+import { useDecks } from "../context/DecksContext";
 import styles from "./Flashcards.module.css";
 import "./Play.css";
 import home from "../assets/home.svg";
@@ -11,13 +12,26 @@ import home from "../assets/home.svg";
 function Play() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
-    const [decks, setDecks] = useState([]);
-    const [deckCounts, setDeckCounts] = useState({});
     const [mode, setMode] = useState('menu');
     const [isLoading, setIsLoading] = useState(false);
     const [roomCode, setRoomCode] = useState('');
     const [error, setError] = useState('');
     const [showLoginPrompt, setLoginPrompt] = useState(false);
+
+    //no longer looking each load, just checks cache
+    const { decks, loadingDecks, deckCounts } = useDecks(); 
+    const categories = Array.from(
+        new Set((decks || []).map((d) => d.category || "Uncategorized"))
+    ).sort();
+
+    const [filteredDecks, setFilteredDecks] = useState([]);
+    const [sortOption, setSortOption] = useState("category");
+
+    // Filter state
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [showFilter, setShowFilter] = useState(false);
+    const filterRef = useRef(null);
+    const didInitCategoriesRef = useRef(false);
 
     useEffect(() => {
         if(!currentUser){
@@ -53,6 +67,47 @@ function Play() {
 
         return() => unsubscribe();
     }, [currentUser]);
+
+    // Initialize default categories on first load
+    useEffect(() => {
+        if (!didInitCategoriesRef.current && categories.length > 0) {
+            setSelectedCategories(categories);
+            didInitCategoriesRef.current = true;
+        }
+    }, [categories]);
+
+    //Apply sort & filtering to cached decks
+    useEffect(() => {
+        let updated = [...decks];
+
+        if (selectedCategories?.length > 0) {
+            updated = updated.filter((d) => selectedCategories.includes(d.category));
+        } else {
+            updated = [];
+        }
+
+        switch (sortOption) {
+            case "az":
+                updated.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+                break;
+            case "za":
+                updated.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+                break;
+            case "newest":
+                updated.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                break;
+            case "oldest":
+                updated.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                break;
+            case "category":
+            default:
+                updated.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
+                break;
+        }
+
+        setFilteredDecks(updated);
+        window.scrollTo(0, 0); // 🔥 Fixed infinite loop bug
+    }, [decks, sortOption, selectedCategories]);
 
     useEffect(() => {
         const onGameCreated = (newRoomCode) => {
@@ -114,6 +169,25 @@ function Play() {
         setRoomCode('');
     };
 
+    // Toggle a single category
+    const toggleCategory = (cat) => {
+        setSelectedCategories((prev) =>
+            prev.includes(cat)
+                ? prev.filter((c) => c !== cat)
+                : [...prev, cat]
+        );
+    };
+
+    // Select all categories
+    const handleSelectAll = () => {
+        setSelectedCategories(categories);
+    };
+
+    // Clear all categories
+    const handleClearFilter = () => {
+        setSelectedCategories([]);
+    };
+
     if (showLoginPrompt){
         return (
             <div className="login-prompt-overlay">
@@ -149,15 +223,65 @@ function Play() {
                                 Back
                             </button>
                         </div>
-                        <h1 className={styles.toolbarTitle}>Choose a Deck to Host</h1>
-                        <div className={styles.toolbarRight}></div>
+                        <h3 className={styles.toolbarTitle}>Choose a Deck to Host</h3>
+                        <div className={styles.toolbarRight}>
+                            <select
+                                value={sortOption}
+                                onChange={(e) => setSortOption(e.target.value)}
+                                className={styles.dropdown}
+                            >
+                                <option value="category">Category</option>
+                                <option value="newest">Newest</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="az">A–Z</option>
+                                <option value="za">Z–A</option>
+                            </select>
+    
+                            <div className={styles.filterWrapper} ref={filterRef}>
+                                <button
+                                    className={styles.dropdownButton}
+                                    onClick={() => setShowFilter((p) => !p)}
+                                >
+                                    Filter ▾
+                                </button>
+    
+                                {showFilter && (
+                                    <div className={styles.filterDropdown}>
+                                        {categories.length > 0 ? (
+                                            <>
+                                                {categories.map((cat) => (
+                                                    <label key={cat} className={styles.filterItem}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedCategories.includes(cat)}
+                                                            onChange={() => toggleCategory(cat)}
+                                                        />
+                                                        <span>{cat}</span>
+                                                    </label>
+                                                ))}
+                                                <div className={styles.filterButtons}>
+                                                    <button type="button" onClick={handleSelectAll}>
+                                                        Select All
+                                                    </button>
+                                                    <button type="button" onClick={handleClearFilter}>
+                                                        Clear Filter
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <p style={{ padding: 12 }}>No categories found</p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div className={styles.menuBackdrop}>
                     <div className={styles.flashcardGallery}>
                         <div className={styles.categoryGrid}>
                             {decks.length    > 0 ?(
-                                decks.map((deck) => (
+                                filteredDecks.map((deck) => (
                                     <div key={deck.id} className={styles.deckCard}>
                                         <div className={styles.deckMeta}>
                                             <div className={styles.deckCardContent}>
@@ -212,14 +336,14 @@ function Play() {
     return (
         <> 
             <div className="menu-overlay"> 
-                <img
-                    src={home}
-                    alt="Home"
-                    className="home"
-                    onClick={() => navigate("/main")}
-                    title="Home"
-                />
                 <div className="menu-button-box">
+                    <img
+                        src={home}
+                        alt="Home"
+                        className="home"
+                        onClick={() => navigate("/main")}
+                        title="Home"
+                    />
                     <button onClick={handleShowChooseDeck}>Host Game</button>
                     <button onClick={handleShowJoinMenu}>Join Game</button>
                 </div>

@@ -64,8 +64,8 @@
     transition: transform 0.3s ease, filter 0.3s ease;
     vertical-align: middle;
     position: absolute;
-    top: 260px;
-    left: 540px;
+    top: 6px;
+    left: 10px;
     bottom: 3px;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
@@ -75,6 +75,7 @@
 }
 
 .menu-button-box {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 1rem;
