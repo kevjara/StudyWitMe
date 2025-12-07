@@ -18,7 +18,7 @@ import FlashcardsStudy from "./components/FlashcardsStudy";
 import FlashcardsQuiz from "./components/FlashcardsQuiz";
 import Layout from "./components/Layout";
 import ManageDeck from "./components/ManageDeck";
-import Header from "./components/Header";
+import AuthGate from "./components/AuthGate";
 import SearchResults from "./components/SearchResults";
 import Play from "./components/Play";
 import GameScreen from "./components/GameScreen";
@@ -58,28 +58,30 @@ function App() {
           </div>
         )}
 
-        <Routes>
-          {/* Routes WITHOUT header */}
-          <Route path="/" element={<TitleScreen />} />
-          <Route path="/login" element={<Login />} />
-          <Route element={<GameConnection />}>
-              <Route path="/play" element={<Play />} />
-              <Route path="/game/:roomCode" element={<GameScreen/>} />
-          </Route>
+        <AuthGate>
+          <Routes>
+            {/* Routes WITHOUT header */}
+            <Route path="/" element={<TitleScreen />} />
+            <Route path="/login" element={<Login />} />
+            <Route element={<GameConnection />}>
+                <Route path="/play" element={<Play />} />
+                <Route path="/game/:roomCode" element={<GameScreen/>} />
+            </Route>
 
-          {/* Routes WITH header */}
-          <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
-            <Route path="/main" element={<MainMenu />} />
-            <Route path="/create" element={<FlashcardGenerator />} />
-            <Route path="/flashcards" element={<Flashcards />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
-            <Route path="/flashcards_quiz" element={<FlashcardsQuiz />} />
-            <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
-            <Route path="/search" element={<SearchResults />} />
-          </Route>
-        </Routes>
+            {/* Routes WITH header */}
+            <Route element={<Layout handleSignOut={handleGlobalSignOut} />}>
+              <Route path="/main" element={<MainMenu />} />
+              <Route path="/create" element={<FlashcardGenerator />} />
+              <Route path="/flashcards" element={<Flashcards />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
+              <Route path="/flashcards_quiz" element={<FlashcardsQuiz />} />
+              <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
+              <Route path="/search" element={<SearchResults />} />
+            </Route>
+          </Routes>
+        </AuthGate>
       </>
     </DecksProvider>
   );
