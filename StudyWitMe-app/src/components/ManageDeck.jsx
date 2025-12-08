@@ -533,11 +533,26 @@ export default function ManageDeck() {
 
       {/* Right: Add Card button */}
       <div className={styles.addCardColumn}>
-        <button onClick={handleAddCard} className={styles.addCardButton}>
-          + Add Card
+       <button
+          onClick={handleAddCard}
+          className={styles.addCardButton}
+          disabled={cards.length >= 100} // disable when 100 or more
+        >
+          {cards.length >= 100 ? "Flashcards limit reached" : "+ Add Card"}
         </button>
       </div>
     </div>
+
+    <div className={styles.addCardColumn}>
+      <button
+        onClick={handleAddCard}
+        className={styles.addCardButton}
+        disabled={cards.length >= 100} // disable when 100 or more
+      >
+        {cards.length >= 100 ? "Flashcards limit reached" : "+ Add Card"}
+      </button>
+    </div>
+
 
         {/* Deck Image Picker Modal (Unchanged) */}
         {pickerForDeck && (
