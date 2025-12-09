@@ -10,9 +10,18 @@ import styles from "./Header.module.css";
 
 function Header({ handleSignOut }) {
     const [hasHoveredSettings, setHasHoveredSettings] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { hasStartedOnce, playMusic } = useMusic();
+
+    // brought searchbar back over
+    const handleSearchKeyDown = (e) => {
+        if (e.key === "Enter" && searchTerm.trim()) {
+            const q = encodeURIComponent(searchTerm.trim());
+            navigate(`/search?q=${q}`);
+        }
+    };
 
     useEffect(() => {
         if (!hasStartedOnce) {
@@ -39,6 +48,14 @@ function Header({ handleSignOut }) {
                 ) : (
                 <button onClick={() => navigate("/login")}>Sign In</button>
                 )}
+                <input
+                    type="text"
+                    placeholder="Search public decks..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className={styles.navSearchInput}
+                />
                 <img
                 src={settingsIcon}
                 alt="Settings"
