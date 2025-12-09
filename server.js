@@ -267,7 +267,7 @@ User answer: "${userAnswer}"
  * {
  *      hostId : socket.id (internal socket.io identifier)
  *      players : [] (an array of key value pairs that store other players ids)
- *      scores : {int} (array of scores where index corresponds to which players score)
+ *      scores : {int} (map of scores where key corresponds to socket.id and value to score)
  *      currentQuestionIndex : int (the index of which question the game is currently displaying in the question array)
  *      questionTimer : the timer object (object used to keep track of time for each question)
  *      questions : [] (an array of the users flashcards from firebase)
@@ -319,7 +319,9 @@ function sendQuestion(roomCode) {
     }
 
     const currentQuestion = gameQuestions[questionIndex];
-
+    
+    // add timestamp when quetion was sent
+    game.questionStartTime = Date.now();
    
     const questionData = {
         question : currentQuestion.question,
@@ -461,20 +463,23 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('joinGame', (roomCode) => {
-        console.log(`server recieved request to join for room ${roomCode}`)
+    socket.on('joinGame', ({roomCode, playerName}) => {
+        console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
         if(gameSessionsContainer[roomCode]) {
             socket.join(roomCode);
             
             const game = gameSessionsContainer[roomCode];
 
-            game.players.push({id: socket.id});
+            game.players.push({
+              id: socket.id,
+              name: playerName
+            });
             game.scores[socket.id] = 0;
 
             socket.emit('joinSuccess', roomCode);
 
             io.to(roomCode).emit('updatePlayerList', game.players);
-            console.log(`User ${socket.id} joined room: ${roomCode}`);
+            console.log(`User ${playerName} (${socket.id}) joined room: ${roomCode}`);
         }
         else{
             socket.emit('joinError', 'This room does not exist');
@@ -507,7 +512,15 @@ io.on('connection', (socket) => {
         if(isCorrect) {
             clearTimeout(game.questionTimer);
             game.questionTimer = null;
-            game.scores[socket.id] += 10;
+
+            const total_time = 30;
+            const max_score = 1000;
+            const min_score = 100;
+
+            const timeElapsed = (Date.now() - game.questionStartTime) / 1000;
+            const timeRemaining = Math.max(0, total_time - timeElapsed);
+            const totalPoints = Math.ceil(min_score + ((max_score - min_score) * (timeRemaining / total_time)));
+            game.scores[socket.id] += totalPoints;
 
             
             io.to(roomCode).emit('questionResult', {

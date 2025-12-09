@@ -22,7 +22,20 @@ function GameScreen() {
     const [showTransitionScoreboard, setShowTransitionScoreboard] = useState(false);
     const [selectedOptionIndex, setSelectedOptionIndex] = useState(null);
 
-    // timer countdown
+    // Timer visual circle stuff
+    const [visualProgress, setVisualProgress] = useState(0);
+    const radius = 25;
+    const circumference = 2 * Math.PI * radius;
+    const totalTime = 30;
+    const timeColor = timer <= 5 ? "#FF5252" : (timer <= 10 ? "#FFC107" : "#416d8e")
+
+    useEffect(() => {
+        const targetTime = timer > 0 ? timer - 1 : 0;
+        const offset = circumference - (targetTime / totalTime) * circumference;
+        setVisualProgress(offset);
+    }, [timer, circumference]);
+
+    // timer countdown number
     useEffect(() => {
         if (gameState === 'in-game' && revealedAnswer === null){
             const interval = setInterval(() => {
@@ -133,7 +146,7 @@ function GameScreen() {
                     <p>Players ({players.length}):</p>
                     <ul>
                         {players.map((player) => (
-                            <li key={player.id}>{player.id.substring(0,5)}</li>
+                            <li key={player.id}>{player.name}</li>
                         ))}
                     </ul>
                 </div>
@@ -165,7 +178,30 @@ function GameScreen() {
                         {currentQuestion && ((
                             <>  
                                 <div className="game-host-header">
-                                    <div className="game-host-timer">Time remaining: {timer} </div>
+                                    <div className="game-host-time-container">
+                                        <svg className="timer-svg" width="100" height="100" viewBox="0 0 100 100">
+                                            <circle
+                                                className="timer-circle-bg"
+                                                cx="50" cy="50" r={radius}
+                                            />
+                                            <circle
+                                                className="timer-circle-progress"
+                                                cx="50" cy="50" r={radius}
+                                                stroke={timeColor}
+                                                strokeDasharray={circumference}
+                                                strokeDashoffset={visualProgress}
+                                                transform="rotate(-90 50 50)"
+                                            />
+                                            <text
+                                                x="50" y="50"
+                                                className="timer-text"
+                                                dominantBaseline="central"
+                                                textAnchor="middle"
+                                            >
+                                                {timer}
+                                            </text>
+                                        </svg>
+                                    </div>
                                     <h3 className="game-host-q-number">Question {currentQuestion.questionNumber}/{currentQuestion.totalQuestions}</h3>
                                 </div>
 
@@ -199,7 +235,7 @@ function GameScreen() {
                                         <div className="correct-answer-reveal">
                                             <p className="winner-text">
                                                 {roundWinner
-                                                    ? `${roundWinner.substring(0,5)} got it right!`
+                                                    ? `${players.find(p => p.id === roundWinner)?.name || 'Someone'} got it right!`
                                                     : "Times up! No one got it."}
                                             </p>
                                         </div>
@@ -225,7 +261,7 @@ function GameScreen() {
                         <ol>
                             {sortedPlayers.map((player) => (
                                 <li key={player.id}>
-                                    <span className="player-name">{player.id.substring(0,5)}</span>
+                                    <span className="player-name">{player.name}</span>
                                     <span className="player-score">{scores[player.id] || 0}</span>
                                 </li>
                             ))}
@@ -305,7 +341,7 @@ function GameScreen() {
                         <ol>
                             {sortedPlayers.map((player) => (
                                 <li>
-                                    {player.id === socket.id ? `You` : player.id.substring(0,5)}: {scores[player.id] || 0} points
+                                    {player.id === socket.id ? `You (${player.name})`: player.name}: {scores[player.id] || 0} points
                                 </li>
                             ))}
                         </ol>
@@ -315,7 +351,7 @@ function GameScreen() {
                             <button className="gameover-replay-btn" onClick={handleRestart}>
                                 Play Again
                             </button>
-                            <button className="gameover-host-deck-btn">
+                            <button className="gameover-host-deck-btn" >
                                 Choose Another Deck
                             </button>
                             <button className="gameover-main-menu-btn" onClick={() => navigate("/main")}>
