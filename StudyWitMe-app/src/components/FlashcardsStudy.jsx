@@ -196,7 +196,7 @@ function FlashcardsStudy() {
             isMultipleChoice: fc.type === "Multiple Choice",
         }));
 
-            const response = await fetch("http://localhost:3000/study", {
+            const response = await fetch("/study", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ flashcards: formatted }),
@@ -609,7 +609,7 @@ function FlashcardsStudy() {
                                                         setCardStatus("Checking your answer...");
 
                                                         try {
-                                                            const res = await fetch("http://localhost:3000/compare", {
+                                                            const res = await fetch("/compare", {
                                                                 method: "POST",
                                                                 headers: { "Content-Type": "application/json" },
                                                                 body: JSON.stringify({

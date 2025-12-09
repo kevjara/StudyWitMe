@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useDecks } from "../context/DecksContext"; // ← NEW
+import { useDecks } from "../context/DecksContext"; 
 import { useNavigate, Link } from "react-router-dom";
+
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+
 import styles from "./Flashcards.module.css";
-import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
+import { refreshPixabayImage } from "../utils/imageRefresh";
 
 export default function Flashcards() {
     const { currentUser, loading } = useAuth();
 
-    //no longer looking each load, just checks cache
-    const { decks, loadingDecks, deckCounts } = useDecks(); 
+    // Cached deck system
+    const { decks, loadingDecks, deckCounts } = useDecks();
 
     const [filteredDecks, setFilteredDecks] = useState([]);
     const [sortOption, setSortOption] = useState("category");
@@ -21,8 +23,9 @@ export default function Flashcards() {
     const [selectedDecks, setSelectedDecks] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteStatus, setDeleteStatus] = useState("");
+
     const [refreshedUrls, setRefreshedUrls] = useState({});
-    const [masteryData, setMasteryData] = useState({}); // deckId -> mastery info
+    const [masteryData, setMasteryData] = useState({}); 
 
     // Filter state
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -32,9 +35,9 @@ export default function Flashcards() {
 
     const navigate = useNavigate();
 
-    // 🔹 Categories from cached decks - memoized to prevent infinite loops
-    const categories = useMemo(() => 
-        [...new Set(decks.map((d) => d.category).filter(Boolean))],
+    // Unique categories
+    const categories = useMemo(
+        () => [...new Set(decks.map((d) => d.category).filter(Boolean))],
         [decks]
     );
 
@@ -44,8 +47,11 @@ export default function Flashcards() {
             setSelectedCategories([...categories]);
             didInitCategoriesRef.current = true;
         }
-        if (categories.length === 0) setSelectedCategories([]);
-    }, [categories]);
+
+        if (categories.length === 0 && selectedCategories.length > 0) {
+            setSelectedCategories([]);
+        }
+    }, [categories, selectedCategories]);
 
     // Close filter dropdown on outside click
     useEffect(() => {
@@ -58,7 +64,7 @@ export default function Flashcards() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
-    // 🔥 Apply sort & filtering to cached decks
+    // Apply sort & filtering
     useEffect(() => {
         let updated = [...decks];
 
@@ -81,17 +87,15 @@ export default function Flashcards() {
             case "oldest":
                 updated.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
                 break;
-            case "category":
             default:
                 updated.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
-                break;
         }
 
         setFilteredDecks(updated);
-        window.scrollTo(0, 0); // 🔥 Fixed infinite loop bug
+        window.scrollTo(0, 0);
     }, [decks, sortOption, selectedCategories]);
 
-    // Fetch mastery data for all user's decks
+    // Load mastery data
     useEffect(() => {
         const fetchMasteryData = async () => {
             if (!currentUser || decks.length === 0) return;
@@ -107,7 +111,7 @@ export default function Flashcards() {
                     masteryMap[data.deckId] = {
                         masteryLevel: data.masteryLevel || 0,
                         lastStudied: data.lastStudied,
-                        quizAttempts: data.quizAttempts || []
+                        quizAttempts: data.quizAttempts || [],
                     };
                 });
 
@@ -120,7 +124,7 @@ export default function Flashcards() {
         fetchMasteryData();
     }, [currentUser, decks]);
 
-    // Delete helpers
+    // Filter toggle helpers
     const toggleCategory = (cat) => {
         setSelectedCategories((prev) =>
             prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
@@ -129,6 +133,7 @@ export default function Flashcards() {
     const handleSelectAll = () => setSelectedCategories([...categories]);
     const handleClearFilter = () => setSelectedCategories([]);
 
+    // Delete helpers
     const toggleDeckSelection = (deckId) => {
         setSelectedDecks((prev) =>
             prev.includes(deckId) ? prev.filter((id) => id !== deckId) : [...prev, deckId]
@@ -138,9 +143,10 @@ export default function Flashcards() {
     const handleConfirmDelete = async () => {
         try {
             for (const deckId of selectedDecks) {
-                console.warn("TODO: implement deletion here since firestore removed");
+                console.warn("TODO: implement deletion since Firestore removed");
             }
             setDeleteStatus("All selected decks have been discarded.");
+
             setTimeout(() => {
                 setShowDeleteConfirm(false);
                 setDeleteMode(false);
@@ -149,66 +155,52 @@ export default function Flashcards() {
             }, 2000);
         } catch (err) {
             console.error("Error deleting decks:", err);
-            setDeleteStatus("Error deleting decks. Check console.");
+            setDeleteStatus("Error deleting decks.");
         }
     };
-    
+
+    // Smart image error handler (Pixabay refresh)
     const handleImageError = async (e, deck) => {
-        const isOwner = currentUser?.uid === deck.ownerId; 
-        
-        // Prevent infinite retry loops - no pixabayId means we can't fetch a new image
+        const isOwner = currentUser?.uid === deck.ownerId;
+
         if (!deck.pixabayId) {
-            console.warn(`⚠️ No pixabayId for deck ${deck.id}, cannot refresh`);
-            e.target.style.display = 'none';
-            return;
-        }
-        
-        // Check current refresh status
-        const currentStatus = refreshedUrls[deck.id];
-        if (currentStatus === 'loading') {
-            console.log(`⏳ Already fetching fresh URL for deck ${deck.id}...`);
-            return;
-        }
-        if (currentStatus === 'failed') {
-            console.warn(`⚠️ Previously failed to refresh deck ${deck.id}, hiding image`);
-            e.target.style.display = 'none';
-            return;
-        }
-        // If we have a refreshed URL and it's STILL failing, don't retry
-        if (currentStatus && currentStatus !== 'loading' && currentStatus !== 'failed') {
-            console.warn(`⚠️ Refreshed URL also expired for deck ${deck.id}, giving up`);
-            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
-            e.target.style.display = 'none';
+            e.target.style.display = "none";
             return;
         }
 
-        // Mark that we're attempting a refresh to prevent multiple simultaneous calls
-        setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'loading' }));
+        const status = refreshedUrls[deck.id];
+        if (status === "loading" || status === "failed") return;
+
+        if (status && status !== "loading" && status !== "failed") {
+            setRefreshedUrls((prev) => ({ ...prev, [deck.id]: "failed" }));
+            e.target.style.display = "none";
+            return;
+        }
+
+        setRefreshedUrls((prev) => ({ ...prev, [deck.id]: "loading" }));
         e.target.style.opacity = 0.3;
-        console.log(`🖼️ Cached image expired for deck ${deck.id} (Pixabay ID: ${deck.pixabayId}), fetching fresh URL...`);
-        
-        // Fetch fresh URL from Pixabay and update Firestore cache
+
         const newUrl = await refreshPixabayImage(
-            'deck', 
-            deck.id, 
-            deck.pixabayId, 
-            isOwner // Only update database if user owns this deck
+            "deck",
+            deck.id,
+            deck.pixabayId,
+            isOwner
         );
 
         if (newUrl) {
-            console.log(`✅ Fresh URL obtained for deck ${deck.id}: ${newUrl.substring(0, 50)}...`);
-            setRefreshedUrls(prev => ({ ...prev, [deck.id]: newUrl }));
+            setRefreshedUrls((prev) => ({ ...prev, [deck.id]: newUrl }));
             e.target.src = newUrl;
             e.target.style.opacity = 1;
-            e.target.style.display = 'block';
         } else {
-            console.error(`❌ Failed to fetch fresh URL for deck ${deck.id}`);
-            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
-            e.target.style.display = 'none';
+            setRefreshedUrls((prev) => ({ ...prev, [deck.id]: "failed" }));
+            e.target.style.display = "none";
         }
     };
 
-    // ---- Render states ----
+    // ─────────────────────────────────────────────
+    // RENDER
+    // ─────────────────────────────────────────────
+
     if (!currentUser && !loading) {
         return (
             <div className={styles.overlay}>
@@ -241,12 +233,14 @@ export default function Flashcards() {
                 <div className={`${styles.menuBackdrop} ${styles.noCards}`}>
                     <h2>No Decks Yet</h2>
                     <p>Why not create a new deck?</p>
+
                     <div
                         className={styles.placeholderCard}
                         onClick={() => navigate("/flashcards/create")}
                     >
                         <span className={styles.plusSign}>+</span>
                     </div>
+
                     <button className={styles.backButton} onClick={() => navigate("/main")}>
                         ← Back to Main Menu
                     </button>
@@ -255,7 +249,10 @@ export default function Flashcards() {
         );
     }
 
-    // ---- Main UI ----
+    // ─────────────────────────────────────────────
+    // MAIN UI
+    // ─────────────────────────────────────────────
+
     return (
         <div className={styles.overlay}>
             <div className={styles.menuBackdrop}>
@@ -263,7 +260,10 @@ export default function Flashcards() {
 
                 {/* Toolbar */}
                 <div className={styles.stickyToolbar}>
-                    <button className={styles.stickyBackButton} onClick={() => navigate("/main")}>
+                    <button
+                        className={styles.stickyBackButton}
+                        onClick={() => navigate("/main")}
+                    >
                         ← Back to Main Menu
                     </button>
 
@@ -325,6 +325,7 @@ export default function Flashcards() {
                                                         <span>{cat}</span>
                                                     </label>
                                                 ))}
+
                                                 <div className={styles.filterButtons}>
                                                     <button type="button" onClick={handleSelectAll}>
                                                         Select All
@@ -350,7 +351,7 @@ export default function Flashcards() {
                         ? Object.entries(
                               filteredDecks.reduce((groups, deck) => {
                                   const cat = deck.category || "Uncategorized";
-                                  (groups[cat] ||= []).push(deck);
+                                  (groups[cat] ??= []).push(deck);
                                   return groups;
                               }, {})
                           )
@@ -361,80 +362,142 @@ export default function Flashcards() {
                             <div className={styles.categoryGrid}>
                                 {decksInCat.map((deck) => {
                                     const isSelected = selectedDecks.includes(deck.id);
+
                                     return (
                                         <div
                                             key={deck.id}
-                                            className={`${styles.deckCard} ${isSelected ? styles.selectedDeck : ""}`}
+                                            className={`${styles.deckCard} ${
+                                                isSelected ? styles.selectedDeck : ""
+                                            }`}
                                         >
+                                            {/* Delete selector */}
                                             {deleteMode && (
                                                 <button
-                                                    className={`${styles.deleteSelectButton} ${isSelected ? styles.selected : ""}`}
+                                                    className={`${styles.deleteSelectButton} ${
+                                                        isSelected ? styles.selected : ""
+                                                    }`}
                                                     onClick={() => toggleDeckSelection(deck.id)}
                                                 >
                                                     {isSelected ? "✕" : "✓"}
                                                 </button>
                                             )}
-                                            
-                                            {/* Deck Cover Image with Smart Caching */}
+
+                                            {/* Deck Image */}
                                             {(deck.imagePath || deck.pixabayId) && (
-                                                <div style={{width: '100%', height: '100px', overflow: 'hidden', borderRadius: '8px 8px 0 0', background: '#f0f0f0'}}>
+                                                <div
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100px",
+                                                        overflow: "hidden",
+                                                        borderRadius: "8px 8px 0 0",
+                                                        background: "#f0f0f0",
+                                                    }}
+                                                >
                                                     <img
-                                                        src={refreshedUrls[deck.id] && refreshedUrls[deck.id] !== 'loading' && refreshedUrls[deck.id] !== 'failed' 
-                                                            ? refreshedUrls[deck.id] 
-                                                            : deck.imagePath}
+                                                        src={
+                                                            refreshedUrls[deck.id] &&
+                                                            refreshedUrls[deck.id] !== "loading" &&
+                                                            refreshedUrls[deck.id] !== "failed"
+                                                                ? refreshedUrls[deck.id]
+                                                                : deck.imagePath
+                                                        }
                                                         alt={deck.title}
                                                         style={{
-                                                            width: '100%', 
-                                                            height: '100%', 
-                                                            objectFit: 'cover',
-                                                            opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
-                                                            transition: 'opacity 0.3s'
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            objectFit: "cover",
+                                                            opacity:
+                                                                refreshedUrls[deck.id] === "loading"
+                                                                    ? 0.3
+                                                                    : 1,
+                                                            transition: "opacity 0.3s",
                                                         }}
                                                         onError={(e) => handleImageError(e, deck)}
                                                     />
                                                 </div>
                                             )}
-                                            {/* End Deck Cover Image */}
 
+                                            {/* Deck Info */}
                                             <div className={styles.deckMeta}>
                                                 <div className={styles.deckCardContent}>
                                                     <h3>{deck.title || "Untitled Deck"}</h3>
                                                     <p>Cards: {deckCounts[deck.id] || 0}</p>
 
-                                                    <p>Cards Mastered: {masteryData[deck.id]?.masteryLevel || 0}%</p>
+                                                    <p>
+                                                        Cards Mastered:{" "}
+                                                        {masteryData[deck.id]?.masteryLevel || 0}%
+                                                    </p>
+
                                                     <div className={styles.progressBar}>
-                                                        <div className={styles.progressFill} style={{ width: `${masteryData[deck.id]?.masteryLevel || 0}%` }} />
+                                                        <div
+                                                            className={styles.progressFill}
+                                                            style={{
+                                                                width: `${
+                                                                    masteryData[deck.id]
+                                                                        ?.masteryLevel || 0
+                                                                }%`,
+                                                            }}
+                                                        />
                                                     </div>
 
-                                                    <p>Last Quiz Score: {
-                                                        masteryData[deck.id]?.quizAttempts?.length > 0
-                                                            ? `${masteryData[deck.id].quizAttempts[masteryData[deck.id].quizAttempts.length - 1]}%`
-                                                            : "N/A"
-                                                    }</p>
-                                                    <p>Last Studied: {
-                                                        masteryData[deck.id]?.lastStudied
-                                                            ? new Date(masteryData[deck.id].lastStudied.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                                            : "Never"
-                                                    }</p>
+                                                    <p>
+                                                        Last Quiz Score:{" "}
+                                                        {masteryData[deck.id]?.quizAttempts?.length >
+                                                        0
+                                                            ? `${
+                                                                  masteryData[deck.id].quizAttempts[
+                                                                      masteryData[deck.id]
+                                                                          .quizAttempts.length - 1
+                                                                  ]
+                                                              }%`
+                                                            : "N/A"}
+                                                    </p>
+
+                                                    <p>
+                                                        Last Studied:{" "}
+                                                        {masteryData[deck.id]?.lastStudied
+                                                            ? new Date(
+                                                                  masteryData[deck.id].lastStudied
+                                                                      .seconds * 1000
+                                                              ).toLocaleDateString("en-US", {
+                                                                  month: "short",
+                                                                  day: "numeric",
+                                                              })
+                                                            : "Never"}
+                                                    </p>
                                                 </div>
                                             </div>
 
+                                            {/* ACTION BUTTONS */}
                                             <div className={styles.deckButtons}>
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })}
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/flashcards/deck/${deck.id}/study`,
+                                                            { state: { deck } }
+                                                        )
+                                                    }
                                                 >
                                                     Study
                                                 </button>
+
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/quiz`)}
+                                                    onClick={() =>
+                                                        navigate("/flashcards_quiz", {
+                                                            state: { deck },
+                                                        })
+                                                    }
                                                 >
                                                     Quiz
                                                 </button>
+
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/manage`)}
+                                                    onClick={() =>
+                                                        navigate(`/manage/${deck.id}`)
+                                                    }
                                                 >
                                                     Manage
                                                 </button>
@@ -447,7 +510,7 @@ export default function Flashcards() {
                     ))}
                 </div>
 
-                {/* Delete Confirmation Modal */}
+                {/* Delete Confirm Modal */}
                 {showDeleteConfirm && (
                     <div className={styles.modalOverlay}>
                         <div className={styles.confirmationBox}>
@@ -476,6 +539,7 @@ export default function Flashcards() {
                                             >
                                                 Confirm
                                             </button>
+
                                             <button
                                                 className={styles.cancelButton}
                                                 onClick={() => {

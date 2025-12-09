@@ -140,25 +140,61 @@
     border-radius: 1px solid #eee;
 }
 
-.game-host-scoreboard {
-    flex: 1;
+.game-host-header{
+    position: relative;
     display: flex;
-    flex-direction: column;
-    padding: 2.5rem;
-    max-height: 500px;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    height: 70px;
 }
 
-.game-host-timer {
-    align-self: flex-end;
-    font-size: 1rem;
-    color: #888;
+.timer-container{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80px;
+    height: 80px;
+    z-index: 2;
+}
+
+.timer-svg{
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.timer-circle-bg{
+    fill: none;
+    stroke: #e6e6e6;
+    stroke-width: 8px;
+}
+
+.timer-circle-progress{
+    fill: none;
+    stroke-width: 8px;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+}
+
+.timer-text {
+    font-size: 24px;
+    font-weight: bold;
+    fill: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transform: translateY(-1px);
 }
 
 .game-host-q-number {
+    width: 100%;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1.5rem;
     color: #555;
     margin: 0;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .game-host-q-text{
@@ -166,43 +202,114 @@
     font-size: 1.8rem;
     margin-top: 0.5rem;
     margin-bottom: 2rem;
-    min-height: 80px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.3;
 }
 
-.game-options-grid{
+.game-host-options-grid{
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     width: 100%;
 }
 
-.game-result-message{
-    margin-top: 2rem;
-    min-height: 30px;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.game-host-scoreboard h4{
+.host-option-display{
+    background-color: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
     text-align: center;
-    font-size: 1.5rem;
-    margin-top: 0;
-    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
 }
 
-.game-host-scoreboard ul{
-    list-style: none;
-    padding: 0;
+.host-option-display.correct-reveal {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+.host-option-display.dimmed{
+    opacity: 0.5;
+}
+
+.host-game-result-message{
+    margin-top: auto;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.winner-text {
+    font-size: 1.4rem;
+    color: #4CAF50;
     margin: 0;
-    overflow-y: auto;
 }
 
-.game-host-scoreboard li {
+.transition-scoreboard-container{
+    width: 90%;
+    max-width: 600px;
+    background-color: white;
+    border-radius: 12px;
+    padding: 3rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: slideUp 0.5s ease-out;
+}
+
+.transition-scoreboard-container h2 {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 1rem;
+}
+
+.scoreboard-list ol{
+    padding: 0;
+    list-style: none;
+    margin-bottom: 2rem;
+}
+
+.scoreboard-list li{
     display: flex;
     justify-content: space-between;
-    font-size: 1.1rem;
-    padding: 10px 5px;
+    padding: 15px 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
     border-bottom: 1px solid #f0f0f0;
+}
+
+.scoreboard-list li:first-child{
+    background-color: #416d8e;
+    color: white;
+    border-radius: 8px;
+    transform: scale(8px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.player-score{
+    color: #000000;
+}
+
+.scoreboard-list li:first-child .player-score {
+    color: white;
+}
+
+@keyframes slideUp{
+    from { transform: translateY(50px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
 }
 
 .player-trivia-screen-overlay {
@@ -322,3 +429,28 @@
     border-bottom: 1px solid #eee;
 }
 
+.gameover-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid #eee;
+}
+
+.gameover-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.gameover-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}

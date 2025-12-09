@@ -1,5 +1,9 @@
 node_modules/
 .env
+<<<<<<< HEAD
 .env.local
+=======
+ServiceAccountKey.json
+>>>>>>> origin/backend/online-game-v1
 
 logo_files/

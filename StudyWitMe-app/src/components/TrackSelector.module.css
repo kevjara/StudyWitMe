@@ -1,10 +1,14 @@
 .trackSelectorContainer {
+    position: relative;
+    min-width: 260px;
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
 .playButton {
+    position: absolute;
+    width: 150px;
     background: transparent;
     color: #416d8e;
     border: none;
@@ -16,6 +20,7 @@
 }
 
 .trackWheel {
+    margin-left: 130px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -29,6 +34,8 @@
     cursor: grab;
     user-select: none;
     transition: transform 0.3s;
+    touch-action: none; /* disables touch scrolling */
+    overscroll-behavior: contain;
 }
 
 /* Core item styling */

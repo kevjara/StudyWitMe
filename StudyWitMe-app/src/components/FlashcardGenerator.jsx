@@ -41,8 +41,6 @@ function FlashcardGenerator() {
     const [isFinishLocked, setIsFinishLocked] = useState(false);
     const [isPublic, setIsPublic] = useState(false); // New state for deck public status
 
-    const [pickerForDeck, setPickerForDeck] = useState(false);
-    const [pickerForCard, setPickerForCard] = useState(null); // stores index of card being edited
     const [deckImagePath, setDeckImagePath] = useState("");
     const [cardImagePaths, setCardImagePaths] = useState([]);
     const [deckPixabayId, setDeckPixabayId] = useState(null);
@@ -50,6 +48,17 @@ function FlashcardGenerator() {
 
     // UI modals
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+    //For Pixabay
+    const [pickerForCard, setPickerForCard] = useState(null);
+    const [pickerForDeck, setPickerForDeck] = useState(false);
+    const [deckImage, setDeckImage] = useState("");
+
+    useEffect(() => {
+    const open = Boolean(pickerForCard || pickerForDeck);
+        document.body.style.overflow = open ? "hidden" : "";
+        return () => (document.body.style.overflow = "");
+    }, [pickerForCard, pickerForDeck]);
 
     //manage view states ("form", "loading", "viewer")
     const [view, setView] = useState("form");
@@ -391,7 +400,6 @@ function FlashcardGenerator() {
         setView("status")
         showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
-            setStatus("");       // clear after showing
             setView("form");     // go back to start
         }, 3000);
     };
@@ -426,13 +434,6 @@ function FlashcardGenerator() {
 
     return (
         <div className={styles.flashcardGenerator}>
-            {/* Back Button */}
-            {view === "form" || view === "viewer" ? (
-                <button className={styles.backBtn} onClick={() => navigate("/main")}>
-                    ← Back to Main Menu
-                </button>
-            ) : null}
-
             <h2>Flashcard Generator</h2>
 
             {/* --- STATUS VIEW (after cancel or finalize) --- */}

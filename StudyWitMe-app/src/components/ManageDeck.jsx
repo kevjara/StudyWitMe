@@ -226,6 +226,12 @@ export default function ManageDeck() {
   };
 
   const handleAddCard = async () => {
+    //added limit for 100 cards
+    if (cards.length >= 100) {
+      toast("⚠️ Maximum limit of 100 cards reached for this deck", 3000);
+      return;
+    }
+
     await addDoc(collection(db, "flashcard"), {
       deckId,
       ownerId: currentUser.uid,
