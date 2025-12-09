@@ -235,6 +235,10 @@ function Profile() {
                                 <strong>Email:</strong>
                                 <span>{isOwner ? profile.email : "Private"}</span>
                             </div>
+                            <div className={styles.accountRow}>
+                                <strong>Games Won:</strong>
+                                <span>{profile.gamesWon ?? 0}</span>
+                            </div>
                         </div>
                     </div>
 
