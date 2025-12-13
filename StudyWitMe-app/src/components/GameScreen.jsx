@@ -97,6 +97,10 @@ function GameScreen() {
             navigate('/main'); // redirect back to main menu
         }
 
+        const onGameError = (message) => {
+            alert(message);
+        }
+
         socket.on('updatePlayerList', onUpdatePlayerList);
         socket.on('gameStarted', onGameStarted);
         socket.on('newQuestion', onNewQuestion);
@@ -104,6 +108,7 @@ function GameScreen() {
         socket.on('gameOver', onGameOver);
         socket.on('newHost', onNewHost);
         socket.on('roomClosed', onRoomCLosed);
+        socket.on('gameError', onGameError);
 
         // request server for player list after game created in case of race conditon
         socket.emit('getInitialData', roomCode);
@@ -116,6 +121,7 @@ function GameScreen() {
             socket.off('gameOver', onGameOver);
             socket.off('newHost', onNewHost);
             socket.off('roomClosed', onRoomCLosed);
+            socket.off('gameError', onGameError);
         }
 
     }, [navigate, roomCode]);
@@ -150,7 +156,7 @@ function GameScreen() {
                         ))}
                     </ul>
                 </div>
-                <button className="host-lobby-start-game-btn" onClick={handleStartGame} disabled={players.length < 1}>
+                <button className="host-lobby-start-game-btn" onClick={handleStartGame}>
                     Start Game
                 </button>
             </div>

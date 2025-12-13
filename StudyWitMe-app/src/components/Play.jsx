@@ -84,14 +84,21 @@ function Play() {
             setError(message);
         }
 
+        const onGameError = (message) => {
+            alert(message);
+        }
+
         socket.on('gameCreated', onGameCreated);
         socket.on('joinSuccess', onJoinSuccess);
         socket.on('joinError', onJoinError);
+        socket.on('gameError', onGameError);
+    
 
         return () => {
             socket.off('gameCreated', onGameCreated);
             socket.off('joinSuccess', onJoinSuccess);
             socket.off('joinError', onJoinError);
+            socket.off('gameError', onGameError);
         }
     }, [navigate]);
 
@@ -106,6 +113,11 @@ function Play() {
     }
 
     const handleShowChooseDeck = () => {
+        if(!currentUser) {
+            setLoginPrompt(true);
+            return;
+        }
+
         setMode('choosing-deck')
     }
 

@@ -466,9 +466,14 @@ io.on('connection', (socket) => {
     socket.on('joinGame', ({roomCode, playerName}) => {
         console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
         if(gameSessionsContainer[roomCode]) {
-            socket.join(roomCode);
-            
             const game = gameSessionsContainer[roomCode];
+
+            if(game.players.length >= 4) {
+              socket.emit('joinError', 'Room is full (max 4 players)');
+              return;
+            }
+
+            socket.join(roomCode);
 
             game.players.push({
               id: socket.id,
@@ -488,7 +493,22 @@ io.on('connection', (socket) => {
 
     socket.on('startGame', (roomCode) => {
         const game = gameSessionsContainer[roomCode];
+
         if (game && game.hostId == socket.id) {
+
+            const playerCount = game.players.length;
+
+            if(playerCount < 2){
+              socket.emit('gameError', 'Not Enough Players, You Need at least 2 players to start.');
+              return;
+            }
+            
+            // Check for more than 4 players (just in case)
+            if(playerCount > 4){
+              socket.emit('gameError', 'Too Many Players, The max is 4 players.');;
+              return;
+            }
+
             console.log(`starting game in room ${roomCode}`);
             io.to(roomCode).emit('gameStarted');
             sendQuestion(roomCode);
@@ -517,6 +537,7 @@ io.on('connection', (socket) => {
             const max_score = 1000;
             const min_score = 100;
 
+            // Player gets 900 point bonus on ratio between time remaining and total time
             const timeElapsed = (Date.now() - game.questionStartTime) / 1000;
             const timeRemaining = Math.max(0, total_time - timeElapsed);
             const totalPoints = Math.ceil(min_score + ((max_score - min_score) * (timeRemaining / total_time)));
