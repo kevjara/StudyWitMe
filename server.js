@@ -457,7 +457,7 @@ app.get("/pixabay-search", async (req, res) => {
  * {
  *      hostId : socket.id (internal socket.io identifier)
  *      players : [] (an array of key value pairs that store other players ids)
- *      scores : {int} (array of scores where index corresponds to which players score)
+ *      scores : {int} (map of scores where key corresponds to socket.id and value to score)
  *      currentQuestionIndex : int (the index of which question the game is currently displaying in the question array)
  *      questionTimer : the timer object (object used to keep track of time for each question)
  *      questions : [] (an array of the users flashcards from firebase)
@@ -510,7 +510,9 @@ function sendQuestion(roomCode) {
 
     const currentQuestion = gameQuestions[questionIndex];
 
-   
+    // add timestamp when quetion was sent
+    game.questionStartTime = Date.now();
+
     const questionData = {
         question : currentQuestion.question,
         options: currentQuestion.options,
@@ -526,7 +528,7 @@ function sendQuestion(roomCode) {
         io.to(roomCode).emit('questionResult', {
             correctAnswer: currentQuestion.answerText,
             scores: game.scores,
-            winnerID: null //no winner
+            winnerId: null //no winner
         });
 
         setTimeout(() => {
@@ -659,20 +661,23 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('joinGame', (roomCode) => {
-        console.log(`server recieved request to join for room ${roomCode}`)
+    socket.on('joinGame', ({roomCode, playerName}) => {
+        console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
         if(gameSessionsContainer[roomCode]) {
             socket.join(roomCode);
             
             const game = gameSessionsContainer[roomCode];
 
-            game.players.push({id: socket.id});
+            game.players.push({
+              id: socket.id,
+              name: playerName
+            });
             game.scores[socket.id] = 0;
 
             socket.emit('joinSuccess', roomCode);
 
             io.to(roomCode).emit('updatePlayerList', game.players);
-            console.log(`User ${socket.id} joined room: ${roomCode}`);
+            console.log(`User ${playerName} (${socket.id}) joined room: ${roomCode}`);
         }
         else{
             socket.emit('joinError', 'This room does not exist');
@@ -742,7 +747,15 @@ io.on('connection', (socket) => {
         if(isCorrect) {
             clearTimeout(game.questionTimer);
             game.questionTimer = null;
-            game.scores[socket.id] += 10;
+
+            const total_time = 30;
+            const max_score = 1000;
+            const min_score = 100;
+
+            const timeElapsed = (Date.now() - game.questionStartTime) / 1000;
+            const timeRemaining = Math.max(0, total_time - timeElapsed);
+            const totalPoints = Math.ceil(min_score + ((max_score - min_score) * (timeRemaining / total_time)));
+            game.scores[socket.id] += totalPoints;
 
             
             io.to(roomCode).emit('questionResult', {
@@ -759,6 +772,23 @@ io.on('connection', (socket) => {
 
         // do nothing if answer is wrong let users try again
     });
+
+    socket.on('restartGame', (roomCode) => {
+      const game = gameSessionsContainer[roomCode];
+
+      if(game && game.hostId === socket.id){
+        console.log(`Host restarting game for room ${roomCode}`);
+
+        game.currentQuestionIndex = 0;
+        game.players.forEach(player => {
+          game.scores[player.id] = 0;
+        })
+
+        io.to(roomCode).emit('gameStarted');
+        sendQuestion(roomCode);
+      }
+
+    })
 
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
@@ -786,6 +816,19 @@ io.on('connection', (socket) => {
                 console.log(`Player ${socket.id} disconnect from room ${roomCode}`);
                 game.players.splice(playerIndex, 1);
                 delete game.scores[socket.id];
+
+                if(game.players.length === 0){
+                  console.log(`All players left room ${roomCode}, Closing Room`);
+
+                  if(game.questionTimer){
+                    clearTimeout(game.questionTimer);
+                  }
+
+                  io.to(roomCode).emit('roomClosed', 'All players have left the game');
+
+                  delete gameSessionsContainer[roomCode];
+                  break;
+                }
 
                 roomToUpdate = roomCode;
                 break;

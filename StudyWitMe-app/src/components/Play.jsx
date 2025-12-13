@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
-import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { useDecks } from "../context/DecksContext";
 import styles from "./Flashcards.module.css";
 import "./Play.css";
@@ -32,6 +32,30 @@ function Play() {
     const [showFilter, setShowFilter] = useState(false);
     const filterRef = useRef(null);
     const didInitCategoriesRef = useRef(false);
+    const [guestName, setGuestName] = useState('');
+    const [displayName, setDisplayName] = useState('');
+
+    useEffect(() => {
+        if(!currentUser){
+            setDecks([])
+            setDisplayName('');
+            return;
+        }
+
+        const fetchUserProfile = async () => {
+            try {
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userSnapshot = await getDoc(userDocRef);
+                
+                if (userSnapshot.exists()){
+                    setDisplayName(userSnapshot.data().displayName);
+                }
+            } catch (err){
+                console.error("Error fetching profile:", err);
+            }
+        };
+        fetchUserProfile();
+    }, [currentUser]);
 
     useEffect(() => {
         if(!currentUser){
@@ -154,13 +178,29 @@ function Play() {
 
     const handleJoinGame = () => {
         setError('');
-        if(roomCode.trim()){
-            setIsLoading(true);
-            socket.emit('joinGame', roomCode.toUpperCase());
+        
+        const cleanRoomCode = roomCode.trim().toUpperCase();
+        
+        if(!cleanRoomCode){
+            setError('Please enter room code.')
+            return;
+        }
+
+        let finalName = "";
+
+        if(currentUser){
+            finalName = displayName;
         }
         else{
-            setError('Please enter a room code.')
+            finalName = guestName.trim();
+            if(!finalName){
+                setError('Please enter a username.')
+                return;
+            }
         }
+
+        setIsLoading(true);
+        socket.emit('joinGame', {roomCode: cleanRoomCode, playerName: finalName});
     }
 
     const handleBackToMenu = () => {
@@ -322,6 +362,20 @@ function Play() {
                                 value={roomCode}
                                 onChange={(e) => setRoomCode(e.target.value)}
                             />
+                                                        {!currentUser && (
+                                <input
+                                    placeholder="Enter Guest Username"
+                                    type="text"
+                                    value={guestName}
+                                    onChange={(e) => setGuestName(e.target.value)}
+                                    className="join-input"
+                                />
+                            )}
+                            {currentUser && (
+                                <p className="join-display-name">
+                                    Joining as: <strong>{displayName}</strong>
+                                </p>
+                            )}
                             <button onClick={handleJoinGame}>
                                 Join
                             </button>
