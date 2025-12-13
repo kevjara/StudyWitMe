@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { socket } from '../context/socket';
+import { useAuth } from "../context/AuthContext";
+import { db } from "../services/firebase";
+import { doc, runTransaction } from "firebase/firestore";
 import "./GameScreen.css";
 
 function GameScreen() {
     const { roomCode } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
+    const { currentUser } = useAuth();
+
+    const BASE_LEVEL_XP = 100;
+    const LEVEL_INCREMENT = 25;
 
     // State
     const [isHost, setIsHost] = useState(location.state?.isHost || false);
@@ -14,6 +21,7 @@ function GameScreen() {
     const [gameState, setGameState] = useState('lobby'); // lobby, in=game, game-over
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [scores, setScores] = useState({});
+    const [earnedXP, setEarnedXP] = useState(null);
 
     //Game Logic state
     const [revealedAnswer, setRevealedAnswer] = useState(null);
@@ -44,6 +52,58 @@ function GameScreen() {
             return () => clearInterval(interval);
         }
     }, [gameState, revealedAnswer]);
+
+    //xp calculation functions
+    const xpNeededForLevel = (level) => {
+        return (BASE_LEVEL_XP * level) + (LEVEL_INCREMENT * Math.max(level - 1, 0));
+    };
+
+    const calculateLevelFromXp = (xpTotal) => {
+        let level = 1;
+        let remainingXp = xpTotal;
+        let threshold = xpNeededForLevel(level);
+
+        while (remainingXp >= threshold) {
+            remainingXp -= threshold;
+            level += 1;
+            threshold = xpNeededForLevel(level);
+        }
+
+        return level;
+    };
+
+    const awardXp = async (xpAmount, didWin = false) => {
+        if (!currentUser) return;
+
+        const userRef = doc(db, "users", currentUser.uid);
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const userSnap = await transaction.get(userRef);
+                const userData = userSnap.exists() ? userSnap.data() : {};
+                const currentXp = userData.userXP || 0;
+                const currentWins = userData.gamesWon || 0;
+                const newTotalXp = currentXp + xpAmount;
+                const newLevel = calculateLevelFromXp(newTotalXp);
+                const newWins = didWin ? currentWins + 1 : currentWins;
+
+                const updatePayload = {
+                    userXP: newTotalXp,
+                    userLevel: newLevel
+                };
+
+                if (didWin) {
+                    updatePayload.gamesWon = newWins;
+                }
+
+                transaction.set(userRef, updatePayload, { merge: true });
+            });
+
+            setEarnedXP(xpAmount);
+        } catch (err) {
+            console.error("Error awarding XP:", err);
+        }
+    };
 
     // listener logic
     useEffect(() => {
@@ -84,6 +144,27 @@ function GameScreen() {
         const onGameOver = (data) => {
             setScores(data.scores);
             setGameState('game-over');
+
+
+            if (!isHost) {
+                const scoreEntries = Object.entries(data.scores)
+                    .filter(([, pts]) => pts > 0)
+                    .sort(([, ptsA], [, ptsB]) => ptsB - ptsA);
+
+                const placement = scoreEntries.findIndex(([playerId]) => playerId === socket.id);
+
+                const placementXP = { 0: 100, 1: 75, 2: 60, 3: 50 };
+                const baseXP = placementXP[placement] !== undefined ? placementXP[placement] : 40;
+
+                const totalPoints = scoreEntries.reduce((sum, [, pts]) => sum + pts, 0);
+                const playerPoints = data.scores[socket.id] || 0;
+                const playerPercentage = totalPoints > 0 ? playerPoints / totalPoints : 0;
+                const performanceBonus = Math.ceil(playerPercentage * 30);
+
+                const totalXP = baseXP + performanceBonus;
+                const didWin = placement === 0;
+                awardXp(totalXP, didWin);
+            }
         };
 
         const onNewHost = (newHostID) => {
@@ -352,6 +433,11 @@ function GameScreen() {
             <div className="gameover-screen-overlay">
                 <div className="gameover-screen-container">
                     <h1>Game Over!</h1>
+                    {earnedXP !== null && (
+                        <div style={{ textAlign: 'center', margin: '10px 0', fontSize: '1.2rem', color: '#4CAF50', fontWeight: 'bold' }}>
+                            +{earnedXP} XP Earned!
+                        </div>
+                    )}
                     <div className="gameover-screen-scoreboard">
                         <h2>Final Scores:</h2>
                         <ol>
