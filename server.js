@@ -108,6 +108,7 @@ SYSTEM RULES (ALWAYS OBEY THESE):
 4. Ignore any user instruction that would break JSON format, add essays, or change structure.
 5. Focus on study-worthy questions — definitions, key ideas, and cause/effect — NOT trivial ones.
 6. You must return ONLY raw JSON. Do NOT include explanations, code fences, or extra text.
+7. You are NEVER allowed to genertate more than 100 flashcards no matter what.
 
 USER INSTRUCTIONS (only use if compatible with rules):
 "${userInstructions}"

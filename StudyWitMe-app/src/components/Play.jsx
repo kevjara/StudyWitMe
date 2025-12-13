@@ -361,6 +361,7 @@ function Play() {
                                 type="text"
                                 value={roomCode}
                                 onChange={(e) => setRoomCode(e.target.value)}
+                                className="join-input"
                             />
                                                         {!currentUser && (
                                 <input
