@@ -564,15 +564,23 @@ io.on('connection', (socket) => {
             back: doc.data().back
           }));
 
-          if (rawCards.length < 4){
-            socket.emit('gameError', 'Deck must have at least 4 cards to play');
-            return;
+          // Remove Invalid Cards (missing front, missing back, or empty strings)
+          const sanitizedCards = rawCards.filter(card => {
+              const hasFront = card.front && String(card.front).trim().length > 0;
+              const hasBack = card.back && String(card.back).trim().length > 0;
+              return hasFront && hasBack;
+          });
+
+          // Handle invalid deck
+          if (sanitizedCards.length < 4) {
+              socket.emit('gameError', 'Deck must have at least 4 valid cards to play');
+              return;
           }
 
           // fetch answers from cards
-          const onlyAnswers = rawCards.map(c => c.back);
+          const onlyAnswers = sanitizedCards.map(c => c.back);
 
-          gameQuestions = rawCards.map((card) => {
+          gameQuestions = sanitizedCards.map((card) => {
             const correctAnswer = card.back;
 
             const otherAnswers = onlyAnswers.filter(ans => ans !== correctAnswer);

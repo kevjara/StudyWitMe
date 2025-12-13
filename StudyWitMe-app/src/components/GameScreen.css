@@ -116,20 +116,23 @@
 .game-host-overlay {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     position: fixed;
     top: 0;
     left: 0;
     z-index: 900;
     width: 100vw;
     height: 100vh;
+
+    padding: 2rem 0;
+    overflow-y: auto;
 }
 
 .game-host-container{
     display: flex;
     flex-direction: row;
-    width: 90%;
-    max-width: 900px;
+    width: 95%;
+    max-width: 1400px;
     min-height: 500px;
     background-color: white;
     border-radius: 8px;
@@ -286,6 +289,9 @@
     z-index: 900;
     width: 100vw;
     height: 100vh;
+
+    padding: 2rem 0;
+    overflow-y: auto;
 }
 
 .player-trivia-screen-container{
@@ -293,7 +299,7 @@
     flex-direction: column;
     align-items: center;
     width: 90%;
-    max-width: 600px;
+    max-width: 1400px;
     min-height: 150px;
     background-color: white;
     border-radius: 8px;
@@ -442,4 +448,79 @@
 
 .leave-room-btn:active {
     transform: scale(0.97);
+}
+
+/* --- MOBILE OPTION TRUNCATION & EXPANSION --- */
+@media (max-width: 500px) {
+
+    /* make the overlay align from the top so container isn't clipped */
+    .player-trivia-screen-overlay {
+        align-items: flex-start;      /* push container down from top instead of centering */
+        padding-top: 1.25rem;         /* breathing room on top */
+    }
+
+    /* allow the main container to grow but not overflow the viewport
+        and enable internal scrolling when content expands */
+    .player-trivia-screen-container {
+        position: relative;
+        width: 96%;
+        max-width: 720px; /* keep large-desktop maxWidth harmless on mobile */
+        max-height: calc(100vh - 3.5rem); /* leave some space for top/bottom */
+        overflow-y: auto;   /* scroll inside container when needed */
+        -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+        box-sizing: border-box;
+        margin: 0.5rem auto; /* center horizontally with a small top margin */
+        padding: 1rem; /* slightly reduced padding for mobile */
+    }
+
+    /* Player option buttons */
+    .player-trivia-options-btn {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        position: relative;
+    }
+
+    /* Host option display */
+    .host-option-display {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        position: relative;
+    }
+
+    /* Expand on tap or hover */
+    .player-trivia-options-btn:active,
+    .player-trivia-options-btn:focus,
+    .player-trivia-options-btn:hover,
+    .host-option-display:hover,
+    .host-option-display:active,
+    .host-option-display:focus {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+
+        /* Makes the expanded bubble appear above others */
+        z-index: 2000;
+        background-color: white;
+        padding: 1.2rem;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+    }
+
+    /* Slightly reduce padding to fit mobile better */
+    .player-trivia-options-btn,
+    .host-option-display {
+        padding: 0.8rem;
+        font-size: 1rem;
+        min-height: 50px;
+    }
+
+    /* Options grid becomes single column on very small screens */
+    .player-trivia-options-grid,
+    .game-host-options-grid {
+        grid-template-columns: 1fr;
+    }
 }
