@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
-import { collection, onSnapshot, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useDecks } from "../context/DecksContext";
 import styles from "./Flashcards.module.css";
 import "./Play.css";
@@ -37,7 +37,6 @@ function Play() {
 
     useEffect(() => {
         if(!currentUser){
-            setDecks([])
             setDisplayName('');
             return;
         }
@@ -57,40 +56,6 @@ function Play() {
         fetchUserProfile();
     }, [currentUser]);
 
-    useEffect(() => {
-        if(!currentUser){
-            setDecks([])
-            return;
-        }
-        
-        const decksCollectionRef = collection(db, "deck");
-        const q = query(decksCollectionRef, where("ownerId", "==", currentUser.uid));
-
-        const unsubscribe = onSnapshot(
-            q,
-            async (snapshot) => {
-                const userDecks = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
-                setDecks(userDecks);
-
-                const counts = {};
-                const flashcardsCollectionRef = collection(db, "flashcard");
-                for (const deck of userDecks){
-                    const cardQuery = query(flashcardsCollectionRef, where("deckId", "==", deck.id), where("ownerId", "==", currentUser.uid));
-                    const cardSnapshot = await getDocs(cardQuery);
-                    counts[deck.id] = cardSnapshot.size;
-                }
-                setDeckCounts(counts);
-            },
-            (error) => {
-                console.error("error fetching cards", error);
-            }
-        );
-
-        return() => unsubscribe();
-    }, [currentUser]);
 
     // Initialize default categories on first load
     useEffect(() => {
@@ -355,7 +320,9 @@ function Play() {
                 <div className="join-screen-overlay">
                     <div className="join-screen-box">
                         <button className="join-screen-back-btn" onClick={handleBackToMenu}>&times;</button>
-                        <div className="join-screen-contents">
+
+                        <div className="join-body-grid">
+                            <label className="join-label">Room Code:</label>
                             <input
                                 placeholder="Enter Room Code"
                                 type="text"
@@ -363,24 +330,33 @@ function Play() {
                                 onChange={(e) => setRoomCode(e.target.value)}
                                 className="join-input"
                             />
-                                                        {!currentUser && (
-                                <input
-                                    placeholder="Enter Guest Username"
-                                    type="text"
-                                    value={guestName}
-                                    onChange={(e) => setGuestName(e.target.value)}
-                                    className="join-input"
-                                />
+                            {!currentUser && (
+                                <>
+                                    <label className="join-label">Username:</label>       
+                                    <input
+                                        placeholder="Enter Guest Username"
+                                        type="text"
+                                        value={guestName}
+                                        onChange={(e) => setGuestName(e.target.value)}
+                                        className="join-input"
+                                    />
+                                </>  
                             )}
-                            {currentUser && (
-                                <p className="join-display-name">
-                                    Joining as: <strong>{displayName}</strong>
-                                </p>
-                            )}
-                            <button onClick={handleJoinGame}>
+                        </div>
+
+                        <div className="join-footer">
+                            <div className="join-status-text">
+                                {currentUser && (
+                                    <p className="join-display-name">
+                                        Joining as: <strong>{displayName}</strong>
+                                    </p>
+                                )}
+                            </div>
+                            <button className="join-action-btn" onClick={handleJoinGame}>
                                 Join
                             </button>
                         </div>
+
                         {error && <p className="join-error-text">{error}</p>}
                     </div>
                 </div>
