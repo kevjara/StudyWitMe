@@ -178,6 +178,20 @@ function GameScreen() {
             navigate('/play'); // redirect back to game menu
         }
 
+        const onGameError = (message) => {
+            alert(message);
+        }
+        
+        // Clean up listerners before launching new ones just in case
+        socket.off('updatePlayerList');
+        socket.off('gameStarted');
+        socket.off('newQuestion');
+        socket.off('questionResult');
+        socket.off('gameOver');
+        socket.off('newHost');
+        socket.off('roomClosed');
+        socket.off('gameError');
+
         socket.on('updatePlayerList', onUpdatePlayerList);
         socket.on('gameStarted', onGameStarted);
         socket.on('newQuestion', onNewQuestion);
@@ -185,6 +199,7 @@ function GameScreen() {
         socket.on('gameOver', onGameOver);
         socket.on('newHost', onNewHost);
         socket.on('roomClosed', onRoomCLosed);
+        socket.on('gameError', onGameError);
 
         // request server for player list after game created in case of race conditon
         socket.emit('getInitialData', roomCode);
@@ -197,6 +212,7 @@ function GameScreen() {
             socket.off('gameOver', onGameOver);
             socket.off('newHost', onNewHost);
             socket.off('roomClosed', onRoomCLosed);
+            socket.off('gameError', onGameError);
         }
 
     }, [navigate, roomCode]);
@@ -237,14 +253,14 @@ function GameScreen() {
                     Close Room
                 </button>
                 <div className="player-display">
-                    <p>Players ({players.length}):</p>
+                    <p>Players ({players.length}/4):</p>
                     <ul>
                         {players.map((player) => (
                             <li key={player.id}>{player.name}</li>
                         ))}
                     </ul>
                 </div>
-                <button className="host-lobby-start-game-btn" onClick={handleStartGame} disabled={players.length < 1}>
+                <button className="host-lobby-start-game-btn" onClick={handleStartGame}>
                     Start Game
                 </button>
             </div>
@@ -452,9 +468,6 @@ function GameScreen() {
                         <div className="gameover-controls">
                             <button className="gameover-replay-btn" onClick={handleRestart}>
                                 Play Again
-                            </button>
-                            <button className="gameover-host-deck-btn" >
-                                Choose Another Deck
                             </button>
                             <button className="gameover-main-menu-btn" onClick={() => navigate("/main")}>
                                 Main Menu

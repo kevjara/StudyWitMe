@@ -112,14 +112,27 @@ function Play() {
             setError(message);
         }
 
+        const onGameError = (message) =>{
+            alert(message);
+        }
+
+        // clean up listeners before launching new ones just in case
+        socket.off('gameCreated');
+        socket.off('joinSuccess');
+        socket.off('joinError');
+        socket.off('gameError');
+
         socket.on('gameCreated', onGameCreated);
         socket.on('joinSuccess', onJoinSuccess);
         socket.on('joinError', onJoinError);
+        socket.on('gameError', onGameError);
 
         return () => {
             socket.off('gameCreated', onGameCreated);
             socket.off('joinSuccess', onJoinSuccess);
             socket.off('joinError', onJoinError);
+            socket.off('gameError', onGameError);
+
         }
     }, [navigate]);
 
@@ -134,7 +147,12 @@ function Play() {
     }
 
     const handleShowChooseDeck = () => {
-        setMode('choosing-deck')
+        if(!currentUser){
+            setLoginPrompt(true);
+            return;
+        }
+
+        setMode('choosing-deck');
     }
 
     const handleShowJoinMenu = () => {

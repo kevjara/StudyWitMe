@@ -665,9 +665,14 @@ io.on('connection', (socket) => {
     socket.on('joinGame', ({roomCode, playerName}) => {
         console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
         if(gameSessionsContainer[roomCode]) {
-            socket.join(roomCode);
-            
             const game = gameSessionsContainer[roomCode];
+
+            if(game.players.length >= 4){
+              socket.emit('joinError', 'Room is full (max 4 players');
+              return;
+            }
+
+            socket.join(roomCode);
 
             game.players.push({
               id: socket.id,
@@ -724,7 +729,21 @@ io.on('connection', (socket) => {
 
     socket.on('startGame', (roomCode) => {
         const game = gameSessionsContainer[roomCode];
+
         if (game && game.hostId == socket.id) {
+
+            const playerCount = game.players.length;
+
+            if(playerCount < 2){
+              socket.emit('gameError', 'Not enough players, You need at least 2 players to start.');
+              return;
+            }
+
+            if(playerCount > 4){
+              socket.emit('gameError', 'Too many players, The max is 4 players');
+              return;
+            }
+
             console.log(`starting game in room ${roomCode}`);
             io.to(roomCode).emit('gameStarted');
             sendQuestion(roomCode);
