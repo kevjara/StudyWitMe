@@ -26,9 +26,15 @@ body {
 }
 
 .home {
+<<<<<<< HEAD
     width: 35px !important; 
     height: 35px !important;
     margin-right: 12px;
+=======
+    width: 30px;
+    height: 30px;
+    margin-right: 8px;
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
     cursor: pointer;
     transition: transform 0.3s ease, filter 0.3s ease;
     vertical-align: middle;
@@ -42,13 +48,18 @@ body {
 }
 
 .nav button {
+<<<<<<< HEAD
+=======
+    margin-right: 10px;
+    padding: 10px 18px;
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
     border: none;
     border-radius: 8px;
     background-color: #416d8e;
     color: #fff;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     cursor: pointer;
     transition: background-color 0.25s ease, transform 0.15s ease;
 }
@@ -60,6 +71,15 @@ body {
 
 .nav button:active {
     transform: translateY(0);
+}
+
+.navSearchInput {
+    margin: 0 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #c0c9d5;
+    font-size: 0.85rem;
+    width: 180px;
 }
 
 .music {
@@ -130,9 +150,9 @@ body {
 
 /* === SETTINGS ICON === */
 .settingsIcon {
-    width: 35px;
-    height: 35px;
-    margin-left: 12px;
+    width: 30px;
+    height: 30px;
+    margin-left: 8px;
     cursor: pointer;
     transition: transform 0.3s ease, filter 0.3s ease;
     vertical-align: middle;

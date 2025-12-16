@@ -1,10 +1,18 @@
+<<<<<<< HEAD
 import {useState, useEffect, useRef} from "react";
+=======
+import React, {useState, useEffect} from "react";
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 import { useNavigate, Link } from "react-router-dom";
 import { socket } from "../context/socket";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
+<<<<<<< HEAD
 import { doc, getDoc } from "firebase/firestore";
 import { useDecks } from "../context/DecksContext";
+=======
+import { collection, onSnapshot, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 import styles from "./Flashcards.module.css";
 import "./Play.css";
 import logo from "../assets/Logo.png";
@@ -12,11 +20,68 @@ import logo from "../assets/Logo.png";
 function Play() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
+<<<<<<< HEAD
+=======
+    const [decks, setDecks] = useState([]);
+    const [deckCounts, setDeckCounts] = useState({});
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
     const [mode, setMode] = useState('menu');
     const [isLoading, setIsLoading] = useState(false);
     const [roomCode, setRoomCode] = useState('');
     const [error, setError] = useState('');
     const [showLoginPrompt, setLoginPrompt] = useState(false);
+    const [guestName, setGuestName] = useState('');
+    const [displayName, setDisplayName] = useState('');
+
+    useEffect(() => {
+        if(!currentUser){
+            setDecks([])
+            setDisplayName('');
+            return;
+        }
+
+        const fetchUserProfile = async () => {
+            try {
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userSnapshot = await getDoc(userDocRef);
+                
+                if (userSnapshot.exists()){
+                    setDisplayName(userSnapshot.data().displayName);
+                }
+            } catch (err){
+                console.error("Error fetching profile:", err);
+            }
+        };
+        fetchUserProfile();
+        
+        const decksCollectionRef = collection(db, "deck");
+        const q = query(decksCollectionRef, where("ownerId", "==", currentUser.uid));
+
+        const unsubscribe = onSnapshot(
+            q,
+            async (snapshot) => {
+                const userDecks = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setDecks(userDecks);
+
+                const counts = {};
+                const flashcardsCollectionRef = collection(db, "flashcard");
+                for (const deck of userDecks){
+                    const cardQuery = query(flashcardsCollectionRef, where("deckId", "==", deck.id), where("ownerId", "==", currentUser.uid));
+                    const cardSnapshot = await getDocs(cardQuery);
+                    counts[deck.id] = cardSnapshot.size;
+                }
+                setDeckCounts(counts);
+            },
+            (error) => {
+                console.error("error fetching cards", error);
+            }
+        );
+
+        return() => unsubscribe();
+    }, [currentUser]);
 
     //no longer looking each load, just checks cache
     const { decks, loadingDecks, deckCounts } = useDecks(); 
@@ -150,12 +215,16 @@ function Play() {
     }
 
     const handleShowChooseDeck = () => {
+<<<<<<< HEAD
         if(!currentUser){
             setLoginPrompt(true);
             return;
         }
 
         setMode('choosing-deck');
+=======
+        setMode('choosing-deck')
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
     }
 
     const handleShowJoinMenu = () => {
@@ -186,6 +255,7 @@ function Play() {
         }
 
         setIsLoading(true);
+<<<<<<< HEAD
         const avatar = currentUser ? "default" : "guest";
         socket.emit('joinGame', {
             roomCode: cleanRoomCode,
@@ -193,6 +263,9 @@ function Play() {
             avatar,
             userLevel
         });
+=======
+        socket.emit('joinGame', {roomCode: cleanRoomCode, playerName: finalName});
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
     }
 
     const handleBackToMenu = () => {
@@ -255,6 +328,7 @@ function Play() {
                                 Back
                             </button>
                         </div>
+<<<<<<< HEAD
                         <h3 className={styles.toolbarTitle}>Choose a Deck to Host</h3>
                         <div className={styles.toolbarRight}>
                             <select
@@ -314,6 +388,17 @@ function Play() {
                         <div className={styles.categoryGrid}>
                             {decks.length    > 0 ?(
                                 filteredDecks.map((deck) => (
+=======
+                        <h1 className={styles.toolbarTitle}>Choose a Deck to Host</h1>
+                        <div className={styles.tollbarRight}></div>
+                    </div>
+                </div>
+                <div className={styles.menuBackdrop}>
+                    <div >
+                        <div className={styles.categoryGrid}>
+                            {decks.length    > 0 ?(
+                                decks.map((deck) => (
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                                     <div key={deck.id} className={styles.deckCard}>
                                         <div className={styles.deckMeta}>
                                             <div className={styles.deckCardContent}>
@@ -358,6 +443,7 @@ function Play() {
                                 className="join-input"
                             />
                             {!currentUser && (
+<<<<<<< HEAD
                                 <>
                                     <label className="join-label">Username:</label>       
                                     <input
@@ -380,6 +466,22 @@ function Play() {
                                 )}
                             </div>
                             <button className="join-action-btn" onClick={handleJoinGame}>
+=======
+                                <input
+                                    placeholder="Enter Guest Username"
+                                    type="text"
+                                    value={guestName}
+                                    onChange={(e) => setGuestName(e.target.value)}
+                                    className="join-input"
+                                />
+                            )}
+                            {currentUser && (
+                                <p className="join-display-name">
+                                    Joining as: <strong>{displayName}</strong>
+                                </p>
+                            )}
+                            <button onClick={handleJoinGame}>
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                                 Join
                             </button>
                         </div>
@@ -394,6 +496,7 @@ function Play() {
     return (
         <> 
             <div className="menu-overlay"> 
+<<<<<<< HEAD
                 <div className="menu-arched-card">
 
                     <div className="menu-logo-section">
@@ -415,6 +518,11 @@ function Play() {
                         <p>Test your knowledge with up to 4 players!</p>
                     </div>
                     
+=======
+                <div className="menu-button-box">
+                    <button onClick={handleShowChooseDeck}>Host Game</button>
+                    <button onClick={handleShowJoinMenu}>Join Game</button>
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                 </div>
             </div>
         </>

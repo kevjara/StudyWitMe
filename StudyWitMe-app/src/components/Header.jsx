@@ -10,6 +10,7 @@ import styles from "./Header.module.css";
 
 function Header({ handleSignOut }) {
     const [hasHoveredSettings, setHasHoveredSettings] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { hasStartedOnce, playMusic } = useMusic();
@@ -25,6 +26,14 @@ function Header({ handleSignOut }) {
             navigate(`/search?q=${q}`);
             // optional: clear it
             // setSearchTerm("");
+        }
+    };
+
+    // brought searchbar back over
+    const handleSearchKeyDown = (e) => {
+        if (e.key === "Enter" && searchTerm.trim()) {
+            const q = encodeURIComponent(searchTerm.trim());
+            navigate(`/search?q=${q}`);
         }
     };
 
@@ -53,7 +62,6 @@ function Header({ handleSignOut }) {
                 ) : (
                 <button onClick={() => navigate("/login")}>Sign In</button>
                 )}
-
                 <img
                 src={settingsIcon}
                 alt="Settings"

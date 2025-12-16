@@ -47,12 +47,12 @@ export default function Login() {
                         console.log("Applying achievements field update and granting Beta User achievement.");
                     }
                     //checks for 'userLevel' field
-                    if (!('userLevel' in userData)) {
+                    if (!("userLevel" in userData)) {
                         updates.userLevel = 0;
                         console.log("Applying userLevel field update (default to 0).");
                     }
                     // check for avatar field
-                    if (!('avatar' in userData)) {
+                    if (!("avatar" in userData)) {
                         updates.avatar = "default";
                         console.log("Applying avatar field update (default).");
                     }

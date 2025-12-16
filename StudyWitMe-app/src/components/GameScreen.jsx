@@ -4,10 +4,13 @@ import { socket } from '../context/socket';
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { doc, runTransaction } from "firebase/firestore";
+<<<<<<< HEAD
 import Avatar from "../components/Avatar";
 import FirstPlaceMedal from "../assets/1st-place-medal.svg";
 import SecondPlaceMedal from "../assets/2nd-place-medal.svg";
 import ThirdPlaceMedal from "../assets/3rd-place-medal.svg";
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 import "./GameScreen.css";
 
 function GameScreen() {
@@ -108,12 +111,15 @@ function GameScreen() {
             console.error("Error awarding XP:", err);
         }
     };
+<<<<<<< HEAD
 
     const [mySocketId, setMySocketId] = useState(null);
 
     useEffect(() => {
         setMySocketId(socket.id);
     }, []);
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 
     // listener logic
     useEffect(() => {
@@ -155,7 +161,10 @@ function GameScreen() {
             setScores(data.scores);
             setGameState('game-over');
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
             if (!isHost) {
                 const scoreEntries = Object.entries(data.scores)
                     .filter(([, pts]) => pts > 0)
@@ -226,6 +235,7 @@ function GameScreen() {
         }
 
     }, [navigate, roomCode]);
+<<<<<<< HEAD
 
     const handleLeaveRoom = () => {
         socket.emit("leaveRoom", roomCode);
@@ -236,6 +246,8 @@ function GameScreen() {
         socket.emit("closeRoom", roomCode);
         navigate("/play");
     };
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 
     const handleStartGame = () => {
         socket.emit('startGame', roomCode);
@@ -266,6 +278,7 @@ function GameScreen() {
                     <p>Players ({players.length}/4):</p>
                     <ul className="player-list">
                         {players.map((player) => (
+<<<<<<< HEAD
                             <li key={player.id} className="player-list-item">
                                 <div className="player-identity">
                                     <Avatar avatar={player.avatar} size={32} />
@@ -276,6 +289,9 @@ function GameScreen() {
                                     Lv. {player.userLevel ?? 1}
                                 </span>
                             </li>
+=======
+                            <li key={player.id}>{player.name}</li>
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                         ))}
                     </ul>
                 </div>
@@ -291,9 +307,12 @@ function GameScreen() {
             <div className="join-lobby-container">
                 <h1>Room Code: {roomCode}</h1>
                 <p>Waiting for host to start the game...</p>
+<<<<<<< HEAD
                 <button onClick={handleLeaveRoom} className="leave-room-btn">
                     Leave Room
                 </button>
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
             </div>
         </div>
     );
@@ -429,7 +448,11 @@ function GameScreen() {
                                     }
                                 }
                                 else if(selectedOptionIndex === index){
+<<<<<<< HEAD
                                     buttonClass += ' selected';
+=======
+                                  buttonClass += ' selected';
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                                 }
 
                                 return (
@@ -476,6 +499,7 @@ function GameScreen() {
                     <div className="gameover-screen-scoreboard">
                         <h2>Final Scores:</h2>
                         <ol>
+<<<<<<< HEAD
                             {sortedPlayers.map((player, index) => {
                                 const isMe = player.id === socket.id;
 
@@ -515,6 +539,13 @@ function GameScreen() {
                                     </li>
                                 );
                             })}
+=======
+                            {sortedPlayers.map((player) => (
+                                <li>
+                                    {player.id === socket.id ? `You (${player.name})`: player.name}: {scores[player.id] || 0} points
+                                </li>
+                            ))}
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                         </ol>
                     </div>
                     {isHost ? (
@@ -522,6 +553,12 @@ function GameScreen() {
                             <button className="gameover-replay-btn" onClick={handleRestart}>
                                 Play Again
                             </button>
+<<<<<<< HEAD
+=======
+                            <button className="gameover-host-deck-btn" >
+                                Choose Another Deck
+                            </button>
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
                             <button className="gameover-main-menu-btn" onClick={() => navigate("/main")}>
                                 Main Menu
                             </button>

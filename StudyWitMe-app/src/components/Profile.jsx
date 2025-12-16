@@ -31,7 +31,6 @@ function Profile() {
 
     const handleImageError = async (e, deck) => {
         const isOwnerOfDeck = currentUser?.uid === deck.ownerId; 
-
         if (!deck.pixabayId) {
             console.warn(`⚠️ No pixabayId for deck ${deck.id}`);
             e.target.style.display = 'none';
@@ -188,6 +187,8 @@ function Profile() {
 
     return (
         <div className={styles.profilePage}>
+
+            <button className={styles.backBtn} onClick={() => navigate("/main")}>← Back to Main Menu</button>
 
             <div className={styles.profileCard}>
                 <div className={styles.profileTop}>

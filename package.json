@@ -1,19 +1,18 @@
 {
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@ncdai/react-wheel-picker": "^1.0.19",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^5.1.0",
-    "firebase-admin": "^13.6.0",
-    "framer-motion": "^12.23.24",
+  "firebase-admin": "^13.6.0",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.4.149",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "vite": "^7.1.10"
   },
   "name": "studywitme",
   "version": "1.0.0",
@@ -22,7 +21,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev:all": "node server.js & cd StudyWitMe-app && npm run dev"
   },
   "keywords": [],
   "author": "",

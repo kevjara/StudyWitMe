@@ -190,6 +190,7 @@
     text-align: left;
 }
 
+<<<<<<< HEAD
 .labelRow {
     display: flex;
     align-items: center;
@@ -471,6 +472,8 @@
 }
 
 
+=======
+>>>>>>> origin/backend-website/store-generated-flashcards/Daniel
 .startQuizButton {
     background-color: #416d8e;
     color: white;

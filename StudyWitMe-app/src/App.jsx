@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Routes, Route, useLocation } from "react-router-dom";;
+import { useNavigate, Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useMusic } from "./context/MusicProvider";
 import styles from "./components/Header.module.css";
@@ -11,7 +11,6 @@ import Login from "./components/Login";
 import FlashcardGenerator from "./components/FlashcardGenerator";
 import Background from "./components/Background";
 import Flashcards from "./components/Flashcards";
-import { DecksProvider } from "./context/DecksContext";
 import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import FlashcardsStudy from "./components/FlashcardsStudy";
@@ -21,8 +20,9 @@ import ManageDeck from "./components/ManageDeck";
 import AuthGate from "./components/AuthGate";
 import SearchResults from "./components/SearchResults";
 import Play from "./components/Play";
-import GameScreen from "./components/GameScreen";
 import GameConnection from "./components/GameConnection";
+import GameScreen from "./components/GameScreen";
+import { DecksProvider } from "./context/DecksContext";
 
 
 function App() {
@@ -63,9 +63,11 @@ function App() {
             {/* Routes WITHOUT header */}
             <Route path="/" element={<TitleScreen />} />
             <Route path="/login" element={<Login />} />
+            
+            {/* Game routes (no layout) */}
             <Route element={<GameConnection />}>
-                <Route path="/play" element={<Play />} />
-                <Route path="/game/:roomCode" element={<GameScreen/>} />
+              <Route path="/play" element={<Play />} />
+              <Route path="/game/:roomCode" element={<GameScreen />} />
             </Route>
 
             {/* Routes WITH header */}
@@ -73,9 +75,10 @@ function App() {
               <Route path="/main" element={<MainMenu />} />
               <Route path="/create" element={<FlashcardGenerator />} />
               <Route path="/flashcards" element={<Flashcards />} />
+              <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
+              <Route path="/profile/:uid" element={<Profile />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/flashcards/deck/:deckId/study" element={<FlashcardsStudy />} />
               <Route path="/flashcards_quiz" element={<FlashcardsQuiz />} />
               <Route path="/flashcards/deck/:deckId/manage" element={<ManageDeck />} />
               <Route path="/search" element={<SearchResults />} />

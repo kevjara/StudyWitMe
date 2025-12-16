@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useDecks } from "../context/DecksContext"; // ← NEW
+import { useDecks } from "../context/DecksContext";
 import { useNavigate, Link } from "react-router-dom";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -10,8 +10,8 @@ import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
 export default function Flashcards() {
     const { currentUser, loading } = useAuth();
 
-    //no longer looking each load, just checks cache
-    const { decks, loadingDecks, deckCounts } = useDecks(); 
+    // Cached deck system
+    const { decks, loadingDecks, deckCounts } = useDecks();
 
     const [filteredDecks, setFilteredDecks] = useState([]);
     const [sortOption, setSortOption] = useState("category");
@@ -21,8 +21,9 @@ export default function Flashcards() {
     const [selectedDecks, setSelectedDecks] = useState([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteStatus, setDeleteStatus] = useState("");
+
     const [refreshedUrls, setRefreshedUrls] = useState({});
-    const [masteryData, setMasteryData] = useState({}); // deckId -> mastery info
+    const [masteryData, setMasteryData] = useState({}); 
 
     // Filter state
     const [selectedCategories, setSelectedCategories] = useState([]);
@@ -58,7 +59,7 @@ export default function Flashcards() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
-    // 🔥 Apply sort & filtering to cached decks
+    // Apply sort & filtering
     useEffect(() => {
         let updated = [...decks];
 
@@ -149,7 +150,7 @@ export default function Flashcards() {
             }, 2000);
         } catch (err) {
             console.error("Error deleting decks:", err);
-            setDeleteStatus("Error deleting decks. Check console.");
+            setDeleteStatus("Error deleting decks.");
         }
     };
     
@@ -208,7 +209,11 @@ export default function Flashcards() {
         }
     };
 
-    // ---- Render states ----
+
+    // ─────────────────────────────────────────────
+    // RENDER
+    // ─────────────────────────────────────────────
+
     if (!currentUser && !loading) {
         return (
             <div className={styles.overlay}>
@@ -217,6 +222,9 @@ export default function Flashcards() {
                     <p>
                         Please <Link to="/login">sign in</Link> to view your decks.
                     </p>
+                    <button className={styles.backButton} onClick={() => navigate("/main")}>
+                        ← Back to Main Menu
+                    </button>
                 </div>
             </div>
         );
@@ -244,6 +252,10 @@ export default function Flashcards() {
                     >
                         <span className={styles.plusSign}>+</span>
                     </div>
+
+                    <button className={styles.backButton} onClick={() => navigate("/main")}>
+                        ← Back to Main Menu
+                    </button>
                 </div>
             </div>
         );
@@ -340,7 +352,7 @@ export default function Flashcards() {
                         ? Object.entries(
                               filteredDecks.reduce((groups, deck) => {
                                   const cat = deck.category || "Uncategorized";
-                                  (groups[cat] ||= []).push(deck);
+                                  (groups[cat] ??= []).push(deck);
                                   return groups;
                               }, {})
                           )
@@ -351,14 +363,20 @@ export default function Flashcards() {
                             <div className={styles.categoryGrid}>
                                 {decksInCat.map((deck) => {
                                     const isSelected = selectedDecks.includes(deck.id);
+
                                     return (
                                         <div
                                             key={deck.id}
-                                            className={`${styles.deckCard} ${isSelected ? styles.selectedDeck : ""}`}
+                                            className={`${styles.deckCard} ${
+                                                isSelected ? styles.selectedDeck : ""
+                                            }`}
                                         >
+                                            {/* Delete selector */}
                                             {deleteMode && (
                                                 <button
-                                                    className={`${styles.deleteSelectButton} ${isSelected ? styles.selected : ""}`}
+                                                    className={`${styles.deleteSelectButton} ${
+                                                        isSelected ? styles.selected : ""
+                                                    }`}
                                                     onClick={() => toggleDeckSelection(deck.id)}
                                                 >
                                                     {isSelected ? "✕" : "✓"}
@@ -386,6 +404,42 @@ export default function Flashcards() {
                                             )}
                                             {/* End Deck Cover Image */}
 
+                                            {/* Deck Image */}
+                                            {(deck.imagePath || deck.pixabayId) && (
+                                                <div
+                                                    style={{
+                                                        width: "100%",
+                                                        height: "100px",
+                                                        overflow: "hidden",
+                                                        borderRadius: "8px 8px 0 0",
+                                                        background: "#f0f0f0",
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={
+                                                            refreshedUrls[deck.id] &&
+                                                            refreshedUrls[deck.id] !== "loading" &&
+                                                            refreshedUrls[deck.id] !== "failed"
+                                                                ? refreshedUrls[deck.id]
+                                                                : deck.imagePath
+                                                        }
+                                                        alt={deck.title}
+                                                        style={{
+                                                            width: "100%",
+                                                            height: "100%",
+                                                            objectFit: "cover",
+                                                            opacity:
+                                                                refreshedUrls[deck.id] === "loading"
+                                                                    ? 0.3
+                                                                    : 1,
+                                                            transition: "opacity 0.3s",
+                                                        }}
+                                                        onError={(e) => handleImageError(e, deck)}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Deck Info */}
                                             <div className={styles.deckMeta}>
                                                 <div className={styles.deckCardContent}>
                                                     <h3>{deck.title || "Untitled Deck"}</h3>
@@ -409,19 +463,31 @@ export default function Flashcards() {
                                                 </div>
                                             </div>
 
+                                            {/* ACTION BUTTONS */}
                                             <div className={styles.deckButtons}>
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })}
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/flashcards/deck/${deck.id}/study`,
+                                                            { state: { deck } }
+                                                        )
+                                                    }
                                                 >
                                                     Study
                                                 </button>
+
                                                 <button
                                                     className={styles.deckButtonSmall}
-                                                    onClick={() => navigate("/flashcards_quiz", { state: { deck } })}
+                                                    onClick={() =>
+                                                        navigate("/flashcards_quiz", {
+                                                            state: { deck },
+                                                        })
+                                                    }
                                                 >
                                                     Quiz
                                                 </button>
+
                                                 <button
                                                     className={styles.deckButtonSmall}
                                                     onClick={() => navigate(`/flashcards/deck/${deck.id}/manage`)}
