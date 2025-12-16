@@ -56,7 +56,26 @@
     height: 100vh;
 }
 
+.home {
+    width: 35px !important; 
+    height: 35px !important;
+    margin-right: 12px;
+    cursor: pointer;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    vertical-align: middle;
+    position: absolute;
+    top: 6px;
+    left: 10px;
+    bottom: 3px;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.home:hover {
+    filter: brightness(0.8)
+}
+
 .menu-button-box {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -70,6 +89,16 @@
     max-width: 450px;
 }
 
+.menu-button-box button {
+    background-color: #416d8e;
+    color: #fff;
+}
+
+.menu-button-box button:hover {
+    background-color: #2f546e;
+}
+
+
 .join-screen-overlay{
     display: flex;
     justify-content: center;
@@ -82,16 +111,22 @@
 
     width: 100vw;
     height: 100vh;
+
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 .join-screen-box{
     position: relative;
     background-color: white;
-    padding: 2.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    width: 90%;
-    max-width: 450px;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 380px;
+    max-width: 90%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    
 }
 
 .join-screen-back-btn{
@@ -102,33 +137,72 @@
     background: none;
     border: none;
     font-size:1.7rem;
+    font-weight: bold;
     color: #888;
     cursor: pointer;
-    line-height: 0;
+    line-height: 1;
+    padding: 0;
 }
 
-.join-screen-contents{
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
+.join-body-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 15px 15px;
+    align-items: center;
+    margin-top: 15px;
 }
 
-.join-screen-contents input {
-    flex-grow: 1;
-    padding: 10px;
+.join-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #000;
+    text-align: left;
+}
+
+.join-input {
+    width: 100%;
+    padding: 8px 10px;
     font-size: 1rem;
     border: 1px solid#ccc;
-    border-radius: 5px;
+    border-radius: 4px;
+    outline: none;
 }
 
-.join-screen-contents button{
-    flex-grow: 0;
-    padding: 10px 20px;
+.join-input:focus {
+    border-color: #2D9CDB;
+}
+
+.join-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.join-status-text{
+    font-size: 1rem;
+    color: #333;
+}
+
+.join-action-btn {
+    padding: 8px 24px;
     font-size: 1rem;
     font-weight: 500;
     border: none;
-    border-radius: 5px;
-    background-color: #007bff;
+    border-radius: 6px;
+    background-color: #2D9CDB;
     color: white;
     cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.join-action-btn:hover{
+    background-color: #2488c2;
+}
+
+.join-error-text {
+    color: red;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 5px;
 }

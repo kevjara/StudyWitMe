@@ -34,6 +34,7 @@ function FlashcardGenerator() {
     const [endPage, setEndPage] = useState('1'); //endPage button
     const [editedAnswer, setEditedAnswer] = useState("");
     const [isButtonLocked, setIsButtonLocked] = useState(false);
+    const [tempImages, setTempImages] = useState({});
     //Used in Finalize Deck
     const [selectedCategory, setSelectedCategory] = useState("");
     const [selectedSubcategory, setSelectedSubcategory] = useState("");
@@ -139,6 +140,10 @@ function FlashcardGenerator() {
 
         try {
             let response;
+            if (file && textInput.trim()) {
+                showStatus("Please use only ONE input: either upload a PDF or enter text directly.");
+                return;
+            }
 
             if (file) {
                 // --- PDF upload with FormData ---
@@ -250,7 +255,7 @@ function FlashcardGenerator() {
             setTimeout(() => {
             setStatus("");        // clear right before entering viewer
             setView("viewer");
-            }, 1500); 
+            }, 2000); 
 
         } catch (err) {
             console.error("Unexpected error:", err);
@@ -351,9 +356,13 @@ function FlashcardGenerator() {
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
+            setDeckImage("");
+            setPickerForDeck(false);
+            setPickerForCard(null);
+            setTempImages({});
             setView("form");
             setIsFinishLocked(false); // ✅ unlock button after save
-        }, 3000);
+        }, 2500);
         } catch (err) {
             console.error("Error saving deck:", err);
             showStatus("Error saving deck. Check console.");
@@ -387,10 +396,14 @@ function FlashcardGenerator() {
         setStartPage('1');
         setEndPage('1');
         setView("status")
+        setDeckImage("");
+        setPickerForDeck(false);
+        setPickerForCard(null);
+        setTempImages({});
         showStatus("⚠️Deck canceled and discarded.");
         setTimeout(() => {
             setView("form");     // go back to start
-        }, 3000);
+        }, 2500);
     };
 
     const handleCancelConfirmNo = () => {
@@ -577,25 +590,10 @@ function FlashcardGenerator() {
                                     open={true}
                                     onClose={() => setPickerForCard(null)}
                                     onSelect={(img) => {
-                                    // attach image info to the flashcard
-                                    setSavedFlashcards((prev) => {
-                                        const updated = [...prev];
-                                        const existing = updated.findIndex((f) => f.index === currentFlashcardIndex);
-                                        if (existing !== -1) {
-                                        updated[existing] = { ...updated[existing], image: img.webformatURL };
-                                        } else {
-                                        updated.push({
-                                            index: currentFlashcardIndex,
-                                            front: currentFlashcard[0],
-                                            back: editedAnswer,
-                                            image: img.webformatURL,
-                                            type: flashcardTypes[currentFlashcardIndex] || "Multiple Choice",
-                                        });
-                                        }
-                                        return updated;
-                                    });
+                                    const newImage = img.webformatURL;
+                                    setTempImages(prev => ({ ...prev, [currentFlashcardIndex]: newImage }));
                                     setPickerForCard(null);
-                                    showStatus("Image selected for this card ✓");
+                                    showStatus("Image selected — remember to save this card!");
                                     }}
                                     mode="inline"
                                 />
@@ -608,14 +606,51 @@ function FlashcardGenerator() {
                                 className={styles.cardImageBtn}
                             >
                                 {(() => {
-                                const card = savedFlashcards.find(f => f.index === currentFlashcardIndex);
-                                return card && card.image ? "Change Image" : "Choose Image for Card";
-                                })()}
+                                    const savedCard = savedFlashcards.find(f => f.index === currentFlashcardIndex);
+                                    const previewSrc = tempImages[currentFlashcardIndex] || savedCard?.image || "";
+
+                                    return previewSrc ? (
+                                        <div className={styles.imagePreviewWrapper}>
+                                        <img
+                                            src={previewSrc}
+                                            alt="Card Preview"
+                                            className={styles.imagePreview}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.removeImageBtn}
+                                            onClick={() => {
+                                            // remove temp image and if saved exists, clear saved image
+                                            setTempImages(prev => {
+                                                const copy = { ...prev };
+                                                delete copy[currentFlashcardIndex];
+                                                return copy;
+                                            });
+                                            setSavedFlashcards(prev => {
+                                                const updated = [...prev];
+                                                const idx = updated.findIndex(c => c.index === currentFlashcardIndex);
+                                                if (idx !== -1) {
+                                                updated[idx] = { ...updated[idx], image: "" };
+                                                }
+                                                return updated;
+                                            });
+                                            showStatus("Image removed from this card.");
+                                            }}
+                                        >
+                                            ✖
+                                        </button>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.imagePlaceholder}></div>
+                                    );
+                                    })()}
                             </button>
 
                             {(() => {
                                 const card = savedFlashcards.find(f => f.index === currentFlashcardIndex);
-                                return card && card.image ? (
+                                if (!card || !card.image) return null;
+
+                                return (
                                     <div className={styles.imagePreviewWrapper}>
                                         <img
                                             src={card.image}
@@ -640,8 +675,6 @@ function FlashcardGenerator() {
                                             ✖
                                         </button>
                                     </div>
-                                ) : (
-                                    <div className={styles.imagePlaceholder}></div>
                                 );
                             })()}
                             </div>

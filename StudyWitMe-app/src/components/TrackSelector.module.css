@@ -7,94 +7,71 @@
 }
 
 .playButton {
-    position: absolute;
-    width: 150px;
+    position: relative;
+    width: 147px;
     background: transparent;
     color: #416d8e;
     border: none;
     border-radius: 0;
-    padding: 8px 14px;
-    font-weight: 600;
     font-size: 15px;
     cursor: pointer;
 }
 
+/* Outer wheel */
 .trackWheel {
-    margin-left: 130px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    overflow: hidden;
-    height: 90px;
-    width: 200px; /* slightly wider for text balance */
-    border-radius: 3px;
-    background: transparent;
-    cursor: grab;
-    user-select: none;
-    transition: transform 0.3s;
-    touch-action: none; /* disables touch scrolling */
-    overscroll-behavior: contain;
+  width: 200px;
+  height: 120px;
+  border-radius: 0rem;
+  background-color: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Core item styling */
+/* WheelPickerDemo.module.css */
+.trackLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 50px;
+  width: 180px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.discIcon {
+  width: 20px;
+  height: 20px;
+  background-image: url("../assets/disc.svg");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+/* Each option (including current) */
 .trackItem {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 160px; /* fixed width for all items */
-    opacity: 0.6;
-    transform: scale(0.9);
-    transition: 
-        opacity 0.3s, 
-        transform 0.3s,
-        margin-left 0.3s ease;
-    font-weight: 500;
+  color: #416d8e; 
+  font-size: 1rem;
+  font-weight: 500;
+  transition: opacity 0.3s, transform 0.3s, color 0.3s;
+  opacity: 0.6;
+  transform: scale(0.9);
+  text-align: center;
+  max-width: 170px;
 }
 
-/* Icon alignment */
-.trackItem img {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    margin-right: 8px;
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.1));
+/* Highlight band (center slot) */
+.current {
+  background-color:none;
+  font-size: 1rem;
+  color: #416d8e; 
+  opacity: 1;
+  font-weight: 500;
+  max-width: 170px;
+  text-align: center;      /* ensure labels start aligned */
 }
-
-/* Text alignment */
-.trackTitle {
-    display: inline-block;
-    max-width: 120px; /* consistent title width */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Active track styling */
-.trackItem.current {
-    opacity: 1;
-    transform: scale(1.1);
-    font-weight: 700;
-    color: var(--accent);
-    margin-left: 0; /* center position */
-}
-
-/* Depth illusion */
-.trackItem.prev {
-    color: var(--muted);
-    margin-left: 10px; /* moves inward */
-}
-
-.trackItem.next {
-    color: var(--muted);
-    margin-left: 10px; /* moves inward */
-}
-
-.trackItem.prev img,
-.trackItem.next img {
-    transform: scale(0.9);
-    opacity: 0.8;
-}
-

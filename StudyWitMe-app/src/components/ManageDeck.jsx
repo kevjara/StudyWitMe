@@ -47,6 +47,7 @@ export default function ManageDeck() {
   const [deckSaving, setDeckSaving] = useState(false);
   const [pickerForCard, setPickerForCard] = useState(null);
   const [pickerForDeck, setPickerForDeck] = useState(false);
+  const [editImageUrl, setEditImageUrl] = useState(deck?.imageUrl || null);
 
   //this locks the scroll when the image modal is open like in the gen
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function ManageDeck() {
       setEditCategory(deck.category || "");
       setEditSubcategory(deck.subcategory || "");
       setEditIsPublic(deck.isPublic || false);
+      setEditImageUrl(deck.imageUrl || null);
       setDeckIsDirty(false); // Reset dirty status on initial load/deck change
     }
   }, [deck]);
@@ -72,7 +74,8 @@ export default function ManageDeck() {
       editTitle !== deck.title ||
       editDescription !== deck.description ||
       editCategory !== deck.category ||
-      editIsPublic !== deck.isPublic;
+      editIsPublic !== deck.isPublic ||
+      (deck.imageUrl || null) !== (editImageUrl || null);
     setDeckIsDirty(isDirty);
   }, [editTitle, editDescription, editCategory, editIsPublic, deck]);
 
@@ -80,29 +83,26 @@ export default function ManageDeck() {
     if (!currentUser || !deckId) return;
     setLoading(true);
 
-    //this is for the deck load
+    // Load deck once
     (async () => {
       try {
         const dref = doc(db, "deck", deckId);
         const snap = await getDoc(dref);
-        if (snap.exists()) {
-          const data = snap.data();
-          // normalize the imagePath field to imageUrl
-          const normalizedImageUrl = data.imageUrl || data.imagePath || null;
-          setDeck({ id: snap.id, ...data, imageUrl: normalizedImageUrl });
-        }
+        if (snap.exists()) setDeck({ id: snap.id, ...snap.data() });
         else toast("Deck not found");
       } catch {
         toast("Failed to load deck");
       }
     })();
+
+    // Live listen to cards
     const cref = collection(db, "flashcard");
     const qCards = query(
       cref,
       where("deckId", "==", deckId),
       where("ownerId", "==", currentUser.uid),
-      orderBy("createdAt", "asc") // oldest first → new cards appear at the end
     );
+
     const unsub = onSnapshot(
       qCards,
       (snap) => {
@@ -116,10 +116,13 @@ export default function ManageDeck() {
           _dirty: false,
           _saving: false,
         }));
-        setCards(list);
-        setTimeout(() => {
-            setLoading(false);
-        }, 2000)
+        const sortedList = list.sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return aTime - bTime; // ascending order
+        });
+        setCards(sortedList);
+        setLoading(false);
       },
       (err) => {
         console.error(err);
@@ -131,6 +134,23 @@ export default function ManageDeck() {
     return () => unsub();
   }, [currentUser, deckId]);
 
+  useEffect(() => {
+    if (justAddedCard && cards.length > 0) {
+      setCurrentIndex(cards.length - 1); // jump to last card
+      setJustAddedCard(false);
+    }
+  }, [cards, justAddedCard]);
+
+  // Reset index safely when cards change
+  useEffect(() => {
+    if (cards.length === 0) {
+      setCurrentIndex(0);
+    } else if (currentIndex >= cards.length) {
+      // if the last card was deleted, move to the new last index
+      setCurrentIndex(cards.length - 1);
+    }
+  }, [cards, currentIndex]);
+
   //this is to handle the edits to db
   const handleSaveDeckInfo = async () => {
     if (!deckIsDirty) return;
@@ -141,6 +161,7 @@ export default function ManageDeck() {
         description: editDescription,
         category: editCategory,
         isPublic: editIsPublic,
+        imageUrl: editImageUrl,
       };
 
       await updateDoc(doc(db, "deck", deckId), newDeckData);
@@ -189,17 +210,15 @@ export default function ManageDeck() {
     const deletedIndex = cards.findIndex(c => c.id === id);
 
     try {
-      await deleteDoc(doc(db, "flashcard", id));
-      toast("Card deleted");
-
       // adjust currentIndex
-      setCurrentIndex(prev => {
-        if (cards.length === 1) return 0; // deleted the only card
-        if (deletedIndex === prev && prev === cards.length - 1) {
-          return prev - 1; // deleted the last card, go back
-        }
-        return prev; // otherwise keep same index
+      setCurrentIndex((prev) => {
+        if (cards.length <= 1) return 0; 
+        if (deletedIndex < prev) return prev - 1; 
+        if (deletedIndex === prev && prev === cards.length - 1) return prev - 1;
+        return prev; 
       });
+        await deleteDoc(doc(db, "flashcard", id));
+        toast("Card deleted");
     } catch (e) {
       console.error(e);
       toast("Failed to delete card");
@@ -208,33 +227,20 @@ export default function ManageDeck() {
 
 
   const handleAddCard = async () => {
-    try {
-      await addDoc(collection(db, "flashcard"), {
-        deckId,
-        ownerId: currentUser.uid,
-        front: "",
-        back: "",
-        type: "Multiple Choice",
-        imagePath: null,
-        category: deck?.category || "",
-        createdAt: serverTimestamp(),
-        isPublic: false,
-      });
-
-      toast("Added new card");
-      setJustAddedCard(true);
-    } catch (e) {
-      console.error(e);
-      toast("Failed to add card");
-    }
+    await addDoc(collection(db, "flashcard"), {
+      deckId,
+      ownerId: currentUser.uid,
+      front: "",
+      back: "",
+      type: "Multiple Choice",
+      imagePath: null,
+      category: deck?.category || "",
+      createdAt: serverTimestamp(),
+      isPublic: false,
+    });
+    toast("Added new card");
+    setJustAddedCard(true);
   };
-
-  useEffect(() => {
-    if (justAddedCard && cards.length > 0) {
-      setCurrentIndex(cards.length - 1); // jump to last card
-      setJustAddedCard(false);
-    }
-  }, [cards, justAddedCard]);
 
   if (!currentUser)
     return (
@@ -268,6 +274,8 @@ export default function ManageDeck() {
         </div>
         </div>
       <div className={styles.menuBackdrop}>
+      
+      <div className={styles.header}><h2>Deck Cover</h2></div>
         
       {/* DECK EDITING FORM */}
       <div className={styles.coverCard}>
@@ -336,20 +344,12 @@ export default function ManageDeck() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-          <div
-            style={{
-              width: 88,
-              height: 88,
-              borderRadius: 10,
-              overflow: "hidden",
-              border: "1px solid #e5e7eb",
-              background: "#f8fafc",
-            }}
-          >
-            {deck?.imageUrl ? (
+        {/* Image */}
+        <div className={styles.imageRow}>
+          <div className={styles.imageBox}>
+            {editImageUrl ? (
               <img
-                src={deck.imageUrl}
+                src={editImageUrl}
                 alt=""
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
@@ -370,17 +370,19 @@ export default function ManageDeck() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             className={styles.deckButtonSmall}
-            onClick={() => setPickerForDeck(true)}
+            onClick={() => {
+              setPickerForDeck(true);
+              setDeckIsDirty(true);
+            }}
           >
-            {deck?.imageUrl ? "Change Deck Image" : "Add Deck Image"}
+            {editImageUrl ? "Change Deck Image" : "Add Deck Image"}
           </button>
-          {deck?.imageUrl && (
+          {editImageUrl && (
             <button
               className={styles.deckButtonSmall}
-              onClick={async () => {
-                await updateDoc(doc(db, "deck", deckId), { imageUrl: null });
-                setDeck((d) => ({ ...d, imageUrl: null }));
-                toast("Removed deck image");
+              onClick={() => {
+                setEditImageUrl(null);
+                setDeckIsDirty(true); 
               }}
             >
               Remove
@@ -400,15 +402,15 @@ export default function ManageDeck() {
       </div>
       {/* END DECK EDITING FORM */}
 
-      <div className={styles.deckToolbar}>
-        <button onClick={handleAddCard}>+ Add Card</button>
-        {status && <span className={styles.statusPill}>{status}</span>}
-      </div>
+      <h2>Flashcards</h2>
 
       {/* Flashcard Viewer */}
-      <div className={styles.flashcardViewer}>
-        {cards.length > 0 && (
-          <>
+      <div className={styles.flashcardViewerWrapper} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+        
+        {/* Left: Flashcard + Navigation */}
+        <div className={styles.flashcardColumn}>
+          {cards.length > 0 && (
+            <>
             <div className={styles.flashcard}>
               {/* Image */}
               <div className={styles.imageRow}>
@@ -502,9 +504,8 @@ export default function ManageDeck() {
             {/* Navigation */}
             <div className={styles.navButtons}>
               <button
-                onClick={() =>
-                  setCurrentIndex((prev) => Math.max(prev - 1, 0))
-                }
+                className={styles.navButton}
+                onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
                 disabled={currentIndex === 0}
               >
                 ← Previous
@@ -513,9 +514,8 @@ export default function ManageDeck() {
                 {currentIndex + 1} / {cards.length}
               </span>
               <button
-                onClick={() =>
-                  setCurrentIndex((prev) => Math.min(prev + 1, cards.length - 1))
-                }
+                className={styles.navButton}
+                onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, cards.length - 1))}
                 disabled={currentIndex === cards.length - 1}
               >
                 Next →
@@ -523,8 +523,25 @@ export default function ManageDeck() {
             </div>
           </>
         )}
-        {cards.length === 0 && <p>No cards in this deck.</p>}
+
+        {cards.length === 0 && (
+          <div className={styles.emptyDeckMessage}>
+            <p>This deck is empty!</p>
+          </div>
+        )}
       </div>
+
+      {/* Right: Add Card button */}
+      <div className={styles.addCardColumn}>
+        <button
+          onClick={handleAddCard}
+          className={styles.addCardButton}
+          disabled={cards.length >= 100} // disable when 100 or more
+        >
+          {cards.length >= 100 ? "Flashcards limit reached" : "+ Add Card"}
+        </button>
+      </div>
+    </div>
 
         {/* Deck Image Picker Modal (Unchanged) */}
         {pickerForDeck && (
@@ -541,10 +558,7 @@ export default function ManageDeck() {
                     open
                     onClose={() => setPickerForDeck(false)}
                     onSelect={async (img) => {
-                      const url = img?.webformatURL || null;
-                      await updateDoc(doc(db, "deck", deckId), { imageUrl: url, imageAttribution: img ? { pageURL: img.pageURL, user: img.user } : null });
-                      setDeck((d) => ({ ...d, imageUrl: url }));
-                      toast("Deck image updated ✓");
+                      setEditImageUrl(img?.webformatURL || null); // track locally
                       setPickerForDeck(false);
                     }}
                   />

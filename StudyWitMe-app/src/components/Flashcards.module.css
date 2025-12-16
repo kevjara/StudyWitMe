@@ -9,73 +9,6 @@
     gap: 4px;
 }
 
-/* =======================
-    LOADING ANIMATION
-   ======================= */
-@keyframes slideDownToolbar {
-    0% {
-        transform: translateY(-10px); /* only slightly above the border-bottom */
-        opacity: 0;
-    }
-    40% {
-        transform: translateY(-2px);
-        opacity: 0.7;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeInText {
-    0%, 50% { opacity: 0; }
-    100% { opacity: 1; }
-}
-
-/* Special version of the toolbar for loading */
-.loadingToolbar {
-    position: sticky;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: #1b3c4f;
-    z-index: 150;
-    padding: 20px 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    animation: slideDownToolbar 0.6s ease-out forwards;
-}
-
-.loadingTitle {
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #fff;
-    opacity: 0;
-    animation: fadeInText 1s ease-in forwards;
-    animation-delay: 0.3s; /* text appears after toolbar slides in */
-}
-
-/* =======================
-    CATEGORY & CARD LOADING ANIMATION
-   ======================= */
-
-/* 1. Slide category headers upward (one by one) */
-@keyframes slideUpCategory {
-    0% {
-        transform: translateY(30px);
-        opacity: 0;
-    }
-    70% {
-        transform: translateY(-4px); /* slight overshoot for realism */
-        opacity: 0.9;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
 .menuBackdrop {
     background-color: none;
     color: #1b3c4f;
@@ -93,8 +26,6 @@
 /* Sticky toolbar containing Manage/Share/Sort/Filter */
 .stickyToolbar {
     position: sticky;       /* sticks to top while scrolling */
-    top: 0;                 /* starts at the top of container */
-    left: 0;
     width: 100%;
     background: #1b3c4f;
     z-index: 150;
@@ -114,36 +45,84 @@
    ====================== */
 .deckToolbar {
     position: relative;
-    display: flex;
-    justify-content: center;
+    display: flex;              /* inline flow: left, title, right */
     align-items: center;
-    margin-bottom: 24px;
+    justify-content: center;   /* keep center item centered within available space */
     width: 100%;
     max-width: 1000px;
-}
-
-.toolbarTitle {
-    text-align: center;
-    font-size: 3rem;
-    font-weight: 700;
-    color: #fff;
-    margin: 0; 
-    padding: 0;
-}
-
-/* Ensure buttons inside each toolbar section have spacing */
-.toolbarLeft,
-.toolbarRight {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
     gap: 12px;
+    margin-bottom: 24px;
+    box-sizing: border-box;
 }
 
 .toolbarLeft {
-    left: 0; /* stick to left */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;   /* do not grow, do not shrink below content */
+    min-width: 0;     /* allow contents to shrink internally if necessary */
+    justify-content: flex-start;
+}
+
+.toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+    min-width: 0;
+    justify-content: flex-end;
+}
+
+/* Title sits in the middle, gets the remaining space and centers its text.
+   Because it is in the normal flow, growing text will push the left/right blocks. */
+.toolbarTitle {
+    flex: 1 1 auto;              /* expand to fill available space, but can shrink */
+    display: flex;
+    justify-content: center;     /* horizontally center title text within this area */
+    align-items: center;
+    padding: 0 16px;
+    box-sizing: border-box;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    font-size: 3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    z-index: 2;             
+}
+
+/* Controls (selects / buttons) should be allowed to shrink internally when space is tight */
+.toolbarLeft button,
+.toolbarRight button,
+.toolbarLeft select,
+.toolbarRight select {
+    flex-shrink: 1;     /* they can shrink to avoid overflow */
+    min-width: 0;       /* allow internal content to truncate if needed */
+    padding: 10px 16px; /* slightly reduced padding to avoid overflow */
+    font-size: 0.95rem;
+}
+
+/* Make sure the filter dropdown positioning is relative to the filterWrapper */
+.filterWrapper { position: relative; display: inline-block; }
+
+/* Responsive tweaks: smaller font and smaller gaps on narrow screens */
+@media (max-width: 900px) {
+    .toolbarTitle { font-size: 2.2rem; padding: 0 10px; }
+    .toolbarLeft button,
+    .toolbarRight button,
+    .toolbarLeft select,
+    .toolbarRight select { padding: 8px 10px; font-size: 0.9rem; }
+    .deckToolbar { gap: 8px; }
+}
+
+@media (max-width: 520px) {
+    .toolbarTitle { font-size: 1.4rem; white-space: normal; line-height: 1.1; }
+    /* On tiny screens allow title to wrap and left/right to collapse */
+    .toolbarTitle { overflow: visible; text-overflow: unset; }
+    .toolbarLeft, .toolbarRight { gap: 6px; }
 }
 
 /* Make Delete/Done button fixed size to prevent shifting */

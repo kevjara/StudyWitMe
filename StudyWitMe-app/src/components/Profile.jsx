@@ -1,241 +1,224 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from "../services/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
-import { useAuth } from "../context/AuthContext" 
+import { doc, onSnapshot, collection, getDocs, query, where, getDoc, FieldPath } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
 import { auth } from "../services/firebase";
 import { signOut } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-import DefaultProfileIcon from "../assets/Default_Profile_Icon.png";
-import { useRef } from 'react';
+import { useNavigate, useParams } from "react-router-dom";
 import styles from "./Profile.module.css";
-
+import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
+import Avatar from "./Avatar";
 
 function Profile() {
     const { currentUser } = useAuth();
+    const navigate = useNavigate();
+    const { uid } = useParams();
+
     const [profile, setProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
-    const navigate = useNavigate();
-
+    const [isOwner, setIsOwner] = useState(false);
+    const [publicDecks, setPublicDecks] = useState([]);
+    const [loadingDecks, setLoadingDecks] = useState(false);
+    const [userAchievements, setUserAchievements] = useState([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteStep, setDeleteStep] = useState(0); // 0 = initial confirmation, 1 = timer step
+    const [deleteStep, setDeleteStep] = useState(0);
     const [deleteTimer, setDeleteTimer] = useState(20);
     const [deleteStatus, setDeleteStatus] = useState("");
     const [showFinalYes, setShowFinalYes] = useState(false);
-    const [deleteIntervalId, setDeleteIntervalId] = useState(null);
     const deleteIntervalRef = useRef(null);
     const showYesTimeoutRef = useRef(null);
+    const [refreshedUrls, setRefreshedUrls] = useState({});
 
-    // For potential file uploads later
-    const [profileImage, setProfileImage] = useState(null);
+    const handleImageError = async (e, deck) => {
+        const isOwnerOfDeck = currentUser?.uid === deck.ownerId; 
 
-    //this will update the profile in realtime
-    //look at this if something is broken
-    //this is complex cause I copied from flashcards
-    useEffect(() => {
-        if (!currentUser) {
-            setIsLoading(false);
-            setProfile(null);
+        if (!deck.pixabayId) {
+            console.warn(`⚠️ No pixabayId for deck ${deck.id}`);
+            e.target.style.display = 'none';
             return;
         }
+
+        const currentStatus = refreshedUrls[deck.id];
+        if (currentStatus === 'loading' || currentStatus === 'failed') {
+            return;
+        }
+
+        if (currentStatus && currentStatus !== deck.imagePath) {
+            console.warn(`⚠️ Refreshed URL also expired for deck ${deck.id}`);
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
+            e.target.style.display = 'none';
+            return;
+        }
+
+        setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'loading' }));
+        
+        const newUrl = await refreshPixabayImage(
+            'deck', 
+            deck.id, 
+            deck.pixabayId, 
+            isOwnerOfDeck
+        );
+
+        if (newUrl) {
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: newUrl }));
+        } else {
+            setRefreshedUrls(prev => ({ ...prev, [deck.id]: 'failed' }));
+            e.target.style.display = 'none';
+        }
+    };
+
+
+    useEffect(() => {
+        const targetUid = uid || currentUser?.uid;
+        if (!targetUid) {
+            setProfile(null);
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
-        const userId = doc(db, 'users', currentUser.uid);
-        //listener like from login
-        const unsubscribe = onSnapshot(userId, (doc) => {
-            if (doc.exists()) {
-                setProfile({ id: doc.id, ...doc.data() });
+        const userRef = doc(db, "users", targetUid);
+        const unsubscribe = onSnapshot(userRef, (snap) => {
+            if (snap.exists()) {
+                setProfile({ id: snap.id, ...snap.data() });
             } else {
-                console.log("Invalid user");
                 setProfile(null);
             }
             setIsLoading(false);
-        }, (error) => {
-            console.error("Error fetching profile:", error);
-            setIsLoading(false);
         });
+
+        setIsOwner(currentUser?.uid === targetUid);
         return () => unsubscribe();
-    }, [currentUser]);
+    }, [uid, currentUser]);
 
-    if (!currentUser) {
-            return (
-            <div className={styles.profilePageEmpty}>
-                <div className={styles.guestCard}>
-                    <button 
-                        className={styles.backBtn}
-                        onClick={() => navigate("/main")}
-                    >
-                        ← Back
-                    </button>
+    useEffect(() => {
+        const fetchPublicDecks = async () => {
+            const targetUid = uid || currentUser?.uid;
+            if (!targetUid) return;
+            setLoadingDecks(true);
+            try {
+                const deckSnap = await getDocs(
+                    query(
+                        collection(db, "deck"),
+                        where("ownerId", "==", targetUid),
+                        where("isPublic", "==", true)
+                    )
+                );
+                setPublicDecks(deckSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (e) {
+                console.error("Error fetching decks:", e);
+            } finally {
+                setLoadingDecks(false);
+            }
+        };
+        fetchPublicDecks();
+    }, [uid, currentUser]);
 
-                    <h2>Oops, you're not signed in!</h2>
-                    <p>
-                        Please{" "}
-                        <span
-                            className={styles.loginLink}
-                            onClick={() => navigate("/login")}
-                            role="button"
-                            tabIndex="0"
-                        >
-                            sign in
-                        </span>{" "}
-                        to view your profile.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-    if (isLoading) {
-        return (
-            <div className={styles.profilePageEmpty}>
-                <h2>Profile is loading...</h2>
-            </div>
-        )
-    }
-    if (!profile) {
-        return (
-            <div className={styles.profilePageEmpty}>
-                <h2>Could not find profile :/</h2>
-                <p>Trying to find profile: {currentUser.uid}/</p>
-            </div>
-        )
-    }
+    //this should fetch the achievements
+    useEffect(() => {
+        const fetchAchievements = async () => {
+            if (!profile || !profile.achievements || profile.achievements.length === 0) {
+                setUserAchievements([]);
+                return;
+            }
 
-      // Handlers for fake upload UI (just previews)
-    const onIconSelect = (e) => {
-        const f = e.target.files?.[0];
-        if (f) setProfileImage(URL.createObjectURL(f));
-    };
+            try {
+                const achievementsSnap = await getDocs(
+                    query(
+                        collection(db, "achievements"),
+                        where('__name__', "in", profile.achievements)
+                    )
+                );
+                setUserAchievements(achievementsSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                })));
 
-    const startEdit = () => setIsEditing(true);
-    const cancelEdit = () => {
-        setIsEditing(false);
-        // discard previews
-        setProfileImage(null);
-    };
-    const finishEdit = () => {
-        // TODO: implement save to Firebase (not included)
-        setIsEditing(false);
-        // keep previews (or clear if you prefer)
-    };
+            } catch (e) {
+                console.error("Error fetching achievements:", e);
+                if (e.code === 'failed-precondition') {
+                    console.warn("Achievement list is too long for a single query (max 10 'in' clauses). Consider splitting the array.");
+                }
+                setUserAchievements([]);
+            }
+        };
+
+        fetchAchievements();
+    }, [profile]);
 
     const startDeleteCountdown = () => {
         setDeleteStep(1);
         setDeleteTimer(20);
         setDeleteStatus("Deleting Account");
-
-        // clear any previous interval/timeout before starting
-        if (deleteIntervalRef.current) {
-            clearInterval(deleteIntervalRef.current);
-            deleteIntervalRef.current = null;
-        }
-        if (showYesTimeoutRef.current) {
-            clearTimeout(showYesTimeoutRef.current);
-            showYesTimeoutRef.current = null;
-        }
-
+        if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
+        if (showYesTimeoutRef.current) clearTimeout(showYesTimeoutRef.current);
         const interval = setInterval(() => {
             setDeleteTimer(prev => {
-            if (prev <= 1) {
-                clearInterval(interval);
-                showFinalDeleteStatus();
-                return 0;
-            }
-            return prev - 1;
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    showFinalDeleteStatus();
+                    return 0;
+                }
+                return prev - 1;
             });
         }, 1000);
-
-        deleteIntervalRef.current = interval; // store in ref
-
-        // store timeout for "Yes, I'm Sure"
-        showYesTimeoutRef.current = setTimeout(() => {
-            setShowFinalYes(true);
-        }, 5000);
+        deleteIntervalRef.current = interval;
+        showYesTimeoutRef.current = setTimeout(() => setShowFinalYes(true), 5000);
     };
 
-    // unified final status handler
     const showFinalDeleteStatus = () => {
-    setDeleteTimer(0);
-    setDeleteStatus("Account Deleted, thank you for StudyingWitMe");
-    setShowFinalYes(false); // hide Yes button
-
-    // safely clear interval
-    if (deleteIntervalRef.current) {
-        clearInterval(deleteIntervalRef.current);
-        deleteIntervalRef.current = null;
-    }
-
-    // give React time to render status before signing out
-    setTimeout(() => handleSignOut(), 500);
+        setDeleteTimer(0);
+        setDeleteStatus("Account Deleted, thank you for StudyingWitMe");
+        setShowFinalYes(false);
+        if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
+        setTimeout(() => handleSignOut(), 500);
     };
 
     const handleSignOut = async () => {
         try {
             await signOut(auth);
-            navigate("/"); // back to TitleScreen
+            navigate("/");
         } catch (error) {
             console.error("Error signing out:", error);
         }
     };
 
+    if (isLoading) return <div className={styles.profilePageEmpty}><h2>Loading profile...</h2></div>;
+    if (!profile) return <div className={styles.profilePageEmpty}><h2>Profile not found.</h2></div>;
+
     return (
         <div className={styles.profilePage}>
-            <button
-                className={styles.backBtn}
-                onClick={() => navigate("/main")}
-            >
-                ← Back to Main Menu
-            </button>
 
-            {/* Main card */}
             <div className={styles.profileCard}>
                 <div className={styles.profileTop}>
                     <div className={styles.profileLeft}>
                         <div className={styles.profileIconWrap}>
                             <div className={styles.profileIcon}>
-                                <img
-                                    src={profileImage || DefaultProfileIcon}
-                                    alt="Profile Icon"
-                                />
-                                {isEditing && (
-                                    <>
-                                        <button
-                                        className={styles.iconUploadBtn}
-                                        onClick={() => document.getElementById("iconUpload").click()}
-                                        aria-label="Upload profile icon"
-                                        type="button"
-                                        >
-                                        +
-                                        </button>
-                                        <input
-                                        id="iconUpload"
-                                        type="file"
-                                        accept="image/*"
-                                        className={styles.hiddenFile}
-                                        onChange={onIconSelect}
-                                        />
-                                    </>
-                                )}
+                                <div className={styles.profileIcon}>
+                                    <Avatar avatar={profile.avatar} />
+                                </div>
                             </div>
                         </div>
-
                         <div className={styles.profileMeta}>
-                            <div className={styles.displayRow}>
-                                <h2 className={styles.displayName}>Display Name: {profile.displayName || "No display name"}</h2>
-                                {isEditing && <button className={styles.changeBtn}>Change</button>}
+                            <h2 className={styles.displayName}> {profile.displayName || "No display name"}</h2>
+                            <div className={styles.levelBadge}>
+                                <span className={styles.levelText}>Lvl </span>
+                                <span className={styles.levelNumber}>{profile.userLevel ?? 0}</span>
                             </div>
-                            <p className={styles.email}>Email: {profile.email}</p>
+                            {userAchievements.length > 0 && (
+                                <div className={styles.achievementsContainer} title="Achievements Earned">
+                                    {userAchievements.map(achievement => (
+                                        <img
+                                            key={achievement.id}
+                                            src={achievement.badge} // Use the path stored in the 'badge' field
+                                            alt={achievement.name}
+                                            className={styles.achievementBadge}
+                                            title={achievement.name + ": " + achievement.description} // Tooltip for details
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    </div>
-
-                    <div className={`${styles.profileActions} ${isEditing ? styles.editing : ""}`}>
-                        {isEditing ? (
-                            <div className={styles.editButtons}>
-                                <button className={styles.btnPrimary} onClick={finishEdit}>Finish</button>
-                                <button className={styles.btnCancel} onClick={cancelEdit}>Cancel</button>
-                            </div>
-                            ) : (
-                            <button className={styles.btnPrimary} onClick={startEdit}>Edit Profile</button>
-                        )}
                     </div>
                 </div>
 
@@ -247,100 +230,118 @@ function Profile() {
                             {profile.createdAt && (
                                 <div className={styles.accountRow}><strong>Member Since:</strong> <span>{profile.createdAt.toDate().toLocaleDateString()}</span></div>
                             )}
+                            <div className={styles.accountRow}>
+                                <strong>Email:</strong>
+                                <span>{isOwner ? profile.email : "Private"}</span>
+                            </div>
+                            <div className={styles.accountRow}>
+                                <strong>Games Won:</strong>
+                                <span>{profile.gamesWon ?? 0}</span>
+                            </div>
                         </div>
                     </div>
 
                     <div className={styles.flashcardSection}>
-                        <h3>Flashcard Information</h3>
+                        <h3>Public Decks</h3>
                         <div className={styles.flashcardList}>
-                            <div className={styles.flashcardRow}><strong>Decks:</strong> 0</div>
-                            <div className={styles.flashcardRow}><strong>Flashcards:</strong> 0</div>
+                            <div className={styles.flashcardRow}><strong>Total:</strong> {publicDecks.length}</div>
                         </div>
                     </div>
                 </div>
 
-                <div className={styles.deleteRow}>
-                    <button className={styles.btnDanger} onClick={() => setShowDeleteModal(true)}>
-                        Delete Account 
-                    </button>
-                </div>
-            </div>
-            
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-                    <div className={styles.modalDeleteModal}>
-                    {/* Final deleted status only */}
-                    {deleteStatus === "Account Deleted, thank you for StudyingWitMe" ? (
-                        <div className={styles.deleteFinalStatus}>
-                        <span>{deleteStatus}</span>
-                        </div>
-
-                    // Initial confirmation
-                    ) : deleteStep === 0 ? (
-                        <>
-                        <h3>Are you sure you want to delete your account?</h3>
-                        <p>All Flashcards will be discarded upon deletion</p>
-                        <div className={styles.modalActions}>
-                            <button className={styles.btnDanger} onClick={startDeleteCountdown}>
-                            Yes
-                            </button>
-                            <button className={styles.btnCancel} onClick={() => setShowDeleteModal(false)}>
-                            No
-                            </button>
-                        </div>
-                        </>
-
-                    // Countdown + Yes button + status
+                <div style={{ marginTop: "30px" }}>
+                    <h3>{isOwner ? "Your Public Decks" : `${profile.displayName || "User"}'s Public Decks`}</h3>
+                    {loadingDecks ? (
+                        <p>Loading decks...</p>
+                    ) : publicDecks.length === 0 ? (
+                        <p>No public decks yet.</p>
                     ) : (
-                        <div className={styles.deleteStep1}>
-                        {/* Top row: Are you sure? -> Cancel */}
-                        <div className={styles.deleteRowTop}>
-                            <span>Are you sure? -{'>'}</span>
-                            <button
-                            className={styles.btnCancel}
-                            onClick={() => {
-                                // clear countdown interval
-                                if (deleteIntervalRef.current) {
-                                    clearInterval(deleteIntervalRef.current);
-                                    deleteIntervalRef.current = null;
-                                }
-                                // clear "Yes" timeout
-                                if (showYesTimeoutRef.current) {
-                                    clearTimeout(showYesTimeoutRef.current);
-                                    showYesTimeoutRef.current = null;
-                                }
-
-                                if (deleteIntervalId) clearInterval(deleteIntervalId);
-                                setDeleteStep(0);
-                                setShowDeleteModal(false);
-                                setDeleteTimer(20);
-                                setDeleteStatus("");
-                                setShowFinalYes(false);
-                            }}
-                            >
-                            On second thought...
-                            </button>
-                        </div>
-
-                        {/* Middle row: timer + Yes button */}
-                        <div className={styles.timerRow}>
-                        <span>{deleteTimer}s</span>
-                        {showFinalYes && (
-                            <button className={styles.btnDanger} onClick={showFinalDeleteStatus}>
-                            Yes, I'm Sure
-                            </button>
-                        )}
-                        </div>
-
-                        {/* Bottom row: status message */}
-                        {deleteStatus && (
-                            <div className={styles.deleteStatusMessage}>
-                                <span>{deleteStatus}</span>
-                            </div>
-                        )}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", marginTop: "1rem" }}>
+                            {publicDecks.map(deck => (
+                                <div
+                                    key={deck.id}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "1rem",
+                                        borderRadius: "12px",
+                                        padding: "1rem",
+                                        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                                        cursor: "pointer",
+                                        minWidth: "260px",
+                                        backgroundColor: "#ffffff",
+                                    }}
+                                    onClick={() => navigate(`/flashcards/deck/${deck.id}/study`, { state: { deck } })}
+                                >
+                                    {deck.imagePath && (
+                                        <a href={deck.attributionLink} target="_blank" rel="noopener noreferrer">
+                                            <img
+                                                src={refreshedUrls[deck.id] || deck.imagePath}
+                                                alt="Deck"
+                                                style={{
+                                                    width: "80px",
+                                                    height: "80px",
+                                                    objectFit: "cover",
+                                                    borderRadius: "8px",
+                                                    flexShrink: 0,
+                                                    opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
+                                                    transition: 'opacity 0.3s'
+                                                }}
+                                                onError={(e) => handleImageError(e, deck)}
+                                            />
+                                        </a>
+                                    )}
+                                    <div style={{ flex: 1 }}>
+                                        <h4>{deck.title || "Untitled Deck"}</h4>
+                                        <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                                            Category: {deck.category || "Uncategorized"}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
+                </div>
+
+                {isOwner && (
+                    <div className={styles.deleteRow}>
+                        <button className={styles.btnDanger} onClick={() => setShowDeleteModal(true)}>
+                            Delete Account
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {showDeleteModal && isOwner && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalDeleteModal}>
+                        {deleteStatus === "Account Deleted, thank you for StudyingWitMe" ? (
+                            <div><span>{deleteStatus}</span></div>
+                        ) : deleteStep === 0 ? (
+                            <>
+                                <h3>Are you sure you want to delete your account?</h3>
+                                <div className={styles.modalActions}>
+                                    <button className={styles.btnDanger} onClick={startDeleteCountdown}>Yes</button>
+                                    <button className={styles.btnCancel} onClick={() => setShowDeleteModal(false)}>No</button>
+                                </div>
+                            </>
+                        ) : (
+                            <div>
+                                <div className={styles.deleteRowTop}>
+                                    <span>Are you sure? →</span>
+                                    <button className={styles.btnCancel} onClick={() => setShowDeleteModal(false)}>On second thought...</button>
+                                </div>
+                                <div className={styles.timerRow}>
+                                    <span>{deleteTimer}s</span>
+                                    {showFinalYes && (
+                                        <button className={styles.btnDanger} onClick={showFinalDeleteStatus}>
+                                            Yes, I'm Sure
+                                        </button>
+                                    )}
+                                </div>
+                                {deleteStatus && <div className={styles.deleteStatusMessage}><span>{deleteStatus}</span></div>}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

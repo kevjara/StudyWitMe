@@ -1,8 +1,14 @@
 {
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@ncdai/react-wheel-picker": "^1.0.19",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "express": "^5.1.0",
+    "firebase-admin": "^13.6.0",
+    "framer-motion": "^12.23.24",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",

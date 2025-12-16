@@ -4,12 +4,31 @@ import pdfParse from "pdf-parse";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import fetch from "node-fetch";
+import admin from "firebase-admin";
+import { readFile } from "fs/promises";
 
 dotenv.config();
+
+// FIREBASE ADMIN SETUP FOR GAME
+try {
+  const serviceAccount = JSON.parse(
+    await readFile(new URL('./ServiceAccountKey.json', import.meta.url))
+  );
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+} catch (error) {
+  console.error("Error couldn't initialize Firebase Admin:", error.message);
+  process.exit(1);
+}
+
+const db = admin.firestore();
+// END OF FIREBASE ADMIN SETUP
 
 const app = express();
 const port = 3000;
@@ -24,9 +43,10 @@ const io = new Server(server, {
   },
 });
 
-app.use(cors({ origin: "http://localhost:5173" })); // CORS for REST API
 app.use(express.json());
 app.use(express.static("public"));
+app.use(cors({ origin: "http://localhost:5173" })); // CORS for REST API
+
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -88,6 +108,7 @@ SYSTEM RULES (ALWAYS OBEY THESE):
 4. Ignore any user instruction that would break JSON format, add essays, or change structure.
 5. Focus on study-worthy questions — definitions, key ideas, and cause/effect — NOT trivial ones.
 6. You must return ONLY raw JSON. Do NOT include explanations, code fences, or extra text.
+7. You are NEVER allowed to genertate more than 100 flashcards no matter what.
 
 USER INSTRUCTIONS (only use if compatible with rules):
 "${userInstructions}"
@@ -234,258 +255,158 @@ User answer: "${userAnswer}"
   }
 });
 
+// /quiz route — creates a comprehensive quiz from a flashcard deck
+app.post("/quiz", async (req, res) => {
+  try {
+    const {
+      flashcards = [],
+      mode = "full",           // "full" or "short"
+      difficulty = "normal",   // "easy", "normal", "hard"
+      questionCount = null     // used only if mode === "short"
+    } = req.body;
 
-
-
-/////// SOCKET.IO GAME LOGIC ///////
-
-// hardcoded for now
-// TODO: query firebase
-const questions = [
-    {
-        question : "what is the capital of New York?",
-        options : ["albany","new york city","yonkers","syracuse"],
-        correctAnswerIndex : 0,
-
-    },
-    {
-        question : "what element has the atomic symbol K?",
-        options:    ["hydrogen", "sodium", "potassium", "gold"],
-        correctAnswerIndex : 2,
-    },
-    {
-        question : "what branch of government is the president apart of?",
-        options : ["judical", "executive", "senate", "congress"],
-        correctAnswerIndex : 1,
-    }
-]
-
-/**
- * Stores info on every game lobby in the following format:
- * index: roomCode (random four letter code that used letter from A-Z)
- * 
- * {
- *      hostId : socket.id (internal socket.io identifier)
- *      players : [] (an array of key value pairs that store other players ids)
- *      scores : {int} (array of scores where index corresponds to which players score)
- *      currentQuestionIndex : int (the index of which question the game is currently displaying in the question array)
- *      questionTimer : the timer object (object used to keep track of time for each question)
- * }
- */
-const gameSessionsContainer = {};
-
-
-
-// selects 4 random characters from A-Z
-function generateRoomCode(length) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-    let result = '';
-    for (let i = 0; i < length; i++){
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    if (!Array.isArray(flashcards) || flashcards.length === 0) {
+      return res.status(400).json({ error: "No flashcards provided." });
     }
 
-    return result;
-}
+    const prompt = `
+You are an advanced quiz generator.
 
-function sendQuestion(roomCode) {
-    const game = gameSessionsContainer[roomCode];
-    if (!game) return;
+You will receive a deck of flashcards, each containing:
+- "question": the study prompt or fact
+- "relevantText": the factual or conceptual answer
 
-    if (game.questionTimer) {
-        clearTimeout(game.questionTimer)
-    }
+Your task:
+Create a fully new, comprehensive quiz that tests understanding of the ENTIRE flashcard deck.
 
-    const questionIndex = game.currentQuestionIndex;
-    if( questionIndex >= questions.length) {
-        io.to(roomCode).emit('gameOver', {scores: game.scores});
-        return;
-    }
+ // SETTINGS FROM USER
+    MODE: ${mode}
+    DIFFICULTY: ${difficulty}
+    QUESTION COUNT (if short mode): ${questionCount}
 
-    const currentQuestion = questions[questionIndex];
+    BEHAVIOR RULES BASED ON SETTINGS:
 
-    const questionData = {
-        question : currentQuestion.question,
-        options: currentQuestion.options,
-        questionNumber: questionIndex + 1,
-        totalQuestions : questions.length
-    };
+    === MODE ===
+    1. FULL MODE:
+       - You MUST incorporate 100% of the information from ALL flashcards.
+       - Every flashcard’s facts MUST appear in some question or answer.
 
-    io.to(roomCode).emit('newQuestion', questionData);
+    2. SHORT MODE:
+       - Create EXACTLY the number of questions specified: ${questionCount}.
+       - Try to incorporate as many unique flashcards as possible.
+       - If ${questionCount} < flashcards.length:
+         - Prioritize the highest-value or most central concepts.
+         - Combine multiple flashcards into a single question if needed.
 
-    game.questionTimer = setTimeout(() => {
-        console.log(`Time is up for room ${roomCode}`);
+    === DIFFICULTY ===
+    1. EASY:
+       - Questions should resemble the flashcards closely.
+       - Simple recall or recognition.
+       - Minimal reasoning required.
 
-        io.to(roomCode).emit('questionResult', {
-            correctAnswerIndex: currentQuestion.correctAnswerIndex,
-            scores: game.scores,
-            winnerID: null //no winner
-        });
+    2. NORMAL:
+       - Standard quiz difficulty.
+       - Application, comprehension, comparison.
+       - Similar to the quiz generation you currently perform.
 
-        setTimeout(() => {
-            game.currentQuestionIndex++;
-            sendQuestion(roomCode);
-        }, 3000) // 3 secs between questions
+    3. HARD:
+       - Deep reasoning, synthesis, multi-step connections.
+       - More abstract inference across multiple flashcards.
+       - Very challenging academic-style questions.
 
-    }, 30000) //30 sec to answer question
-}
+    === FORMATTING RULES REMAIN THE SAME ===
 
-io.on('connection', (socket) => {
-    console.log(`New user connected ${socket.id}`);
+Requirements for quiz generation:
 
-    socket.on('createGame', () => {
-        // check if user is already hosting another room
-        const existingRoomCode = Object.keys(gameSessionsContainer).find(
-            (roomCode) => gameSessionsContainer[roomCode].hostId === socket.id
-        );
+1. You MUST generate completely NEW questions.
+   - Do NOT reuse the flashcard fronts as questions.
+   - The quiz should test understanding, relationships, comparisons, applications, and conceptual depth.
 
-        if(existingRoomCode){
-            console.log(`Host ${socket.id} is creating a new room. closing old room ${existingRoomCode}`);
+2. The quiz MUST stay fully on-topic and contextually correct.
+   - All questions must logically follow from the information in the flashcards.
+   - The quiz should reflect the subject matter and difficulty of the deck.
 
-            // get rid of old room timer if it exists
-            if(gameSessionsContainer[existingRoomCode].questionTimer){
-                clearTimeout(gameSessionsContainer[existingRoomCode].questionTimer);
-            }
+3. You MUST use **100%** of the information contained in the flashcards.
+   - Every flashcard’s content must contribute to at least one quiz question or answer.
 
-            // notify other players lobby is closed
-            io.to(existingRoomCode).emit('roomClosed', 'the host has left');
-            delete gameSessionsContainer[existingRoomCode];
-        }
+4. Each quiz question must be returned as a JSON object with the fields:
+   {
+     "question": "string (the newly generated quiz question)",
+     "relevantText": "string (the correct answer)",
+     "isMultipleChoice": true or false
+   }
 
+5. For short-answer questions:
+   - "relevantText" must contain ONLY the correct answer as a plain string.
+   - No explanations or extra text.
 
-        const roomCode = generateRoomCode(4);
-        socket.join(roomCode);
+6. For multiple-choice questions:
+   - "relevantText" MUST follow this strict format:
+     "|||A|||Correct Answer|||B|||Wrong Option 1|||C|||Wrong Option 2|||D|||Wrong Option 3"
+   - The correct answer MUST be the first option after "A".
+   - All distractors MUST be relevant, plausible, and academically meaningful.
 
-        // host is first player
-        gameSessionsContainer[roomCode] = {
-            hostId : socket.id,
-            players: [],
-            scores: {},
-            currentQuestionIndex: 0,
-            questionTimer: null,
+7. The entire output MUST be:
+   - A SINGLE JSON ARRAY of objects
+   - No text before or after the JSON
+   - No markdown
+   - No comments
+   - No natural language outside the JSON array
+
+FLASHCARDS INPUT:
+${JSON.stringify(flashcards, null, 2)}
+`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const rawOutput = result.response.text().trim();
+
+    console.log("/quiz raw output:", rawOutput);
+
+    let cleanedOutput = rawOutput
+      .replace(/```json\s*/gi, "")
+      .replace(/```/g, "")
+      .replace(/^[^{\[]*/, "")
+      .replace(/[^}\]]*$/, "")
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+      .trim();
+
+    try {
+      const jsonOutput = JSON.parse(cleanedOutput);
+      if (!Array.isArray(jsonOutput)) throw new Error("Response is not a JSON array.");
+
+      const normalized = jsonOutput.map((q) => {
+        const question = q.question ?? "";
+        const relevantText = q.relevantText ?? "";
+        
+        // Auto-detect MC format based on delimiter
+        const looksMC = typeof relevantText === "string" && relevantText.includes("|||");
+
+        return {
+          question,
+          relevantText,
+          isMultipleChoice: q.isMultipleChoice === true || looksMC
         };
+      });
 
-        socket.emit('gameCreated', roomCode);
+      
+      //Log the parsed JSON result for now
+      console.log("/quiz processed output:", JSON.stringify(jsonOutput, null, 2));
 
-        // used to update other players
-        io.to(roomCode).emit('updatePlayerList', gameSessionsContainer[roomCode].players);
-        console.log(`Game created with code: ${roomCode} by host ${socket.id}`);
-    });
-
-    // used to send player list after game is created in case of race condition
-    socket.on('getInitialData', (roomCode) => {
-        const game = gameSessionsContainer[roomCode];
-        if(game) {
-            // emit the updated player list to user who requested it
-            socket.emit('updatePlayerList', game.players);
-        }
-    })
-
-    socket.on('joinGame', (roomCode) => {
-        console.log(`server recieved request to join for room ${roomCode}`)
-        if(gameSessionsContainer[roomCode]) {
-            socket.join(roomCode);
-            
-            const game = gameSessionsContainer[roomCode];
-
-            game.players.push({id: socket.id});
-            game.scores[socket.id] = 0;
-
-            socket.emit('joinSuccess', roomCode);
-
-            io.to(roomCode).emit('updatePlayerList', game.players);
-            console.log(`User ${socket.id} joined room: ${roomCode}`);
-        }
-        else{
-            socket.emit('joinError', 'This room does not exist');
-        }
-    });
-
-    socket.on('startGame', (roomCode) => {
-        const game = gameSessionsContainer[roomCode];
-        if (game && game.hostId == socket.id) {
-            console.log(`starting game in room ${roomCode}`);
-            io.to(roomCode).emit('gameStarted');
-            sendQuestion(roomCode);
-        }
-    });
-
-    socket.on('submitAnswer', ({ roomCode, answerIndex}) => {
-        const game = gameSessionsContainer[roomCode];
-        if(!game || !game.questionTimer) return;
-
-        // ignore host answers
-        if(socket.id === game.hostId ){
-            return;
-        }
-
-        const currentQuestion = questions[game.currentQuestionIndex];
-        const isCorrect = currentQuestion.correctAnswerIndex === answerIndex;
-
-        if(isCorrect) {
-            clearTimeout(game.questionTimer);
-            game.questionTimer = null;
-            game.scores[socket.id] += 10;
-
-            io.to(roomCode).emit('questionResult', {
-                correctAnswerIndex: currentQuestion.correctAnswerIndex,
-                scores: game.scores,
-                winnerId: socket.id
-            });
-
-            setTimeout(() => {
-                game.currentQuestionIndex++;
-                sendQuestion(roomCode);
-            }, 3000);
-        }
-
-        // do nothing if answer is wrong
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`User disconnected: ${socket.id}`);
-        let roomToUpdate = null;
-
-        for (const roomCode in gameSessionsContainer) {
-            const game = gameSessionsContainer[roomCode];
-
-            // if host disconnects close the room
-            if (game.hostId === socket.id){
-                console.log(`Host disconnected. Closing room: ${roomCode}`);
-                if(game.questionTimer){
-                    clearTimeout(game.questionTimer);
-                }
-
-                io.to(roomCode).emit('roomClosed', 'The host has disconnected');
-
-                delete gameSessionsContainer[roomCode];
-                break;
-            }
-
-            // if player then remove from lobby
-            const playerIndex = game.players.findIndex(player => player.id === socket.id);
-            if (playerIndex !== -1){
-                console.log(`Player ${socket.id} disconnect from room ${roomCode}`);
-                game.players.splice(playerIndex, 1);
-                delete game.scores[socket.id];
-
-                roomToUpdate = roomCode;
-                break;
-            }
-        }
-
-        // update player list
-        if (roomToUpdate && gameSessionsContainer[roomToUpdate]) {
-            io.to(roomToUpdate).emit('updatePlayerList', gameSessionsContainer[roomToUpdate].players);
-        }
-    });
-});
-
-
-
-// Start Server
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+      // Return it to frontend (for now, we’re just logging on backend)
+      res.json({ output: normalized });
+    } catch (err) {
+      console.error("❌ Invalid JSON from Gemini /quiz:", rawOutput);
+      res.status(500).json({
+        error: "Model returned invalid JSON.",
+        rawOutput: rawOutput.slice(0, 500),
+        cleanedAttempt: cleanedOutput.slice(0, 500),
+      });
+    }
+  } catch (err) {
+    console.error("Quiz route error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 //This is for the pixabay api stuff
@@ -525,4 +446,425 @@ app.get("/pixabay-search", async (req, res) => {
     console.error(e);
     res.status(500).json({ error: "Pixabay search failed" });
   }
+});
+
+/////// SOCKET.IO GAME LOGIC ///////
+
+
+/**
+ * Stores info on every game lobby in the following format:
+ * index: roomCode (random four letter code that used letter from A-Z)
+ * 
+ * {
+ *      hostId : socket.id (internal socket.io identifier)
+ *      players : [] (an array of key value pairs that store other players ids)
+ *      scores : {int} (map of scores where key corresponds to socket.id and value to score)
+ *      currentQuestionIndex : int (the index of which question the game is currently displaying in the question array)
+ *      questionTimer : the timer object (object used to keep track of time for each question)
+ *      questions : [] (an array of the users flashcards from firebase)
+ * }
+ */
+const gameSessionsContainer = {};
+
+
+
+// selects 4 random characters from A-Z
+function generateRoomCode(length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    let result = '';
+    for (let i = 0; i < length; i++){
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return result;
+}
+
+function shuffleArray(array){
+  for(let i = array.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+}
+
+function sendQuestion(roomCode) {
+    const game = gameSessionsContainer[roomCode];
+    if (!game) return;
+
+    const gameQuestions = game.questions;
+    if(!gameQuestions || gameQuestions.length === 0){
+      io.to(roomCode).emit('gameError', "No Questions loaded");
+      return;
+    }
+
+    if (game.questionTimer) {
+        clearTimeout(game.questionTimer)
+    }
+
+    const questionIndex = game.currentQuestionIndex;
+    if( questionIndex >= gameQuestions.length) {
+        io.to(roomCode).emit('gameOver', {scores: game.scores});
+        return;
+    }
+
+    const currentQuestion = gameQuestions[questionIndex];
+
+    // add timestamp when quetion was sent
+    game.questionStartTime = Date.now();
+
+    const questionData = {
+        question : currentQuestion.question,
+        options: currentQuestion.options,
+        questionNumber: questionIndex + 1,
+        totalQuestions : gameQuestions.length
+    };
+
+    io.to(roomCode).emit('newQuestion', questionData);
+
+    game.questionTimer = setTimeout(() => {
+        console.log(`Time is up for room ${roomCode}`);
+
+        io.to(roomCode).emit('questionResult', {
+            correctAnswer: currentQuestion.answerText,
+            scores: game.scores,
+            winnerId: null //no winner
+        });
+
+        setTimeout(() => {
+            game.currentQuestionIndex++;
+            sendQuestion(roomCode);
+        }, 8000) // 8 secs between questions
+
+    }, 30000) //30 sec to answer question
+}
+
+io.on('connection', (socket) => {
+    console.log(`New user connected ${socket.id}`);
+
+    socket.on('createGame', async (deckId) => {
+        //Query Firebase for questions
+        let gameQuestions = [];
+
+        if(!deckId){
+          socket.emit('gameError', 'No deck selected');
+          return;
+        }
+
+        try {
+          const flashcardsRef = db.collection("flashcard");
+          const snapshot = await flashcardsRef.where("deckId", "==", deckId).get();
+
+          if (snapshot.empty) {
+            socket.emit('gameError', 'This deck has no cards');
+            return;
+          }
+          
+          // fetch all cards from deck
+          const rawCards = snapshot.docs.map(doc => ({
+            front: doc.data().front,
+            back: doc.data().back
+          }));
+
+          // Remove Invalid Cards (missing front, missing back, or empty strings)
+          const sanitizedCards = rawCards.filter(card => {
+              const hasFront = card.front && String(card.front).trim().length > 0;
+              const hasBack = card.back && String(card.back).trim().length > 0;
+              return hasFront && hasBack;
+          });
+
+          // Handle invalid deck
+          if (sanitizedCards.length < 4) {
+              socket.emit('gameError', 'Deck must have at least 4 valid cards to play');
+              return;
+          }
+
+          // fetch answers from cards
+          const onlyAnswers = sanitizedCards.map(c => c.back);
+
+          gameQuestions = sanitizedCards.map((card) => {
+            const correctAnswer = card.back;
+
+            const otherAnswers = onlyAnswers.filter(ans => ans !== correctAnswer);
+
+            // pick 3 random wrong answers from deck
+            const wrongOptions = shuffleArray([...otherAnswers].slice(0,3));
+
+            let options = [correctAnswer, ...wrongOptions];
+
+            options = shuffleArray(options);
+
+            const correctIndex = options.indexOf(correctAnswer);
+
+            return{
+              question: card.front,
+              options: options,
+              correctAnswerIndex: correctIndex,
+              answerText: correctAnswer
+            };
+          })
+
+          console.log(`Successfully added ${gameQuestions.length} questions from deck ${deckId}`);
+
+        } catch (error) {
+          console.error("Error fetching flashcards:", error);
+          socket.emit('gameError', 'Server error loading deck.');
+          return;
+        }
+
+        // Game session setup
+        // check if user is already hosting another room
+        const existingRoomCode = Object.keys(gameSessionsContainer).find(
+            (roomCode) => gameSessionsContainer[roomCode].hostId === socket.id
+        );
+
+        if(existingRoomCode){
+            console.log(`Host ${socket.id} is creating a new room. closing old room ${existingRoomCode}`);
+
+            // get rid of old room timer if it exists
+            if(gameSessionsContainer[existingRoomCode].questionTimer){
+                clearTimeout(gameSessionsContainer[existingRoomCode].questionTimer);
+            }
+
+            // notify other players lobby is closed
+            io.to(existingRoomCode).emit('roomClosed', 'the host has left');
+            delete gameSessionsContainer[existingRoomCode];
+        }
+
+
+        const roomCode = generateRoomCode(4);
+        socket.join(roomCode);
+
+        // host is first player
+        gameSessionsContainer[roomCode] = {
+            hostId : socket.id,
+            players: [],
+            scores: {},
+            currentQuestionIndex: 0,
+            questionTimer: null,
+            questions: gameQuestions,
+        };
+
+        socket.emit('gameCreated', roomCode);
+
+        // used to update other players
+        io.to(roomCode).emit('updatePlayerList', gameSessionsContainer[roomCode].players);
+        console.log(`Game created with code: ${roomCode} by host ${socket.id}`);
+    });
+
+    // used to send player list after game is created in case of race condition
+    socket.on('getInitialData', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+        if(game) {
+            // emit the updated player list to user who requested it
+            socket.emit('updatePlayerList', game.players);
+        }
+    })
+
+    socket.on('joinGame', ({ roomCode, playerName, avatar, userLevel }) => {
+        console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
+        if(gameSessionsContainer[roomCode]) {
+            const game = gameSessionsContainer[roomCode];
+
+            if(game.players.length >= 4){
+              socket.emit('joinError', 'Room is full (max 4 players)');
+              return;
+            }
+
+            socket.join(roomCode);
+
+            game.players.push({
+              id: socket.id,
+              name: playerName,
+              avatar: avatar || "default",
+              userLevel: typeof userLevel === "number" ? userLevel : 0
+            });
+            game.scores[socket.id] = 0;
+
+            socket.emit('joinSuccess', roomCode);
+
+            io.to(roomCode).emit('updatePlayerList', game.players);
+            console.log(`User ${playerName} (${socket.id}) joined room: ${roomCode}`);
+        }
+        else{
+            socket.emit('joinError', 'This room does not exist');
+        }
+    });
+
+    socket.on('leaveRoom', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+        if (!game) return;
+
+        // Remove player
+        game.players = game.players.filter(p => p.id !== socket.id);
+        delete game.scores[socket.id];
+
+        // If host leaves → pick a new host or close room
+        if (game.hostId === socket.id) {
+            if (game.players.length > 0) {
+                // transfer host
+                game.hostId = game.players[0].id;
+                io.to(roomCode).emit("newHost", game.hostId);
+            } else {
+                // no players left → close room completely
+                delete gameSessionsContainer[roomCode];
+                io.to(roomCode).emit("roomClosed", "The host left. Room closed.");
+                return;
+            }
+        }
+
+        io.to(roomCode).emit("updatePlayerList", game.players);
+        socket.leave(roomCode);
+    });
+
+    socket.on('closeRoom', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+        if (!game) return;
+
+        // Only host can close
+        if (socket.id !== game.hostId) return;
+
+        io.to(roomCode).emit("roomClosed", "Host closed the room.");
+        delete gameSessionsContainer[roomCode];
+    });
+
+    socket.on('startGame', (roomCode) => {
+        const game = gameSessionsContainer[roomCode];
+
+        if (game && game.hostId == socket.id) {
+
+            const playerCount = game.players.length;
+
+            if(playerCount < 2){
+              socket.emit('gameError', 'Not enough players, You need at least 2 players to start.');
+              return;
+            }
+
+            if(playerCount > 4){
+              socket.emit('gameError', 'Too many players, The max is 4 players');
+              return;
+            }
+
+            console.log(`starting game in room ${roomCode}`);
+            io.to(roomCode).emit('gameStarted');
+            sendQuestion(roomCode);
+        }
+    });
+
+    socket.on('submitAnswer', ({ roomCode, answerIndex}) => {
+        const game = gameSessionsContainer[roomCode];
+        if(!game || !game.questionTimer) return;
+
+        // ignore host answers
+        if(socket.id === game.hostId ){
+            return;
+        }
+
+        const currentQuestion = game.questions[game.currentQuestionIndex];
+        
+        const isCorrect = currentQuestion.correctAnswerIndex === answerIndex;
+
+
+        if(isCorrect) {
+            clearTimeout(game.questionTimer);
+            game.questionTimer = null;
+
+            const total_time = 30;
+            const max_score = 1000;
+            const min_score = 100;
+
+            const timeElapsed = (Date.now() - game.questionStartTime) / 1000;
+            const timeRemaining = Math.max(0, total_time - timeElapsed);
+            const totalPoints = Math.ceil(min_score + ((max_score - min_score) * (timeRemaining / total_time)));
+            game.scores[socket.id] += totalPoints;
+
+            
+            io.to(roomCode).emit('questionResult', {
+                correctAnswer: currentQuestion.answerText,
+                scores: game.scores,
+                winnerId: socket.id
+            });
+
+            setTimeout(() => {
+                game.currentQuestionIndex++;
+                sendQuestion(roomCode);
+            }, 8000); // wait for 8 secs for next question
+        }
+
+        // do nothing if answer is wrong let users try again
+    });
+
+    socket.on('restartGame', (roomCode) => {
+      const game = gameSessionsContainer[roomCode];
+
+      if(game && game.hostId === socket.id){
+        console.log(`Host restarting game for room ${roomCode}`);
+
+        game.currentQuestionIndex = 0;
+        game.players.forEach(player => {
+          game.scores[player.id] = 0;
+        })
+
+        io.to(roomCode).emit('gameStarted');
+        sendQuestion(roomCode);
+      }
+
+    })
+
+    socket.on('disconnect', () => {
+        console.log(`User disconnected: ${socket.id}`);
+        let roomToUpdate = null;
+
+        for (const roomCode in gameSessionsContainer) {
+            const game = gameSessionsContainer[roomCode];
+
+            // if host disconnects close the room
+            if (game.hostId === socket.id){
+                console.log(`Host disconnected. Closing room: ${roomCode}`);
+                if(game.questionTimer){
+                    clearTimeout(game.questionTimer);
+                }
+
+                io.to(roomCode).emit('roomClosed', 'The host has disconnected');
+
+                delete gameSessionsContainer[roomCode];
+                break;
+            }
+
+            // if player then remove from lobby
+            const playerIndex = game.players.findIndex(player => player.id === socket.id);
+            if (playerIndex !== -1){
+                console.log(`Player ${socket.id} disconnect from room ${roomCode}`);
+                game.players.splice(playerIndex, 1);
+                delete game.scores[socket.id];
+
+                if(game.players.length === 0){
+                  console.log(`All players left room ${roomCode}, Closing Room`);
+
+                  if(game.questionTimer){
+                    clearTimeout(game.questionTimer);
+                  }
+
+                  io.to(roomCode).emit('roomClosed', 'All players have left the game');
+
+                  delete gameSessionsContainer[roomCode];
+                  break;
+                }
+
+                roomToUpdate = roomCode;
+                break;
+            }
+        }
+
+        // update player list
+        if (roomToUpdate && gameSessionsContainer[roomToUpdate]) {
+            io.to(roomToUpdate).emit('updatePlayerList', gameSessionsContainer[roomToUpdate].players);
+        }
+    });
+});
+
+//Start server
+server.listen(port, () => {
+  console.log(`Server + Socket.IO running at http://localhost:${port}`);
 });

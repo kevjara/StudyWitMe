@@ -2,11 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, doc, getDoc, updateDoc, Timestamp, runTransaction } from "firebase/firestore";
 import styles from "./FlashcardsStudy.module.css";
+import { refreshPixabayImage } from "../utils/imageRefresh";
 
 function FlashcardsStudy() {
     const { currentUser } = useAuth();
+    const BASE_COMPLETION_XP = 40;
+    const BONUS_COMPLETION_XP = 60;
+    const BASE_LEVEL_XP = 100;
+    const LEVEL_INCREMENT = 25; //this is the offset extra XP added each level after the first to make harder?
     const navigate = useNavigate();
     const { state } = useLocation();
     const deck = state?.deck;
@@ -24,6 +29,12 @@ function FlashcardsStudy() {
     const [cardStatuses, setCardStatuses] = useState([]);
      const [mode, setMode] = useState(null); // null | "practice" | "review"
     const [isFlipped, setIsFlipped] = useState(false);
+    const [refreshedUrls, setRefreshedUrls] = useState({});
+    const [correctAnswers, setCorrectAnswers] = useState(0);
+    const [showCompletion, setShowCompletion] = useState(false);
+    const [finalScore, setFinalScore] = useState(0);
+    const [sessionXp, setSessionXp] = useState(0);
+    const [masteryInfo, setMasteryInfo] = useState(null);
 
     // Safety check: no deck
     useEffect(() => {
@@ -41,7 +52,15 @@ function FlashcardsStudy() {
             try {
                 setLoading(true);
                 const flashRef = collection(db, "flashcard");
-                const q = query(flashRef, where("deckId", "==", deck.id));
+                // Query flashcards - either user owns them OR deck is public
+                const isOwner = deck.ownerId === currentUser.uid;
+                const q = isOwner || !deck.isPublic
+                    ? query(
+                        flashRef, 
+                        where("deckId", "==", deck.id),
+                        where("ownerId", "==", currentUser.uid)
+                    )
+                    : query(flashRef, where("deckId", "==", deck.id));
                 const snap = await getDocs(q);
 
                 const cards = snap.docs.map((doc) => ({
@@ -58,6 +77,36 @@ function FlashcardsStudy() {
             }
         };
         fetchFlashcards();
+    }, [deck, currentUser]);
+
+    // Fetch mastery data for this deck
+    useEffect(() => {
+        const fetchMasteryData = async () => {
+            if (!deck || !currentUser) return;
+
+            try {
+                const masteryRef = collection(db, "mastery");
+                const q = query(
+                    masteryRef,
+                    where("userId", "==", currentUser.uid),
+                    where("deckId", "==", deck.id)
+                );
+                const snap = await getDocs(q);
+
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
+                    setMasteryInfo({
+                        masteryLevel: data.masteryLevel || 0,
+                        lastStudied: data.lastStudied,
+                        quizAttempts: data.quizAttempts || []
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching mastery data:", err);
+            }
+        };
+
+        fetchMasteryData();
     }, [deck, currentUser]);
 
     const resetStudyState = () => {
@@ -81,6 +130,45 @@ function FlashcardsStudy() {
             statusTimeoutRef.current = null;
         }, duration);
     }
+
+    // Handle image refresh for expired Pixabay URLs
+    const handleImageError = async (e, obj, type) => {
+        const isOwner = currentUser?.uid === deck?.ownerId;
+        
+        if (!obj.pixabayId) {
+            console.warn(`⚠️ No pixabayId for ${type} ${obj.id}, cannot refresh`);
+            e.target.style.display = 'none';
+            return;
+        }
+        
+        const currentStatus = refreshedUrls[obj.id];
+        if (currentStatus === 'loading' || currentStatus === 'failed') {
+            e.target.style.display = 'none';
+            return;
+        }
+        if (currentStatus && currentStatus !== 'loading' && currentStatus !== 'failed') {
+            console.warn(`⚠️ Refreshed URL also expired for ${type} ${obj.id}, giving up`);
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'failed' }));
+            e.target.style.display = 'none';
+            return;
+        }
+
+        setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'loading' }));
+        e.target.style.opacity = 0.3;
+        
+        const newUrl = await refreshPixabayImage(type, obj.id, obj.pixabayId, isOwner);
+
+        if (newUrl) {
+            console.log(`✅ Fresh URL obtained for ${type} ${obj.id}`);
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: newUrl }));
+            e.target.src = newUrl;
+            e.target.style.opacity = 1;
+            e.target.style.display = 'block';
+        } else {
+            setRefreshedUrls(prev => ({ ...prev, [obj.id]: 'failed' }));
+            e.target.style.display = 'none';
+        }
+    };
 
     // --- Gemini integration (same logic as Quiz) ---
     const startStudying = async () => {
@@ -108,7 +196,7 @@ function FlashcardsStudy() {
             isMultipleChoice: fc.type === "Multiple Choice",
         }));
 
-            const response = await fetch("/study", {
+            const response = await fetch("http://localhost:3000/study", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ flashcards: formatted }),
@@ -176,6 +264,112 @@ function FlashcardsStudy() {
         });
     }
 
+    //store and calcualate mastery data to Firestore
+    const saveMasteryData = async (score, total) => {
+        if (!currentUser || !deck) return;
+
+        try {
+            const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
+            
+            // Check if mastery document exists for this user/deck
+            const masteryRef = collection(db, "mastery");
+            const q = query(
+                masteryRef,
+                where("userId", "==", currentUser.uid),
+                where("deckId", "==", deck.id)
+            );
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                // Create new mastery document
+                await addDoc(masteryRef, {
+                    userId: currentUser.uid,
+                    deckId: deck.id,
+                    masteryLevel: percentage,
+                    lastStudied: Timestamp.now(),
+                    quizAttempts: [percentage]
+                });
+            } else {
+                // Update existing document
+                const masteryDoc = snap.docs[0];
+                const existingData = masteryDoc.data();
+                const attempts = existingData.quizAttempts || [];
+                
+                // Add new attempt
+                const updatedAttempts = [...attempts, percentage];
+                
+                // Keep only last 3 attempts
+                const last3 = updatedAttempts.slice(-3);
+                
+                // Calculate average mastery level
+                const avgMastery = Math.round(
+                    last3.reduce((sum, val) => sum + val, 0) / last3.length
+                );
+
+                await updateDoc(doc(db, "mastery", masteryDoc.id), {
+                    masteryLevel: avgMastery,
+                    lastStudied: Timestamp.now(),
+                    quizAttempts: updatedAttempts
+                });
+            }
+        } catch (err) {
+            console.error("Error saving mastery data:", err);
+        }
+    };
+
+    const calculateSessionXp = (score, total) => {
+        if (total === 0) return BASE_COMPLETION_XP;
+        const accuracy = score / total;
+        return Math.round(BASE_COMPLETION_XP + BONUS_COMPLETION_XP * accuracy);
+    };
+
+    const xpNeededForLevel = (level) => {
+        // level represents the current level the user is at (>=1)
+        // XP required to go from this level to the next
+        return (BASE_LEVEL_XP * level) + (LEVEL_INCREMENT * Math.max(level - 1, 0));
+    };
+
+    const calculateLevelFromXp = (xpTotal) => {
+        let level = 1;
+        let remainingXp = xpTotal;
+        let threshold = xpNeededForLevel(level);
+
+        while (remainingXp >= threshold) {
+            remainingXp -= threshold;
+            level += 1;
+            threshold = xpNeededForLevel(level);
+        }
+
+        return level;
+    };
+
+    const awardXp = async (score, total) => {
+        if (!currentUser) return;
+
+        const xpEarned = calculateSessionXp(score, total);
+        const userRef = doc(db, "users", currentUser.uid);
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const userSnap = await transaction.get(userRef);
+                const currentXp = userSnap.exists() ? userSnap.data().userXP || 0 : 0;
+                const newTotalXp = currentXp + xpEarned;
+                const newLevel = calculateLevelFromXp(newTotalXp);
+
+                transaction.set(userRef, {
+                    userXP: newTotalXp,
+                    userLevel: newLevel
+                }, { merge: true });
+            });
+
+            showStatus(`Great job! +${xpEarned} XP earned`);
+            return xpEarned;
+        } catch (err) {
+            console.error("Error awarding XP:", err);
+            return 0;
+        }
+    };
+
         // --- Review Mode ---
     const startReview = () => {
             if (flashcards.length === 0) {
@@ -210,6 +404,7 @@ function FlashcardsStudy() {
             <div className={styles.studySection}>
 
                 {!mode && (
+                    <>
                     <div className={styles.coverCard}>
                         <div className={styles.deckInfo}>
                             <h2
@@ -231,7 +426,18 @@ function FlashcardsStudy() {
                                     {deck.description?.trim() || "No description available."}
                                 </p>
                             </div>
-                            <p className={styles.deckMeta}>{flashcards.length} cards</p>
+                            
+                            <p className={styles.deckMeta}>Cards: {flashcards.length}</p>
+                            
+                            <p className={styles.deckMeta}>Cards Mastered: {masteryInfo?.masteryLevel || 0}%</p>
+                            <div className={styles.progressBar}>
+                                <div className={styles.progressFill} style={{ width: `${masteryInfo?.masteryLevel || 0}%` }} />
+                            </div>
+                            
+                            <p className={styles.deckMeta}>Last Quiz Score: {masteryInfo?.quizAttempts?.length > 0 ? `${masteryInfo.quizAttempts[masteryInfo.quizAttempts.length - 1]}%` : "N/A"}</p>
+                            
+                            <p className={styles.deckMeta}>Last Studied: {masteryInfo?.lastStudied ? new Date(masteryInfo.lastStudied.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Never"}</p>
+                            
                             <p className={styles.deckMeta}>
                             Created:{" "} 
                             {deck.createdAt ? 
@@ -243,24 +449,35 @@ function FlashcardsStudy() {
 
                         {deck.imagePath && (
                             <div className={styles.deckCoverImage}>
-                                <img src={deck.imagePath} alt="Deck cover" />
+                                <img 
+                                    src={refreshedUrls[deck.id] && refreshedUrls[deck.id] !== 'loading' && refreshedUrls[deck.id] !== 'failed'
+                                        ? refreshedUrls[deck.id]
+                                        : deck.imagePath}
+                                    alt="Deck cover"
+                                    style={{
+                                        opacity: refreshedUrls[deck.id] === 'loading' ? 0.3 : 1,
+                                        transition: 'opacity 0.3s'
+                                    }}
+                                    onError={(e) => handleImageError(e, deck, 'deck')}
+                                />
                             </div>
                         )}
-
-                        <div className={styles.buttonRow}>
-                            <button
-                                className={styles.reviewButton}
-                                onClick={startReview}
-                            >
-                                Review
-                            </button>
-
-                            <button className={styles.studyButton} onClick={startStudying}>
-                                Practice
-                            </button>
-                        </div>
-                        <p className={styles.status}>{status}</p>
                     </div>
+                    
+                    <div className={styles.buttonRow}>
+                        <button
+                            className={styles.reviewButton}
+                            onClick={startReview}
+                        >
+                            Review
+                        </button>
+
+                        <button className={styles.studyButton} onClick={startStudying}>
+                            Practice
+                        </button>
+                    </div>
+                    <p className={styles.status}>{status}</p>
+                    </>
                 )}
                 {mode === "review" && flashcards[currentIndex] && (
                     <>
@@ -274,9 +491,16 @@ function FlashcardsStudy() {
                                     {/* Display image if available */}
                                     {flashcards[currentIndex].imagePath && (
                                         <img
-                                            src={flashcards[currentIndex].imagePath}
+                                            src={refreshedUrls[flashcards[currentIndex].id] && refreshedUrls[flashcards[currentIndex].id] !== 'loading' && refreshedUrls[flashcards[currentIndex].id] !== 'failed'
+                                                ? refreshedUrls[flashcards[currentIndex].id]
+                                                : flashcards[currentIndex].imagePath}
                                             alt="Flashcard visual"
                                             className={styles.flashcardImage}
+                                            style={{
+                                                opacity: refreshedUrls[flashcards[currentIndex].id] === 'loading' ? 0.3 : 1,
+                                                transition: 'opacity 0.3s'
+                                            }}
+                                            onError={(e) => handleImageError(e, flashcards[currentIndex], 'flashcard')}
                                         />
                                     )}
                                 </div>
@@ -359,6 +583,7 @@ function FlashcardsStudy() {
                                                         setShowResult(true);
                                                         if (selectedOption === correctLabel) {
                                                             setCardStatus("✅ Correct!");
+                                                            setCorrectAnswers(prev => prev + 1);
                                                         } else {
                                                             const correctText =
                                                                 options.find((opt) => opt.label === correctLabel)?.text || "N/A";
@@ -384,7 +609,7 @@ function FlashcardsStudy() {
                                                         setCardStatus("Checking your answer...");
 
                                                         try {
-                                                            const res = await fetch("/compare", {
+                                                            const res = await fetch("http://localhost:3000/compare", {
                                                                 method: "POST",
                                                                 headers: { "Content-Type": "application/json" },
                                                                 body: JSON.stringify({
@@ -396,6 +621,7 @@ function FlashcardsStudy() {
 
                                                             if (data.correct) {
                                                                 setCardStatus("✅ Correct!");
+                                                                setCorrectAnswers(prev => prev + 1);
                                                             } else {
                                                                 setCardStatus(`❌ Incorrect — correct answer: ${response}`);
                                                             }
@@ -424,14 +650,23 @@ function FlashcardsStudy() {
                                             </button>
                                             <button
                                                 className={styles.navButton}
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (currentIndex < processedFlashcards.length - 1) {
                                                         setCurrentIndex(currentIndex + 1);
                                                         resetStudyState();
+                                                    } else {
+                                                        // Last card - show completion
+                                                        const score = correctAnswers;
+                                                        const total = processedFlashcards.length;
+                                                        setFinalScore(score);
+                                                        await saveMasteryData(score, total);
+                                                        const gained = await awardXp(score, total);
+                                                        setSessionXp(gained);
+                                                        setShowCompletion(true);
                                                     }
                                                 }}
                                             >
-                                                -&gt;
+                                                {currentIndex === processedFlashcards.length - 1 ? "Finish" : "→"}
                                             </button>
                                         </div>
 
@@ -443,6 +678,54 @@ function FlashcardsStudy() {
                             })()}
                         </div>
                     )
+                )}
+                
+                {/*Completion Page */}
+                {showCompletion && (
+                    <div className={styles.completionContainer}>
+                        <div className={styles.completionCard}>
+                            <h2 className={styles.completionTitle}>Practice Complete!</h2>
+                            <div className={styles.scoreDisplay}>
+                                <div className={styles.scoreCircle}>
+                                    <span className={styles.scoreText}>
+                                        {finalScore}/{processedFlashcards.length}
+                                    </span>
+                                </div>
+                                <p className={styles.scorePercentage}>
+                                    {Math.round((finalScore / processedFlashcards.length) * 100)}%
+                                </p>
+                            </div>
+                            <p className={styles.completionMessage}>
+                                {finalScore === processedFlashcards.length 
+                                    ? "Perfect score! 🎉" 
+                                    : finalScore >= processedFlashcards.length * 0.7
+                                    ? "Great job! Keep it up! 💪"
+                                    : "Keep practicing to improve! 📚"}
+                                {sessionXp > 0 && `  (+${sessionXp} XP)`}
+                            </p>
+                            <div className={styles.completionButtons}>
+                                <button 
+                                    className={styles.primaryButton}
+                                    onClick={() => {
+                                        setShowCompletion(false);
+                                        setMode(null);
+                                        setCurrentIndex(0);
+                                        setCorrectAnswers(0);
+                                        setFinalScore(0);
+                                        setSessionXp(0);
+                                    }}
+                                >
+                                    Back to Deck
+                                </button>
+                                <button 
+                                    className={styles.secondaryButton}
+                                    onClick={() => navigate("/flashcards")}
+                                >
+                                    View All Decks
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </>
