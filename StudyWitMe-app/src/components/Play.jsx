@@ -116,6 +116,7 @@ function Play() {
         }
 
         const onGameError = (message) =>{
+            setIsLoading(false);
             alert(message);
         }
 
