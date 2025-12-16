@@ -56,46 +56,66 @@
     height: 100vh;
 }
 
-.home {
-    width: 35px !important; 
-    height: 35px !important;
-    margin-right: 12px;
-    cursor: pointer;
-    transition: transform 0.3s ease, filter 0.3s ease;
-    vertical-align: middle;
-    position: absolute;
-    top: 6px;
-    left: 10px;
-    bottom: 3px;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-}
+.menu-arched-card{
+    background-color: white;
+    width: 360px;
+    max-width: 90%;
 
-.home:hover {
-    filter: brightness(0.8)
-}
+    border-radius: 180px 180px 20px 20px;
 
-.menu-button-box {
-    position: relative;
+    padding: 60px 40px 40px 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-
-    background-color: white;
-    padding: 2.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-
-    width: 90%;
-    max-width: 450px;
+    align-items: center;
+    text-align: center;
+    gap: 30px;
 }
 
-.menu-button-box button {
-    background-color: #416d8e;
-    color: #fff;
+.menu-logo {
+    width: 140px;
+    height: auto;
+    display: block;
 }
 
-.menu-button-box button:hover {
-    background-color: #2f546e;
+.menu-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.menu-btn {
+    width: 100%;
+    padding: 14px 0;
+    background-color: #356B8D;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: backround-color 0.2s ease;
+}
+
+.menu-btn:hover {
+    background-color: #2a5570;
+}
+
+.menu-footer h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #000;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.menu-footer p {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 0;
+    font-weight: 500;
 }
 
 
@@ -190,14 +210,14 @@
     font-weight: 500;
     border: none;
     border-radius: 6px;
-    background-color: #2D9CDB;
+    background-color: #356B8D;
     color: white;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
 .join-action-btn:hover{
-    background-color: #2488c2;
+    background-color: #2a5570;
 }
 
 .join-error-text {

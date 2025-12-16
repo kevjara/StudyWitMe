@@ -7,7 +7,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useDecks } from "../context/DecksContext";
 import styles from "./Flashcards.module.css";
 import "./Play.css";
-import home from "../assets/home.svg";
+import logo from "../assets/Logo.png";
 
 function Play() {
     const navigate = useNavigate();
@@ -394,16 +394,27 @@ function Play() {
     return (
         <> 
             <div className="menu-overlay"> 
-                <div className="menu-button-box">
-                    <img
-                        src={home}
-                        alt="Home"
-                        className="home"
-                        onClick={() => navigate("/main")}
-                        title="Home"
-                    />
-                    <button onClick={handleShowChooseDeck}>Host Game</button>
-                    <button onClick={handleShowJoinMenu}>Join Game</button>
+                <div className="menu-arched-card">
+
+                    <div className="menu-logo-section">
+                        <img
+                            src={logo}
+                            alt="StudyWitMe Logo"
+                            className="menu-logo"
+                        />
+                    </div>
+
+                    <div className="menu-btn-group">
+                        <button className="menu-btn" onClick={handleShowChooseDeck}>Host Game</button>
+                        <button className="menu-btn" onClick={handleShowJoinMenu}>Join Game</button>
+                        <button className="menu-btn" onClick={() => navigate("/main")}>Main Menu</button>
+                    </div>
+
+                    <div className="menu-footer">
+                        <h1>Trivia Game</h1>
+                        <p>Test your knowledge with up to 4 players!</p>
+                    </div>
+                    
                 </div>
             </div>
         </>
