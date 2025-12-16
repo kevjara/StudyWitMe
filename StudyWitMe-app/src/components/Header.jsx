@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import settingsIcon from "../assets/settings.svg";
 import logo from "../assets/Logo.png";
 import home from "../assets/home.svg";
@@ -13,6 +13,7 @@ function Header({ handleSignOut }) {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { hasStartedOnce, playMusic } = useMusic();
+    const location = useLocation();
 
     //search term for nav bar
     const [searchTerm, setSearchTerm] = useState("");
@@ -60,7 +61,11 @@ function Header({ handleSignOut }) {
                     !hasHoveredSettings ? styles.shakeOnce : ""
                 }`}
                 onMouseEnter={() => setHasHoveredSettings(true)}
-                onClick={() => navigate("/settings")}
+                onClick={() => {
+                    if (location.pathname !== "/settings") {
+                        navigate("/settings");
+                    }
+                }}
                 title="Settings"
                 />
 

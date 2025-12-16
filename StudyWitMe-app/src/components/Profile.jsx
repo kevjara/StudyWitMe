@@ -5,9 +5,9 @@ import { useAuth } from "../context/AuthContext";
 import { auth } from "../services/firebase";
 import { signOut } from "firebase/auth";
 import { useNavigate, useParams } from "react-router-dom";
-import DefaultProfileIcon from "../assets/Default_Profile_Icon.png";
 import styles from "./Profile.module.css";
 import { refreshPixabayImage } from "../utils/imageRefresh"; // Import utility
+import Avatar from "./Avatar";
 
 function Profile() {
     const { currentUser } = useAuth();
@@ -28,8 +28,6 @@ function Profile() {
     const deleteIntervalRef = useRef(null);
     const showYesTimeoutRef = useRef(null);
     const [refreshedUrls, setRefreshedUrls] = useState({});
-
-    const [profileImage, setProfileImage] = useState(null);
 
     const handleImageError = async (e, deck) => {
         const isOwnerOfDeck = currentUser?.uid === deck.ownerId; 
@@ -190,14 +188,15 @@ function Profile() {
 
     return (
         <div className={styles.profilePage}>
-            <button className={styles.backBtn} onClick={() => navigate("/main")}>← Back to Main Menu</button>
 
             <div className={styles.profileCard}>
                 <div className={styles.profileTop}>
                     <div className={styles.profileLeft}>
                         <div className={styles.profileIconWrap}>
                             <div className={styles.profileIcon}>
-                                <img src={profileImage || DefaultProfileIcon} alt="Profile Icon" />
+                                <div className={styles.profileIcon}>
+                                    <Avatar avatar={profile.avatar} />
+                                </div>
                             </div>
                         </div>
                         <div className={styles.profileMeta}>

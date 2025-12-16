@@ -34,6 +34,7 @@ function Play() {
     const didInitCategoriesRef = useRef(false);
     const [guestName, setGuestName] = useState('');
     const [displayName, setDisplayName] = useState('');
+    const [userLevel, setUserLevel] = useState(0);
 
     useEffect(() => {
         if(!currentUser){
@@ -47,7 +48,9 @@ function Play() {
                 const userSnapshot = await getDoc(userDocRef);
                 
                 if (userSnapshot.exists()){
+                    const data = userSnapshot.data();
                     setDisplayName(userSnapshot.data().displayName);
+                    setUserLevel(typeof data.userLevel === "number" ? data.userLevel : 0);
                 }
             } catch (err){
                 console.error("Error fetching profile:", err);
@@ -183,7 +186,13 @@ function Play() {
         }
 
         setIsLoading(true);
-        socket.emit('joinGame', {roomCode: cleanRoomCode, playerName: finalName});
+        const avatar = currentUser ? "default" : "guest";
+        socket.emit('joinGame', {
+            roomCode: cleanRoomCode,
+            playerName: finalName,
+            avatar,
+            userLevel
+        });
     }
 
     const handleBackToMenu = () => {

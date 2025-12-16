@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import TimeSelector from "./TimeSelector";
 import styles from "./FlashcardsQuiz.module.css";
 
 function FlashcardsQuiz() {

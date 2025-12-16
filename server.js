@@ -662,13 +662,13 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('joinGame', ({roomCode, playerName}) => {
+    socket.on('joinGame', ({ roomCode, playerName, avatar, userLevel }) => {
         console.log(`server recieved request to join for room ${roomCode} from player ${playerName}`)
         if(gameSessionsContainer[roomCode]) {
             const game = gameSessionsContainer[roomCode];
 
             if(game.players.length >= 4){
-              socket.emit('joinError', 'Room is full (max 4 players');
+              socket.emit('joinError', 'Room is full (max 4 players)');
               return;
             }
 
@@ -676,7 +676,9 @@ io.on('connection', (socket) => {
 
             game.players.push({
               id: socket.id,
-              name: playerName
+              name: playerName,
+              avatar: avatar || "default",
+              userLevel: typeof userLevel === "number" ? userLevel : 0
             });
             game.scores[socket.id] = 0;
 

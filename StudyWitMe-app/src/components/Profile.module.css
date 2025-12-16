@@ -375,3 +375,19 @@
     font-weight: bold;
     color: red;
 }
+.achievementsContainer {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    align-items: center;
+}
+.achievementBadge {
+    width: 80px; 
+    height: 80px;
+    object-fit: contain; 
+    cursor: help;
+    transition: transform 0.2s;
+}
+.achievementBadge:hover {
+    transform: scale(1.1);
+}

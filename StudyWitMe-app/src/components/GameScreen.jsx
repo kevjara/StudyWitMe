@@ -4,6 +4,10 @@ import { socket } from '../context/socket';
 import { useAuth } from "../context/AuthContext";
 import { db } from "../services/firebase";
 import { doc, runTransaction } from "firebase/firestore";
+import Avatar from "../components/Avatar";
+import FirstPlaceMedal from "../assets/1st-place-medal.svg";
+import SecondPlaceMedal from "../assets/2nd-place-medal.svg";
+import ThirdPlaceMedal from "../assets/3rd-place-medal.svg";
 import "./GameScreen.css";
 
 function GameScreen() {
@@ -104,6 +108,12 @@ function GameScreen() {
             console.error("Error awarding XP:", err);
         }
     };
+
+    const [mySocketId, setMySocketId] = useState(null);
+
+    useEffect(() => {
+        setMySocketId(socket.id);
+    }, []);
 
     // listener logic
     useEffect(() => {
@@ -254,9 +264,18 @@ function GameScreen() {
                 </button>
                 <div className="player-display">
                     <p>Players ({players.length}/4):</p>
-                    <ul>
+                    <ul className="player-list">
                         {players.map((player) => (
-                            <li key={player.id}>{player.name}</li>
+                            <li key={player.id} className="player-list-item">
+                                <div className="player-identity">
+                                    <Avatar avatar={player.avatar} size={32} />
+                                    <span className="player-name">{player.name}</span>
+                                </div>
+
+                                <span className="player-level">
+                                    Lv. {player.userLevel ?? 1}
+                                </span>
+                            </li>
                         ))}
                     </ul>
                 </div>
@@ -410,7 +429,7 @@ function GameScreen() {
                                     }
                                 }
                                 else if(selectedOptionIndex === index){
-                                  buttonClass += ' selected';
+                                    buttonClass += ' selected';
                                 }
 
                                 return (
@@ -457,11 +476,45 @@ function GameScreen() {
                     <div className="gameover-screen-scoreboard">
                         <h2>Final Scores:</h2>
                         <ol>
-                            {sortedPlayers.map((player) => (
-                                <li>
-                                    {player.id === socket.id ? `You (${player.name})`: player.name}: {scores[player.id] || 0} points
-                                </li>
-                            ))}
+                            {sortedPlayers.map((player, index) => {
+                                const isMe = player.id === socket.id;
+
+                                const medalSrc =
+                                    index === 0 ? FirstPlaceMedal :
+                                    index === 1 ? SecondPlaceMedal :
+                                    index === 2 ? ThirdPlaceMedal :
+                                    null;
+
+                                return (
+                                    <li
+                                        key={player.id}
+                                        className={isMe ? "is-me" : ""}
+                                    >
+                                        <div className="gameover-player-row">
+                                            {medalSrc && (
+                                                <img
+                                                    src={medalSrc}
+                                                    alt={`Place ${index + 1}`}
+                                                    className="placement-medal"
+                                                />
+                                            )}
+
+                                            <div className="gameover-player-block">
+                                                <div className="player-identity">
+                                                    <Avatar avatar={player.avatar} size={40} />
+                                                    <span className="player-name">
+                                                        {player.name}
+                                                    </span>
+                                                </div>
+
+                                                <span className="player-score">
+                                                    {scores[player.id] || 0} pts
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ol>
                     </div>
                     {isHost ? (
